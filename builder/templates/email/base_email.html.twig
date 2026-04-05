@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}{% endblock %} — Webhooky</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5; color: #0f172a; max-width: 560px; margin: 0 auto; padding: 24px; }
+    .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.82rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  {% block body %}{% endblock %}
+  <p class="footer">Message envoyé par Webhooky (webhooky.fr) — ne répondez pas directement à cet e-mail automatisé.</p>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{% extends 'email/base_email.html.twig' %}
+
+{% block title %}Invitation Webhooky{% endblock %}
+
+{% block body %}
+  <p>Bonjour,</p>
+  <p>Un gestionnaire vous a ajouté à une organisation sur <strong>Webhooky</strong>. Créez votre mot de passe pour activer votre compte :</p>
+  <p style="margin: 1.5rem 0;">
+    <a href="{{ inviteUrl }}" style="display: inline-block; padding: 0.75rem 1.25rem; background: #ff5a36; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Choisir mon mot de passe</a>
+  </p>
+  <p class="muted" style="font-size: 0.9rem; color: #64748b;">Lien :<br><span style="word-break: break-all;">{{ inviteUrl }}</span></p>
+  <p class="muted" style="font-size: 0.9rem;">Ce lien expire dans 7 jours. Compte : {{ userEmail }}</p>
+{% endblock %}

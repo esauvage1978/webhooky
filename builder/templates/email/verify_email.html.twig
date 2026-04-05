@@ -1,0 +1,13 @@
+{% extends 'email/base_email.html.twig' %}
+
+{% block title %}Confirmation de compte{% endblock %}
+
+{% block body %}
+  <p>Bonjour,</p>
+  <p>Merci de vous être inscrit sur <strong>Webhooky</strong>. Pour activer votre compte gestionnaire, confirmez votre adresse en cliquant sur le lien ci-dessous :</p>
+  <p style="margin: 1.5rem 0;">
+    <a href="{{ verifyUrl }}" style="display: inline-block; padding: 0.75rem 1.25rem; background: #ff5a36; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Confirmer mon e-mail</a>
+  </p>
+  <p class="muted" style="font-size: 0.9rem; color: #64748b;">Si le bouton ne fonctionne pas, copiez cette URL dans votre navigateur :<br><span style="word-break: break-all;">{{ verifyUrl }}</span></p>
+  <p class="muted" style="font-size: 0.9rem;">Ce lien expire dans 48 heures. Compte : {{ userEmail }}</p>
+{% endblock %}

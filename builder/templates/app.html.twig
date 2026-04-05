@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c1929">
+    <title>Webhooky</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+    {% if vite_dev %}
+        <script type="module" src="{{ vite_dev_host }}/@vite/client"></script>
+    {% endif %}
+    {% if entryCss and not vite_dev %}
+        <link rel="stylesheet" href="{{ asset(entryCss starts with '/' ? entryCss|slice(1) : entryCss) }}">
+    {% endif %}
+</head>
+<body>
+<div id="root"></div>
+{% if entryScript %}
+    <script type="module" src="{{ asset(entryScript starts with '/' ? entryScript|slice(1) : entryScript) }}"></script>
+{% else %}
+    <p style="font-family: system-ui, sans-serif; padding: 1rem; max-width: 40rem;">
+        Front React : exécutez <code>npm install</code> puis <code>npm run build</code> à la racine du projet.<br>
+        Pour le mode développement : ajoutez <code>VITE_DEV=1</code> dans <code>.env.local</code> et lancez <code>npm run dev</code>.
+    </p>
+{% endif %}
+</body>
+</html>
