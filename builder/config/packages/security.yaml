@@ -37,6 +37,7 @@ security:
         - { path: ^/verify-email, roles: PUBLIC_ACCESS }
         - { path: ^/webhook, roles: PUBLIC_ACCESS }
         - { path: ^/api/organizations/.+/subscription, roles: ROLE_USER }
+        - { path: ^/api/onboarding, roles: ROLE_USER }
         - { path: ^/api/me, roles: ROLE_USER }
         - { path: ^/api/users, roles: ROLE_USER }
         - { path: ^/api/organizations, roles: ROLE_USER }

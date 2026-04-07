@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-const ORG_SESSION_KEY = 'webhookyOrgSessionOk';
 import LoginForm from './LoginForm.jsx';
 import ForgotPasswordForm from './ForgotPasswordForm.jsx';
 import RegisterForm from './RegisterForm.jsx';
@@ -14,7 +12,9 @@ import SetupOrganization from './SetupOrganization.jsx';
 import InvitationForm from './InvitationForm.jsx';
 import Users from './Users.jsx';
 import OrganizationBilling from './OrganizationBilling.jsx';
+import OnboardingWizard from './OnboardingWizard.jsx';
 
+const ORG_SESSION_KEY = 'webhookyOrgSessionOk';
 const AUTH_PATHS = ['/inscription', '/mot-de-passe-oublie', '/reinitialisation-mot-de-passe', '/invitation'];
 
 function normalizePath(pathname) {
@@ -97,6 +97,8 @@ function userCanAccessNav(user, navId) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const isManager = user.roles.includes('ROLE_MANAGER');
   const orgCount = user.organizations?.length ?? 0;
+  const onboardingRequired = !isAdmin && user.onboarding?.required;
+  if (onboardingRequired) return false;
   const needsOrg = !isAdmin && orgCount === 0;
   if (needsOrg) return navId === 'setupOrganization';
   if (navId === 'setupOrganization') return false;
@@ -276,6 +278,9 @@ export default function App() {
         setAuthScreen(authScreenFromPath());
         return;
       }
+      if (!user.roles.includes('ROLE_ADMIN') && user.onboarding?.required) {
+        return;
+      }
       const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
       if (needsOrgSetupOnly) {
         setActiveNav('setupOrganization');
@@ -300,6 +305,10 @@ export default function App() {
 
   useEffect(() => {
     if (!user || loading) return;
+
+    if (!user.roles.includes('ROLE_ADMIN') && user.onboarding?.required) {
+      return;
+    }
 
     const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
     if (needsOrgSetupOnly) {
@@ -433,8 +442,14 @@ export default function App() {
   if (user) {
     const isAdmin = user.roles.includes('ROLE_ADMIN');
     const orgs = user.organizations ?? [];
-    const needsOrgSetup = !isAdmin && orgs.length === 0;
-    const showOrgPicker = !isAdmin && orgs.length > 1 && !sessionStorage.getItem(ORG_SESSION_KEY);
+    const onboardingRequired = !isAdmin && user.onboarding?.required;
+    const needsOrgSetup = !isAdmin && !onboardingRequired && orgs.length === 0;
+    const showOrgPicker =
+      !isAdmin && !onboardingRequired && orgs.length > 1 && !sessionStorage.getItem(ORG_SESSION_KEY);
+
+    if (onboardingRequired) {
+      return <OnboardingWizard user={user} onRefresh={refreshSession} />;
+    }
 
     if (showOrgPicker) {
       return <OrganizationContextPicker user={user} onComplete={() => void refreshSession()} />;

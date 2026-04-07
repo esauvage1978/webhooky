@@ -369,6 +369,31 @@ body {
   justify-content: center;
 }
 
+.admin-user-avatar--fox {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+}
+.admin-user-avatar--panda {
+  background: linear-gradient(135deg, #404040 0%, #737373 100%);
+}
+.admin-user-avatar--eagle {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+}
+.admin-user-avatar--whale {
+  background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%);
+}
+.admin-user-avatar--leaf {
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+}
+.admin-user-avatar--bolt {
+  background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
+}
+.admin-user-avatar--moon {
+  background: linear-gradient(135deg, #4338ca 0%, #818cf8 100%);
+}
+.admin-user-avatar--ruby {
+  background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%);
+}
+
 .admin-user-meta {
   display: flex;
   flex-direction: column;
@@ -417,6 +442,162 @@ body {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   padding: 1.5rem 1.75rem;
+}
+
+/* ——— Onboarding obligatoire ——— */
+.onboarding-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1.25rem 3rem;
+  background: linear-gradient(165deg, #0c1929 0%, #152a44 45%, #0f172a 100%);
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 36rem;
+  background: var(--surface-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.onboarding-header {
+  padding: 1.25rem 1.5rem;
+  background: var(--ink);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.onboarding-brand {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.onboarding-brand-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-soft) 100%);
+}
+
+.onboarding-step-label {
+  margin: 0.65rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.onboarding-panel {
+  padding: 1.75rem 1.5rem 2rem;
+}
+
+.onboarding-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  color: var(--ink);
+}
+
+.onboarding-intro {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-size: 0.96rem;
+}
+
+.onboarding-form .btn {
+  margin-top: 0.5rem;
+}
+
+.onboarding-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.onboarding-avatar-btn {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.onboarding-avatar-btn:hover {
+  transform: scale(1.04);
+}
+
+.onboarding-avatar-btn.selected {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px var(--coral-dim);
+}
+
+.onboarding-avatar-btn--fox {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+}
+.onboarding-avatar-btn--panda {
+  background: linear-gradient(135deg, #404040 0%, #a3a3a3 100%);
+}
+.onboarding-avatar-btn--eagle {
+  background: linear-gradient(135deg, #1d4ed8 0%, #60a5fa 100%);
+}
+.onboarding-avatar-btn--whale {
+  background: linear-gradient(135deg, #0369a1 0%, #38bdf8 100%);
+}
+.onboarding-avatar-btn--leaf {
+  background: linear-gradient(135deg, #15803d 0%, #4ade80 100%);
+}
+.onboarding-avatar-btn--bolt {
+  background: linear-gradient(135deg, #ca8a04 0%, #facc15 100%);
+}
+.onboarding-avatar-btn--moon {
+  background: linear-gradient(135deg, #4338ca 0%, #a5b4fc 100%);
+}
+.onboarding-avatar-btn--ruby {
+  background: linear-gradient(135deg, #be123c 0%, #fb7185 100%);
+}
+
+.onboarding-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.onboarding-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.onboarding-plan-card:hover {
+  background: var(--surface);
+}
+
+.onboarding-plan-card--selected {
+  border-color: var(--coral);
+  background: var(--coral-dim);
+}
+
+.onboarding-plan-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.onboarding-plan-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 /* ——— Dashboard home ——— */

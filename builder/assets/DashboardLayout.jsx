@@ -204,11 +204,14 @@ export default function DashboardLayout({ user, activeNav, onNavigate, onLogout,
 
           <div className="admin-topbar-right">
             <div className="admin-user-pill">
-              <span className="admin-user-avatar" aria-hidden>
-                {user.email.slice(0, 1).toUpperCase()}
+              <span
+                className={`admin-user-avatar ${user.avatarKey ? `admin-user-avatar--${user.avatarKey}` : ''}`}
+                aria-hidden
+              >
+                {(user.displayName || user.email).slice(0, 1).toUpperCase()}
               </span>
               <div className="admin-user-meta">
-                <span className="admin-user-email">{user.email}</span>
+                <span className="admin-user-email">{user.displayName || user.email}</span>
                 <span className="admin-user-role">
                   {isAdmin
                     ? 'Administrateur'

@@ -74,6 +74,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastLoginAt = null;
 
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $displayName = null;
+
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $avatarKey = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $profileCompletedAt = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $planOnboardingCompleted = false;
+
     public function __construct()
     {
         $this->organizationMemberships = new ArrayCollection();
@@ -362,6 +374,59 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastLoginAt(?\DateTimeImmutable $lastLoginAt): static
     {
         $this->lastLoginAt = $lastLoginAt;
+
+        return $this;
+    }
+
+    public function getDisplayName(): ?string
+    {
+        return $this->displayName;
+    }
+
+    public function setDisplayName(?string $displayName): static
+    {
+        $this->displayName = $displayName !== null && $displayName !== '' ? $displayName : null;
+
+        return $this;
+    }
+
+    public function getAvatarKey(): ?string
+    {
+        return $this->avatarKey;
+    }
+
+    public function setAvatarKey(?string $avatarKey): static
+    {
+        $this->avatarKey = $avatarKey !== null && $avatarKey !== '' ? $avatarKey : null;
+
+        return $this;
+    }
+
+    public function getProfileCompletedAt(): ?\DateTimeImmutable
+    {
+        return $this->profileCompletedAt;
+    }
+
+    public function setProfileCompletedAt(?\DateTimeImmutable $profileCompletedAt): static
+    {
+        $this->profileCompletedAt = $profileCompletedAt;
+
+        return $this;
+    }
+
+    public function isProfileOnboardingComplete(): bool
+    {
+        return $this->profileCompletedAt !== null;
+    }
+
+    public function isPlanOnboardingComplete(): bool
+    {
+        return $this->planOnboardingCompleted;
+    }
+
+    public function setPlanOnboardingCompleted(bool $planOnboardingCompleted): static
+    {
+        $this->planOnboardingCompleted = $planOnboardingCompleted;
 
         return $this;
     }

@@ -392,6 +392,8 @@ final class ApiUserController extends AbstractController
         return [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
+            'displayName' => $user->getDisplayName(),
+            'avatarKey' => $user->getAvatarKey(),
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),
             'invitePending' => $user->hasPendingInvite(),

@@ -6,6 +6,8 @@ namespace App\Controller;
 
 use App\Entity\Organization;
 use App\Entity\User;
+use App\Onboarding\ProfileAvatarCatalog;
+use App\Onboarding\UserOnboardingEvaluator;
 use App\Repository\OrganizationRepository;
 use App\Subscription\SubscriptionEntitlementService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +24,7 @@ final class ApiMeController extends AbstractController
         private readonly SubscriptionEntitlementService $subscriptionEntitlement,
         private readonly EntityManagerInterface $entityManager,
         private readonly OrganizationRepository $organizationRepository,
+        private readonly UserOnboardingEvaluator $onboardingEvaluator,
     ) {
     }
 
@@ -86,8 +89,11 @@ final class ApiMeController extends AbstractController
         ], $memberOrgs);
 
         $org = $user->getOrganization();
+        $pending = $this->onboardingEvaluator->pendingSteps($user);
         $row = [
             'email' => $user->getUserIdentifier(),
+            'displayName' => $user->getDisplayName(),
+            'avatarKey' => $user->getAvatarKey(),
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),
             'invitePending' => $user->hasPendingInvite(),
@@ -95,6 +101,12 @@ final class ApiMeController extends AbstractController
             'organization' => $org !== null
                 ? ['id' => $org->getId(), 'name' => $org->getName()]
                 : null,
+            'onboarding' => [
+                'required' => $pending !== [],
+                'steps' => $pending,
+                'currentStep' => $pending[0] ?? null,
+                'avatarOptions' => ProfileAvatarCatalog::all(),
+            ],
         ];
 
         if ($org !== null) {

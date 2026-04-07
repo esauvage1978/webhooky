@@ -10,7 +10,7 @@ async function parseJson(res) {
   }
 }
 
-export default function SetupOrganization({ onSuccess, onNavigate }) {
+export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnboarding = false }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [fields, setFields] = useState({});
@@ -35,7 +35,9 @@ export default function SetupOrganization({ onSuccess, onNavigate }) {
         return;
       }
       await onSuccess?.();
-      onNavigate?.('dashboard');
+      if (!embeddedInOnboarding) {
+        onNavigate?.('dashboard');
+      }
     } catch {
       setError('Erreur réseau');
     } finally {
