@@ -130,11 +130,29 @@ final class ApiUserController extends AbstractController
 
         $existing = $this->userRepository->findOneBy(['email' => $email]);
         if ($existing instanceof User) {
-            if ($existing->getOrganization()?->getId() === $organization->getId() && $existing->hasPendingInvite()) {
-                return $this->sendFreshInvite($existing, $actor, $organization, $request);
+            if ($existing->hasPendingInvite()) {
+                if ($existing->hasMembershipInOrganization($organization)
+                    && $existing->getOrganization()?->getId() === $organization->getId()) {
+                    return $this->sendFreshInvite($existing, $actor, $organization, $request);
+                }
+
+                return new JsonResponse(
+                    ['error' => 'Une invitation est déjà en cours pour ce compte.'],
+                    Response::HTTP_CONFLICT,
+                );
             }
 
-            return new JsonResponse(['error' => 'Un compte existe déjà avec cette adresse e-mail.'], Response::HTTP_CONFLICT);
+            if ($existing->hasMembershipInOrganization($organization)) {
+                return new JsonResponse(
+                    ['error' => 'Ce compte est déjà membre de cette organisation.'],
+                    Response::HTTP_CONFLICT,
+                );
+            }
+
+            $existing->addOrganizationMembership($organization);
+            $this->entityManager->flush();
+
+            return new JsonResponse($this->serializeUser($existing));
         }
 
         $user = (new User())
@@ -143,6 +161,7 @@ final class ApiUserController extends AbstractController
             ->setEmailVerified(false)
             ->setAccountEnabled(true)
             ->setOrganization($organization);
+        $user->addOrganizationMembership($organization);
 
         $dummy = bin2hex(random_bytes(32));
         $user->setPassword($this->passwordHasher->hashPassword($user, $dummy));
@@ -359,11 +378,8 @@ final class ApiUserController extends AbstractController
         }
 
         $actorOrg = $actor->getOrganization();
-        $targetOrg = $target->getOrganization();
 
-        return $actorOrg !== null
-            && $targetOrg !== null
-            && $actorOrg->getId() === $targetOrg->getId();
+        return $actorOrg !== null && $target->hasMembershipInOrganization($actorOrg);
     }
 
     /**
@@ -379,6 +395,8 @@ final class ApiUserController extends AbstractController
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),
             'invitePending' => $user->hasPendingInvite(),
+            'createdAt' => $user->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+            'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
             'organization' => $org !== null
                 ? ['id' => $org->getId(), 'name' => $org->getName()]
                 : null,

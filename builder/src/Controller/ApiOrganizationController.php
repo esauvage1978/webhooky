@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Organization;
+use App\Entity\OrganizationInvoice;
 use App\Entity\User;
+use App\Repository\FormWebhookLogRepository;
+use App\Repository\OrganizationInvoiceRepository;
 use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use App\Subscription\SubscriptionEntitlementService;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -28,6 +32,8 @@ final class ApiOrganizationController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly SubscriptionEntitlementService $subscriptionEntitlement,
+        private readonly FormWebhookLogRepository $formWebhookLogRepository,
+        private readonly OrganizationInvoiceRepository $organizationInvoiceRepository,
     ) {
     }
 
@@ -43,12 +49,9 @@ final class ApiOrganizationController extends AbstractController
             return new JsonResponse($payload);
         }
 
-        $org = $user->getOrganization();
-        if ($org === null) {
-            return new JsonResponse([]);
-        }
+        $orgs = $user->getMemberOrganizations();
 
-        return new JsonResponse([$this->serializeOrganization($org, true)]);
+        return new JsonResponse(array_map(fn (Organization $o) => $this->serializeOrganization($o, false), $orgs));
     }
 
     #[Route('/{id}', name: 'api_organizations_show', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -68,6 +71,74 @@ final class ApiOrganizationController extends AbstractController
         return new JsonResponse($this->serializeOrganization($organization, true));
     }
 
+    #[Route('/{id}/usage', name: 'api_organizations_usage', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[IsGranted('ROLE_USER')]
+    public function usage(int $id): JsonResponse
+    {
+        $organization = $this->organizationRepository->find($id);
+        if (!$organization instanceof Organization) {
+            return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $this->currentUser();
+        if (!$this->canAccess($user, $organization)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+
+        $startThis = (new \DateTimeImmutable('first day of this month'))->setTime(0, 0, 0);
+        $startNext = (new \DateTimeImmutable('first day of next month'))->setTime(0, 0, 0);
+        $startPrev = (new \DateTimeImmutable('first day of last month'))->setTime(0, 0, 0);
+
+        $ingressThis = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startThis, $startNext);
+        $ingressPrev = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startPrev, $startThis);
+
+        return new JsonResponse([
+            'currentMonth' => [
+                'periodStart' => $startThis->format(\DateTimeInterface::ATOM),
+                'periodEndExclusive' => $startNext->format(\DateTimeInterface::ATOM),
+                /** Réceptions enregistrées sur vos webhooks (journaux d’ingress), sur la période. */
+                'ingressCount' => $ingressThis,
+            ],
+            'previousMonth' => [
+                'periodStart' => $startPrev->format(\DateTimeInterface::ATOM),
+                'periodEndExclusive' => $startThis->format(\DateTimeInterface::ATOM),
+                'ingressCount' => $ingressPrev,
+            ],
+            'quota' => [
+                'eventsConsumedTotal' => $organization->getEventsConsumed(),
+                'eventsAllowance' => $this->subscriptionEntitlement->getTotalEventsAllowance($organization),
+            ],
+        ]);
+    }
+
+    #[Route('/{id}/invoices', name: 'api_organizations_invoices', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[IsGranted('ROLE_USER')]
+    public function invoices(int $id): JsonResponse
+    {
+        $organization = $this->organizationRepository->find($id);
+        if (!$organization instanceof Organization) {
+            return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $this->currentUser();
+        if (!$this->canAccess($user, $organization)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+
+        $items = $this->organizationInvoiceRepository->findByOrganizationOrdered($organization);
+
+        return new JsonResponse(array_map(static function (OrganizationInvoice $invoice) {
+            return [
+                'id' => $invoice->getId(),
+                'reference' => $invoice->getReference(),
+                'title' => $invoice->getTitle(),
+                'amountEur' => $invoice->getAmountEur(),
+                'issuedAt' => $invoice->getIssuedAt()?->format(\DateTimeInterface::ATOM),
+                'pdfUrl' => $invoice->getPdfUrl(),
+            ];
+        }, $items));
+    }
+
     #[Route('/bootstrap', name: 'api_organizations_bootstrap', methods: ['POST'], priority: 10)]
     #[IsGranted('ROLE_USER')]
     public function bootstrapMyOrganization(Request $request): JsonResponse
@@ -80,9 +151,9 @@ final class ApiOrganizationController extends AbstractController
             );
         }
 
-        if ($user->getOrganization() !== null) {
+        if ($user->hasAnyOrganizationMembership()) {
             return new JsonResponse(
-                ['error' => 'Votre compte est déjà rattaché à une organisation.'],
+                ['error' => 'Votre compte est déjà rattaché à au moins une organisation.'],
                 Response::HTTP_CONFLICT,
             );
         }
@@ -102,7 +173,18 @@ final class ApiOrganizationController extends AbstractController
 
         $this->entityManager->persist($organization);
         $this->attachUserToOrganization($user, $organization);
-        $this->entityManager->flush();
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            return new JsonResponse(
+                [
+                    'error' => 'Une organisation porte déjà ce nom. Les noms doivent être uniques.',
+                    'code' => 'organization_name_taken',
+                ],
+                Response::HTTP_CONFLICT,
+            );
+        }
 
         return new JsonResponse(
             $this->serializeOrganization($organization, true),
@@ -137,7 +219,17 @@ final class ApiOrganizationController extends AbstractController
             $this->attachUserToOrganization($targetUser, $organization);
         }
 
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            return new JsonResponse(
+                [
+                    'error' => 'Une organisation porte déjà ce nom. Les noms doivent être uniques.',
+                    'code' => 'organization_name_taken',
+                ],
+                Response::HTTP_CONFLICT,
+            );
+        }
 
         return new JsonResponse(
             $this->serializeOrganization($organization, true),
@@ -159,6 +251,13 @@ final class ApiOrganizationController extends AbstractController
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
 
+        if (!$this->canManageOrganizationSettings($user)) {
+            return new JsonResponse(
+                ['error' => 'Seuls les gestionnaires et administrateurs peuvent modifier l’organisation.'],
+                Response::HTTP_FORBIDDEN,
+            );
+        }
+
         $data = json_decode($request->getContent(), true);
         if (!\is_array($data)) {
             return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
@@ -166,6 +265,22 @@ final class ApiOrganizationController extends AbstractController
 
         if (\array_key_exists('name', $data)) {
             $organization->setName(trim((string) $data['name']));
+        }
+
+        if (\array_key_exists('billingLine1', $data)) {
+            $organization->setBillingLine1($this->trimOrNull($data['billingLine1']));
+        }
+        if (\array_key_exists('billingLine2', $data)) {
+            $organization->setBillingLine2($this->trimOrNull($data['billingLine2']));
+        }
+        if (\array_key_exists('billingPostalCode', $data)) {
+            $organization->setBillingPostalCode($this->trimOrNull($data['billingPostalCode']));
+        }
+        if (\array_key_exists('billingCity', $data)) {
+            $organization->setBillingCity($this->trimOrNull($data['billingCity']));
+        }
+        if (\array_key_exists('billingCountry', $data)) {
+            $organization->setBillingCountry($this->trimOrNull($data['billingCountry']));
         }
 
         $errors = $this->validator->validate($organization);
@@ -186,7 +301,17 @@ final class ApiOrganizationController extends AbstractController
             }
         }
 
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            return new JsonResponse(
+                [
+                    'error' => 'Une organisation porte déjà ce nom. Les noms doivent être uniques.',
+                    'code' => 'organization_name_taken',
+                ],
+                Response::HTTP_CONFLICT,
+            );
+        }
 
         return new JsonResponse($this->serializeOrganization($organization, true));
     }
@@ -200,7 +325,6 @@ final class ApiOrganizationController extends AbstractController
             return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_NOT_FOUND);
         }
 
-        $this->detachAllUsersFromOrganization($organization);
         $this->entityManager->remove($organization);
         $this->entityManager->flush();
 
@@ -222,24 +346,38 @@ final class ApiOrganizationController extends AbstractController
         return \in_array('ROLE_ADMIN', $user->getRoles(), true);
     }
 
+    private function canManageOrganizationSettings(User $user): bool
+    {
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+
+        return $user->isAppManager();
+    }
+
     private function canAccess(User $user, Organization $organization): bool
     {
         if ($this->isAdmin($user)) {
             return true;
         }
 
-        return $user->getOrganization()?->getId() === $organization->getId();
+        return $user->hasMembershipInOrganization($organization);
     }
 
     private function attachUserToOrganization(User $user, Organization $organization): void
     {
+        $user->addOrganizationMembership($organization);
         $user->setOrganization($organization);
     }
 
     private function detachAllUsersFromOrganization(Organization $organization): void
     {
-        foreach ($this->userRepository->findBy(['organization' => $organization]) as $u) {
-            $u->setOrganization(null);
+        foreach ($this->userRepository->findUsersWithMembershipInOrganization($organization) as $u) {
+            $u->removeMembershipForOrganization($organization);
+            if ($u->getOrganization()?->getId() === $organization->getId()) {
+                $remaining = $u->getMemberOrganizations();
+                $u->setOrganization($remaining[0] ?? null);
+            }
         }
     }
 
@@ -251,6 +389,13 @@ final class ApiOrganizationController extends AbstractController
         $row = [
             'id' => $organization->getId(),
             'name' => $organization->getName(),
+            'billing' => [
+                'line1' => $organization->getBillingLine1(),
+                'line2' => $organization->getBillingLine2(),
+                'postalCode' => $organization->getBillingPostalCode(),
+                'city' => $organization->getBillingCity(),
+                'country' => $organization->getBillingCountry(),
+            ],
         ];
 
         $members = $this->userRepository->findByOrganizationOrderedByEmail($organization);
@@ -281,5 +426,15 @@ final class ApiOrganizationController extends AbstractController
         }
 
         return new JsonResponse(['error' => 'Validation', 'fields' => $messages], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function trimOrNull(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $s = trim((string) $value);
+
+        return $s === '' ? null : $s;
     }
 }

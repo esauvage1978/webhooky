@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -12,6 +15,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_USER_EMAIL', fields: ['email'])]
+#[ORM\HasLifecycleCallbacks]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -55,9 +59,31 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $inviteExpiresAt = null;
 
-    #[ORM\ManyToOne(targetEntity: Organization::class, inversedBy: 'users')]
+    /** Organisation courante (contexte de travail après connexion). */
+    #[ORM\ManyToOne(targetEntity: Organization::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Organization $organization = null;
+
+    /** @var Collection<int, OrganizationMembership> */
+    #[ORM\OneToMany(targetEntity: OrganizationMembership::class, mappedBy: 'user', orphanRemoval: true, cascade: ['persist'])]
+    private Collection $organizationMemberships;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private ?\DateTimeImmutable $createdAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastLoginAt = null;
+
+    public function __construct()
+    {
+        $this->organizationMemberships = new ArrayCollection();
+    }
+
+    #[ORM\PrePersist]
+    public function ensureCreatedAt(): void
+    {
+        $this->createdAt ??= new \DateTimeImmutable();
+    }
 
     public function getId(): ?int
     {
@@ -128,6 +154,75 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->organization = $organization;
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, OrganizationMembership>
+     */
+    public function getOrganizationMemberships(): Collection
+    {
+        return $this->organizationMemberships;
+    }
+
+    public function hasMembershipInOrganization(?Organization $organization): bool
+    {
+        if (!$organization instanceof Organization || $organization->getId() === null) {
+            return false;
+        }
+
+        foreach ($this->organizationMemberships as $m) {
+            if ($m->getOrganization()?->getId() === $organization->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function addOrganizationMembership(Organization $organization): void
+    {
+        if ($this->hasMembershipInOrganization($organization)) {
+            return;
+        }
+
+        $row = new OrganizationMembership();
+        $row->setUser($this);
+        $row->setOrganization($organization);
+        $this->organizationMemberships->add($row);
+    }
+
+    public function removeMembershipForOrganization(Organization $organization): void
+    {
+        foreach ($this->organizationMemberships as $m) {
+            if ($m->getOrganization()?->getId() === $organization->getId()) {
+                $this->organizationMemberships->removeElement($m);
+
+                return;
+            }
+        }
+    }
+
+    public function hasAnyOrganizationMembership(): bool
+    {
+        return !$this->organizationMemberships->isEmpty();
+    }
+
+    /**
+     * @return list<Organization>
+     */
+    public function getMemberOrganizations(): array
+    {
+        $list = [];
+        foreach ($this->organizationMemberships as $m) {
+            $o = $m->getOrganization();
+            if ($o instanceof Organization) {
+                $list[] = $o;
+            }
+        }
+
+        usort($list, static fn (Organization $a, Organization $b) => strcasecmp($a->getName(), $b->getName()));
+
+        return $list;
     }
 
     public function isEmailVerified(): bool
@@ -245,5 +340,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isOrgMember(): bool
     {
         return !$this->isAppAdmin() && !$this->isAppManager();
+    }
+
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(?\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeImmutable
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(?\DateTimeImmutable $lastLoginAt): static
+    {
+        $this->lastLoginAt = $lastLoginAt;
+
+        return $this;
     }
 }

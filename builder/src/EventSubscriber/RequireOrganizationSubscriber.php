@@ -77,6 +77,10 @@ final class RequireOrganizationSubscriber implements EventSubscriberInterface
             return true;
         }
 
+        if ($method === 'POST' && $path === '/api/me/active-organization') {
+            return true;
+        }
+
         if ($method === 'POST' && $path === '/api/organizations/bootstrap') {
             return true;
         }

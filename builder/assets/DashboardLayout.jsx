@@ -11,19 +11,27 @@ const NAV_FULL_BASE = [
 
 const NAV_USERS = { id: 'users', label: 'Utilisateurs', icon: MdiPeople };
 
+const NAV_ORG_BILLING = { id: 'organizationBilling', label: 'Organisation & facturation', icon: MdiInvoice };
+
 function navForUser(user) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const isManager = user.roles.includes('ROLE_MANAGER');
-  if (!isAdmin && !user.organization) {
+  const orgCount = user.organizations?.length ?? 0;
+  if (!isAdmin && orgCount === 0) {
     return NAV_SETUP_ONLY;
   }
   let items = isAdmin ? [...NAV_FULL_BASE] : NAV_FULL_BASE.filter((item) => item.id !== 'organizations');
   if (isAdmin || isManager) {
     const dashIdx = items.findIndex((i) => i.id === 'dashboard');
+    const afterDash = [];
+    if ((isAdmin || isManager) && user.organization) {
+      afterDash.push(NAV_ORG_BILLING);
+    }
+    afterDash.push(NAV_USERS);
     if (dashIdx >= 0) {
-      items = [...items.slice(0, dashIdx + 1), NAV_USERS, ...items.slice(dashIdx + 1)];
+      items = [...items.slice(0, dashIdx + 1), ...afterDash, ...items.slice(dashIdx + 1)];
     } else {
-      items = [NAV_USERS, ...items];
+      items = [...afterDash, ...items];
     }
   }
   return items;
@@ -81,11 +89,23 @@ function MdiPeople() {
   );
 }
 
-export default function DashboardLayout({ user, activeNav, onNavigate, onLogout, children }) {
+function MdiInvoice() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-2-4H8v-2h8v2zm0-4H8v-2h8v2z"
+      />
+    </svg>
+  );
+}
+
+export default function DashboardLayout({ user, activeNav, onNavigate, onLogout, onOrganizationSwitch, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const navItems = useMemo(() => navForUser(user), [user]);
+  const multiOrg = !isAdmin && (user.organizations?.length ?? 0) > 1;
 
   return (
     <div className="admin-app">
@@ -101,8 +121,8 @@ export default function DashboardLayout({ user, activeNav, onNavigate, onLogout,
         <div className="admin-brand">
           <span className="admin-brand-mark" aria-hidden />
           <div className="admin-brand-text">
-            <strong>Webhooky</strong>
-            <small>webhooky.fr</small>
+            <strong>Webhooky Builders</strong>
+            <small>webhooky.builders</small>
           </div>
         </div>
 
@@ -129,7 +149,26 @@ export default function DashboardLayout({ user, activeNav, onNavigate, onLogout,
 
         <div className="admin-sidebar-footer">
           <p className="admin-sidebar-footnote">
-            {user.organization ? (
+            {multiOrg && typeof onOrganizationSwitch === 'function' ? (
+              <label className="admin-org-switch">
+                <span className="admin-org-label">Organisation active</span>
+                <select
+                  className="admin-org-select"
+                  value={user.organization?.id ?? ''}
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    if (id) void onOrganizationSwitch(id);
+                  }}
+                  aria-label="Changer d’organisation"
+                >
+                  {(user.organizations ?? []).map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : user.organization ? (
               <>
                 <span className="admin-org-label">Organisation</span>
                 <span className="admin-org-name">{user.organization.name}</span>

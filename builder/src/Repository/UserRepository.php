@@ -62,7 +62,22 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findByOrganizationOrderedByEmail(Organization $organization): array
     {
         return $this->createQueryBuilder('u')
-            ->andWhere('u.organization = :o')
+            ->innerJoin('u.organizationMemberships', 'm')
+            ->andWhere('m.organization = :o')
+            ->setParameter('o', $organization)
+            ->orderBy('u.email', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return list<User>
+     */
+    public function findUsersWithMembershipInOrganization(Organization $organization): array
+    {
+        return $this->createQueryBuilder('u')
+            ->innerJoin('u.organizationMemberships', 'm')
+            ->andWhere('m.organization = :o')
             ->setParameter('o', $organization)
             ->orderBy('u.email', 'ASC')
             ->getQuery()

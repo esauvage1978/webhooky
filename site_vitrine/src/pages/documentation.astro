@@ -1,0 +1,458 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL } from '../site.ts';
+
+const title = 'Documentation — Guide de l’application Webhooky Builders';
+const description =
+  'Guide des écrans et actions pour les gestionnaires et les utilisateurs sur webhooky.builders : webhooks, Mailjet, membres, organisation et facturation.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container">
+    <div class="page-hero">
+      <h1>Documentation — guide de l’application</h1>
+      <p>
+        Ce document décrit les <strong>actions accessibles aux profils gestionnaire et utilisateur</strong> dans
+        l’application hébergée sur
+        <a href={BUILDER_URL}>webhooky.builders</a>. Pour les détails techniques (ingress, intégrations), voir la
+        <a href="/documentation-technique">documentation technique</a>.
+      </p>
+    </div>
+
+    <nav class="doc-toc" aria-label="Sommaire">
+      <h2 class="doc-toc-title">Sommaire</h2>
+      <ul>
+        <li><a href="#roles">Rôles couverts</a></li>
+        <li><a href="#auth">Connexion et compte</a></li>
+        <li><a href="#organisations-contexte">Organisations et contexte de travail</a></li>
+        <li><a href="#dashboard">Tableau de bord</a></li>
+        <li>
+          <a href="#webhooks">Workflows webhook (formulaires)</a>
+          <ul class="doc-toc-sub">
+            <li><a href="#webhooks-liste">Liste et opérations</a></li>
+            <li><a href="#webhooks-declencheur">Déclencheur et récaps Webhooky</a></li>
+            <li><a href="#webhooks-actions">Actions Mailjet (plusieurs blocs)</a></li>
+            <li><a href="#webhooks-notif-erreur">Notifications d’erreur détaillées</a></li>
+            <li><a href="#webhooks-quotas">Quotas et forfait</a></li>
+          </ul>
+        </li>
+        <li><a href="#mailjet">Configurations Mailjet</a></li>
+        <li><a href="#users">Gestion des membres (gestionnaire)</a></li>
+        <li><a href="#billing">Organisation et facturation</a></li>
+        <li><a href="#premiere-org">Première organisation</a></li>
+      </ul>
+    </nav>
+
+    <section class="doc-section" aria-labelledby="roles">
+      <h2 id="roles">Rôles couverts</h2>
+      <p>
+        Ce guide s’adresse aux membres d’une organisation avec l’un de ces profils&nbsp;:
+      </p>
+      <ul>
+        <li>
+          <strong>Gestionnaire</strong> — pilote le périmètre de son organisation&nbsp;: workflows webhook, configurations
+          Mailjet, invitations et gestion des membres, organisation et facturation, tableau de bord.
+        </li>
+        <li>
+          <strong>Utilisateur</strong> (membre standard) — utilise les outils mis à disposition pour son organisation
+          (par exemple consultation ou exploitation des webhooks et de Mailjet) selon les droits effectifs qui vous sont
+          attribués. En général, pas d’accès à la gestion des membres ni aux réglages d’abonnement.
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="auth">
+      <h2 id="auth">Connexion et compte</h2>
+      <p>Parcours disponibles hors session ou liés à la sécurisation du compte&nbsp;:</p>
+      <ul>
+        <li>
+          <strong>Connexion</strong> — identification par e-mail et mot de passe. Après connexion, accès au tableau de
+          bord ou au parcours de création d’une organisation si votre compte n’est membre d’aucune structure
+          <a href="#premiere-org">(voir ci-dessous)</a>. Si votre compte est rattaché à <strong>plusieurs</strong>
+          organisations, une étape vous demande d’en choisir une pour la session en cours.
+        </li>
+        <li>
+          <strong>Inscription</strong> — création d’un compte, avec envoi d’un e-mail de vérification selon la
+          configuration de la plateforme.
+        </li>
+        <li>
+          <strong>Mot de passe oublié / réinitialisation</strong> — demande de lien par e-mail, puis définition d’un
+          nouveau mot de passe.
+        </li>
+        <li>
+          <strong>Invitation</strong> — si un gestionnaire vous invite dans une organisation, vous recevez un lien pour
+          activer votre accès et choisir votre mot de passe (nouveau compte) ou, si vous aviez déjà un compte, votre
+          adresse peut être ajoutée comme membre d’une organisation supplémentaire sans créer un second compte.
+        </li>
+        <li><strong>Déconnexion</strong> — fin de session depuis le menu du tableau de bord.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="organisations-contexte">
+      <h2 id="organisations-contexte">Organisations et contexte de travail</h2>
+      <p>
+        Un même compte peut être <strong>membre de plusieurs organisations</strong>. Les webhooks, clés Mailjet,
+        utilisateurs et facturation sont toujours vus <strong>dans le contexte d’une seule organisation à la fois</strong>,
+        dite organisation active ou organisation de travail.
+      </p>
+      <ul>
+        <li>
+          <strong>Après connexion</strong> — si vous avez plusieurs rattachements, l’application affiche un écran où vous
+          <strong>choisissez l’organisation</strong> dans laquelle vous travaillez pour la session. Ce choix est redemandé
+          après chaque nouvelle connexion (sécurité et clarté du contexte).
+        </li>
+        <li>
+          <strong>Pendant la session</strong> — un <strong>sélecteur dans la barre latérale</strong> («&nbsp;Organisation
+          active&nbsp;») permet de <strong>changer d’organisation à tout moment</strong> sans vous déconnecter. Les listes
+          (workflows, Mailjet, membres, facturation, etc.) se mettent à jour pour refléter l’organisation sélectionnée.
+        </li>
+        <li>
+          <strong>Noms d’organisations</strong> — deux organisations ne peuvent pas porter le <strong>même nom</strong>
+          sur la plateforme. Si vous créez ou renommez une structure et que le nom est déjà pris, l’application affiche un
+          message d’erreur explicite.
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="dashboard">
+      <h2 id="dashboard">Tableau de bord</h2>
+      <p>Page d’accueil après connexion&nbsp;: synthèse et raccourcis. Le détail affiché dépend de votre rôle.</p>
+      <ul>
+        <li>
+          Pour un <strong>gestionnaire</strong>&nbsp;: vue d’ensemble de l’<strong>organisation active</strong>, indicateurs
+          liés aux quotas et aux webhooks, accès aux sections Mailjet, workflows et facturation.
+        </li>
+        <li>
+          Pour un <strong>utilisateur</strong>&nbsp;: informations utiles à votre activité dans le contexte de l’organisation
+          choisie (workflows, quotas ou rappels selon les droits), sans les menus réservés à la gestion d’équipe ou de
+          l’abonnement.
+        </li>
+        <li>
+          Informations sur votre <strong>compte</strong> (e-mail, rôle) et rappel de l’organisation dans laquelle vous
+          travaillez actuellement.
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="webhooks">
+      <h2 id="webhooks">Workflows webhook (formulaires)</h2>
+      <p>
+        Module pour recevoir des données HTTP (formulaires, intégrations) et enchaîner des actions, en particulier
+        l’envoi d’e-mails via Mailjet. La création, la modification ou la suppression d’un workflow peuvent être
+        limitées selon votre rôle et vos droits.
+      </p>
+
+      <h3 class="doc-h3" id="webhooks-liste">Liste et opérations sur les workflows</h3>
+      <ul>
+        <li>
+          <strong>Créer</strong> un nouveau workflow lorsque l’interface vous le permet (voir les sections déclencheur et
+          actions ci-dessous pour le détail des champs).
+        </li>
+        <li>
+          Consulter la <strong>fiche</strong> d’un workflow&nbsp;: URL d’appel unique en POST, schéma des actions,
+          paramètres de notification.
+        </li>
+        <li><strong>Copier</strong> l’URL du webhook dans le presse-papiers.</li>
+        <li>
+          Ouvrir les <strong>journaux</strong> d’exécution (historique des réceptions, détail par action, codes retour).
+        </li>
+        <li><strong>Modifier</strong> le workflow (déclencheur, notifications, blocs d’actions).</li>
+        <li>
+          <strong>Dupliquer</strong> le workflow&nbsp;: copie des actions et des paramètres&nbsp;; le nouveau nom reprend
+          en général le nom d’origine avec le suffixe <code> copy</code> et une nouvelle URL d’appel. Mêmes règles de
+          forfait qu’une création manuelle.
+        </li>
+        <li>
+          <strong>Supprimer</strong> définitivement un workflow (avec confirmation), si vous en avez la permission.
+        </li>
+      </ul>
+
+      <h3 class="doc-h3" id="webhooks-declencheur">Déclencheur</h3>
+      <p>
+        Le déclencheur définit <strong>ce qui lance</strong> le workflow. Aujourd’hui, seul le type
+        <strong>Webhook · POST entrant</strong> est proposé&nbsp;: une <strong>URL unique</strong> est générée à
+        l’enregistrement du workflow. Le serveur accepte un corps de type formulaire classique ou JSON.
+      </p>
+      <p>Champs proposés dans l’éditeur (bloc «&nbsp;Déclencheur&nbsp;»)&nbsp;:</p>
+      <ul>
+        <li><strong>Nom du workflow</strong> — obligatoire, sert à identifier le workflow dans l’interface et dans les e-mails de récapitulatif.</li>
+        <li><strong>Description</strong> — facultatif, texte libre pour vos équipes.</li>
+        <li>
+          <strong>Déclencheur actif</strong> — case à cocher&nbsp;: si elle est décochée, l’URL ne traite plus les
+          requêtes entrantes (mise en pause sans supprimer la configuration).
+        </li>
+      </ul>
+
+      <h4 class="doc-h4" id="webhooks-recaps-webhooky">Notifications Webhooky (dans le même bloc que le déclencheur)</h4>
+      <p>
+        Ces réglages pilotent l’envoi d’e-mails de <strong>récapitulatif d’exécution</strong> (expéditeur
+        <code class="doc-mono">notification@webhooky.builders</code>), sans réponse attendue de votre part.
+      </p>
+      <ul>
+        <li>
+          <strong>Envoyer les notifications à</strong> — soit <em>l’utilisateur qui a créé ce workflow</em> (l’adresse
+          affichée peut être rappelée à l’écran), soit une <strong>adresse e-mail personnalisée</strong> (champ
+          «&nbsp;E-mail de notification&nbsp;» obligatoire dans ce cas).
+        </li>
+        <li>
+          <strong>Envoyer un récap en cas d’erreur (recommandé)</strong> — case à cocher. Si elle est activée, une
+          notification est envoyée lorsqu’une exécution se termine en échec (voir la section
+          <a href="#webhooks-notif-erreur">Notifications d’erreur détaillées</a>).
+        </li>
+        <li>
+          <strong>Envoyer un récap en cas de succès complet</strong> — case à cocher&nbsp;: notification uniquement
+          lorsque <em>toutes</em> les actions du workflow ont réussi.
+        </li>
+      </ul>
+
+      <h3 class="doc-h3" id="webhooks-actions">Actions — envois Mailjet (plusieurs blocs)</h3>
+      <p>
+        Après un déclenchement traité correctement, les <strong>actions</strong> s’enchaînent dans l’ordre défini dans
+        l’interface. Vous pouvez ajouter <strong>plusieurs actions Mailjet</strong> au même workflow grâce au bouton
+        <strong>«&nbsp;+ Ajouter une action Mailjet&nbsp;»</strong>. Chaque bloc correspond à
+        <strong>une unité d’événement</strong> au regard de votre consommation (un «&nbsp;bloc&nbsp;» = un envoi
+        Mailjet prévu par l’action). La <strong>réponse HTTP globale</strong> vue par le système qui appelle le webhook
+        n’est considérée comme positive que si <strong>toutes</strong> les actions configurées se déroulent avec succès.
+      </p>
+      <p>Champs de chaque bloc «&nbsp;Action <var>n</var>&nbsp;» (Mailjet)&nbsp;:</p>
+      <ul>
+        <li>
+          <strong>Compte Mailjet (clés)</strong> — liste des configurations d’API enregistrées pour votre organisation
+          (voir <a href="#mailjet">Configurations Mailjet</a>).
+        </li>
+        <li><strong>ID template Mailjet</strong> — identifiant numérique du modèle à utiliser dans votre espace Mailjet.</li>
+        <li>
+          <strong>Template language (MJML / dynamique)</strong> — case à cocher pour les modèles utilisant le langage de
+          template Mailjet (variables dynamiques).
+        </li>
+        <li>
+          <strong>Mapping JSON — variable Mailjet → champ POST</strong> — zone de texte au format JSON&nbsp;: chaque clé
+          est le nom de variable attendu par le template Mailjet, chaque valeur est le nom du champ fourni dans la
+          requête HTTP (formulaire ou JSON) pour remplir cette variable.
+        </li>
+        <li>
+          <strong>Champ POST e-mail destinataire</strong> — nom du champ dans la requête qui contient l’adresse du
+          destinataire (souvent <code class="doc-mono">email</code> ou équivalent).
+        </li>
+        <li>
+          <strong>Champ POST nom destinataire</strong> — nom du champ pour le nom affiché du destinataire, si vous en
+          utilisez un.
+        </li>
+        <li>
+          <strong>E-mail destinataire par défaut</strong> — adresse utilisée lorsque la requête ne fournit pas
+          d’e-mail dans le champ indiqué ci-dessus.
+        </li>
+        <li>
+          <strong>Exécuter cette action à chaque réception</strong> — case à cocher&nbsp;: si elle est décochée, l’action
+          est ignorée pour les prochaines exécutions (bloc conservé mais inactif).
+        </li>
+        <li>
+          <strong>Retirer cette action</strong> — bouton visible lorsqu’il reste au moins deux blocs d’action (vous devez
+          toujours conserver au minimum une action pour enregistrer un workflow valide côté interface).
+        </li>
+      </ul>
+
+      <h3 class="doc-h3" id="webhooks-notif-erreur">Notifications d’erreur détaillées</h3>
+      <p>
+        Lorsque l’option <strong>«&nbsp;Envoyer un récap en cas d’erreur&nbsp;»</strong> est activée et qu’une
+        exécution échoue, une notification est adressée au destinataire choisi (créateur du workflow ou e-mail
+        personnalisé). Ce message est volontairement <strong>détaillé</strong> pour faciliter le diagnostic.
+      </p>
+      <ul>
+        <li>
+          <strong>Contexte général</strong>&nbsp;: nom du workflow, numéro de journal d’exécution, statut global
+          indiquant qu’au moins une action a échoué, et message récapitulatif lorsque la plateforme en fournit un.
+        </li>
+        <li>
+          <strong>Stade de l’échec</strong>&nbsp;: selon le cas, l’échec peut intervenir lors de
+          <strong>l’analyse du corps de la requête</strong> (données illisibles ou invalides) ou lors de
+          <strong>l’exécution d’une ou plusieurs actions</strong> (par exemple appel Mailjet).
+        </li>
+        <li>
+          <strong>Détail par action</strong>&nbsp;: pour chaque action Mailjet exécutée ou tentée, la notification reprend
+          le statut de l’action, l’adresse du destinataire lorsqu’elle est connue, le code HTTP renvoyé par Mailjet,
+          l’identifiant de message Mailjet le cas échéant, et un texte d’erreur explicite lorsque l’API ou la plateforme
+          en renvoie un.
+        </li>
+        <li>
+          <strong>Données utiles au debug</strong>&nbsp;: selon la chaîne d’envoi configurée par la plateforme, le
+          récapitulatif peut aussi inclure des éléments techniques (extrait de la charge reçue, aperçu des données
+          interprétées, informations de contexte comme l’horodatage, la durée du traitement ou des en-têtes utiles),
+          dans les limites fixées pour la taille des messages et la protection des données.
+        </li>
+      </ul>
+      <p>
+        Pour le texte brut reçu par e-mail, le corps reprend ces informations sous forme de lignes lisibles (récap par
+        action). Un envoi via un modèle de courrier plus riche peut reprendre les mêmes informations de façon structurée
+        pour affichage dans votre client mail.
+      </p>
+
+      <h3 class="doc-h3" id="webhooks-quotas">Quotas et forfait</h3>
+      <p>
+        Chaque réception peut être comptabilisée dans votre <strong>consommation d’événements</strong> selon votre
+        abonnement. Si le quota est atteint ou le forfait inactif, les envois peuvent être refusés&nbsp;; le tableau de
+        bord et les messages dans l’application vous informent.
+      </p>
+    </section>
+
+    <section class="doc-section" aria-labelledby="mailjet">
+      <h2 id="mailjet">Configurations Mailjet</h2>
+      <p>
+        Gestion des comptes Mailjet utilisés par vos workflows. L’accès en création ou modification dépend de votre
+        rôle et des habilitations.
+      </p>
+      <ul>
+        <li>Enregistrer une <strong>paire de clés API</strong> Mailjet pour votre organisation (libellé, clés).</li>
+        <li><strong>Lister</strong>, <strong>modifier</strong> ou <strong>supprimer</strong> une configuration.</li>
+        <li>
+          Les workflows référencent ces configurations pour envoyer des e-mails à partir de vos templates Mailjet.
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="users">
+      <h2 id="users">Gestion des membres (gestionnaire)</h2>
+      <p>
+        Réservé aux <strong>gestionnaires</strong>. Les utilisateurs standards n’ont pas accès à cet écran.
+      </p>
+      <ul>
+        <li>
+          <strong>Liste</strong> des comptes de l’organisation (e-mail, rôle, statut, dates affichées par l’application).
+        </li>
+        <li>
+          <strong>Inviter</strong> un membre par e-mail&nbsp;: la personne reçoit un e-mail d’activation pour rejoindre
+          votre organisation.
+        </li>
+        <li>
+          <strong>Bloquer</strong> ou <strong>débloquer</strong> l’accès d’un compte (sauf le vôtre), dans les limites
+          prévues par l’application (par exemple sur les profils «&nbsp;utilisateur&nbsp;» de votre organisation).
+        </li>
+        <li><strong>Supprimer</strong> un compte (avec confirmation et garde-fous éventuels).</li>
+        <li>
+          Consulter le <strong>journal des actions</strong> liées à votre organisation (invitations, blocages,
+          suppressions).
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="billing">
+      <h2 id="billing">Organisation et facturation</h2>
+      <p>
+        Écran accessible depuis le menu de l’application pour les <strong>gestionnaires</strong> (les utilisateurs
+        standards n’y ont en général pas accès). Il regroupe notamment les onglets suivants&nbsp;:
+      </p>
+      <ul>
+        <li>
+          <strong>Organisation</strong> — nom de la structure et <strong>adresse de facturation</strong> (voie,
+          complément, code postal, ville, pays). Enregistrement des modifications.
+        </li>
+        <li>
+          <strong>Forfaits et achats</strong> — présentation des offres (Free, Starter, Pro), forfait actuel, souscription
+          ou changement d’offre lorsque proposé, achat de packs d’événements supplémentaires selon votre plan.
+        </li>
+        <li>
+          <strong>Consommation</strong> — volume de réceptions sur les webhooks pour la période affichée et indicateurs de
+          quota liés à l’abonnement.
+        </li>
+        <li>
+          <strong>Factures</strong> — liste des factures disponibles dans l’interface, avec téléchargement lorsque la
+          plateforme fournit un document.
+        </li>
+      </ul>
+    </section>
+
+    <section class="doc-section" aria-labelledby="premiere-org">
+      <h2 id="premiere-org">Première organisation</h2>
+      <p>
+        Si votre compte n’est encore membre d’aucune organisation, l’application vous propose un parcours pour en créer
+        une (nom obligatoire&nbsp;; le nom doit être <strong>unique</strong> sur la plateforme). Jusqu’à cette étape,
+        certains modules restent indisponibles. Si vous rejoignez plutôt une équipe par invitation, ce parcours n’est pas
+        nécessaire dès lors que votre rattachement est enregistré.
+      </p>
+    </section>
+
+    <section class="doc-section" aria-labelledby="suite">
+      <h2 id="suite">Pour aller plus loin</h2>
+      <ul>
+        <li><a href="/documentation-technique">Documentation technique</a> — intégration des formulaires et des appels.</li>
+        <li><a href="/tarifs">Tarifs</a> — grille Free, Starter, Pro et packs.</li>
+        <li>
+          <a href={BUILDER_URL}>Ouvrir webhooky.builders</a> — application en ligne.
+        </li>
+      </ul>
+      <p class="doc-muted-footer">
+        Le produit évolue&nbsp;: certaines étiquettes d’écran peuvent varier. En cas d’écart, se référer à l’interface
+        affichée sur votre compte.
+      </p>
+    </section>
+  </main>
+</SiteLayout>
+
+<style>
+  .doc-toc {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .doc-toc-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .doc-toc ul {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  .doc-toc li {
+    margin: 0.35rem 0;
+  }
+
+  .doc-toc-sub {
+    margin: 0.35rem 0 0;
+    padding-left: 1.1rem;
+    list-style: circle;
+    font-size: 0.95rem;
+  }
+
+  .doc-toc-sub li {
+    margin: 0.25rem 0;
+  }
+
+  .doc-h3 {
+    margin: 1.25rem 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .doc-h4 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  .doc-mono {
+    font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+    font-size: 0.92em;
+    background: rgba(12, 25, 41, 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  .doc-muted-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.92rem;
+    color: var(--text-muted);
+  }
+</style>

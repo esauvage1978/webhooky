@@ -14,6 +14,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: OrganizationRepository::class)]
+#[ORM\Table(name: 'organization')]
+#[ORM\UniqueConstraint(name: 'UNIQ_ORGANIZATION_NAME', fields: ['name'])]
 #[ORM\HasLifecycleCallbacks]
 class Organization
 {
@@ -26,6 +28,27 @@ class Organization
     #[Assert\Length(max: 180)]
     #[ORM\Column(length: 180)]
     private string $name = '';
+
+    #[Assert\Length(max: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $billingLine1 = null;
+
+    #[Assert\Length(max: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $billingLine2 = null;
+
+    #[Assert\Length(max: 32)]
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $billingPostalCode = null;
+
+    #[Assert\Length(max: 128)]
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $billingCity = null;
+
+    /** Code pays ISO 3166-1 alpha-2 (ex. FR) */
+    #[Assert\Length(max: 2)]
+    #[ORM\Column(length: 2, nullable: true)]
+    private ?string $billingCountry = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
@@ -60,13 +83,13 @@ class Organization
     #[ORM\Column(options: ['default' => 0])]
     private int $eventsExtraQuota = 0;
 
-    /** @var Collection<int, User> */
-    #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'organization')]
-    private Collection $users;
+    /** @var Collection<int, OrganizationMembership> */
+    #[ORM\OneToMany(targetEntity: OrganizationMembership::class, mappedBy: 'organization', orphanRemoval: true, cascade: ['persist'])]
+    private Collection $memberships;
 
     public function __construct()
     {
-        $this->users = new ArrayCollection();
+        $this->memberships = new ArrayCollection();
     }
 
     #[ORM\PostLoad]
@@ -121,6 +144,71 @@ class Organization
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getBillingLine1(): ?string
+    {
+        return $this->billingLine1;
+    }
+
+    public function setBillingLine1(?string $billingLine1): static
+    {
+        $this->billingLine1 = $billingLine1 !== null && $billingLine1 !== '' ? $billingLine1 : null;
+
+        return $this;
+    }
+
+    public function getBillingLine2(): ?string
+    {
+        return $this->billingLine2;
+    }
+
+    public function setBillingLine2(?string $billingLine2): static
+    {
+        $this->billingLine2 = $billingLine2 !== null && $billingLine2 !== '' ? $billingLine2 : null;
+
+        return $this;
+    }
+
+    public function getBillingPostalCode(): ?string
+    {
+        return $this->billingPostalCode;
+    }
+
+    public function setBillingPostalCode(?string $billingPostalCode): static
+    {
+        $this->billingPostalCode = $billingPostalCode !== null && $billingPostalCode !== '' ? $billingPostalCode : null;
+
+        return $this;
+    }
+
+    public function getBillingCity(): ?string
+    {
+        return $this->billingCity;
+    }
+
+    public function setBillingCity(?string $billingCity): static
+    {
+        $this->billingCity = $billingCity !== null && $billingCity !== '' ? $billingCity : null;
+
+        return $this;
+    }
+
+    public function getBillingCountry(): ?string
+    {
+        return $this->billingCountry;
+    }
+
+    public function setBillingCountry(?string $billingCountry): static
+    {
+        if ($billingCountry === null || $billingCountry === '') {
+            $this->billingCountry = null;
+
+            return $this;
+        }
+        $this->billingCountry = strtoupper(substr($billingCountry, 0, 2));
 
         return $this;
     }
@@ -268,10 +356,10 @@ class Organization
     }
 
     /**
-     * @return Collection<int, User>
+     * @return Collection<int, OrganizationMembership>
      */
-    public function getUsers(): Collection
+    public function getMemberships(): Collection
     {
-        return $this->users;
+        return $this->memberships;
     }
 }

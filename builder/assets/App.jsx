@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+const ORG_SESSION_KEY = 'webhookyOrgSessionOk';
 import LoginForm from './LoginForm.jsx';
 import ForgotPasswordForm from './ForgotPasswordForm.jsx';
 import RegisterForm from './RegisterForm.jsx';
@@ -11,9 +13,104 @@ import FormWebhooks from './FormWebhooks.jsx';
 import SetupOrganization from './SetupOrganization.jsx';
 import InvitationForm from './InvitationForm.jsx';
 import Users from './Users.jsx';
+import OrganizationBilling from './OrganizationBilling.jsx';
+
+const AUTH_PATHS = ['/inscription', '/mot-de-passe-oublie', '/reinitialisation-mot-de-passe', '/invitation'];
+
+function normalizePath(pathname) {
+  return (pathname || '/').replace(/\/$/, '') || '/';
+}
+
+/** @returns {{ kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'edit'; id: number } | { kind: 'logs'; id: number } | null} */
+function parseWebhooksRoute(pathname) {
+  const p = normalizePath(pathname);
+  if (p === '/webhooks') return { kind: 'list' };
+  const editMatch = p.match(/^\/webhooks\/(\d+)\/edit$/);
+  if (editMatch) return { kind: 'edit', id: parseInt(editMatch[1], 10) };
+  const logsMatch = p.match(/^\/webhooks\/(\d+)\/logs$/);
+  if (logsMatch) return { kind: 'logs', id: parseInt(logsMatch[1], 10) };
+  const detailMatch = p.match(/^\/webhooks\/(\d+)$/);
+  if (detailMatch) return { kind: 'detail', id: parseInt(detailMatch[1], 10) };
+  return null;
+}
+
+/** @param {{ kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'edit'; id: number } | { kind: 'logs'; id: number }} route */
+function pathForWebhooksRoute(route) {
+  if (!route || route.kind === 'list') return '/webhooks';
+  if (route.kind === 'detail') return `/webhooks/${route.id}`;
+  if (route.kind === 'edit') return `/webhooks/${route.id}/edit`;
+  if (route.kind === 'logs') return `/webhooks/${route.id}/logs`;
+  return '/webhooks';
+}
+
+/** @param {string} pathname */
+function pathToNavId(pathname) {
+  const p = normalizePath(pathname);
+  if (AUTH_PATHS.includes(p)) return null;
+  if (p === '/' || p === '/dashboard') return 'dashboard';
+  const seg = p.slice(1).split('/')[0] || '';
+  switch (seg) {
+    case 'webhooks':
+      return 'formWebhooks';
+    case 'mailjet':
+    case 'mailjets':
+      return 'mailjets';
+    case 'organizations':
+    case 'organisations':
+      return 'organizations';
+    case 'users':
+    case 'utilisateurs':
+      return 'users';
+    case 'mon-organisation':
+      return 'setupOrganization';
+    case 'facturation':
+      return 'organizationBilling';
+    default:
+      return null;
+  }
+}
+
+/** @param {string} navId */
+function navIdToPath(navId) {
+  switch (navId) {
+    case 'dashboard':
+      return '/';
+    case 'formWebhooks':
+      return '/webhooks';
+    case 'mailjets':
+      return '/mailjet';
+    case 'organizations':
+      return '/organizations';
+    case 'users':
+      return '/users';
+    case 'setupOrganization':
+      return '/mon-organisation';
+    case 'organizationBilling':
+      return '/facturation';
+    default:
+      return '/';
+  }
+}
+
+/** @param {object} user @param {string} navId */
+function userCanAccessNav(user, navId) {
+  const isAdmin = user.roles.includes('ROLE_ADMIN');
+  const isManager = user.roles.includes('ROLE_MANAGER');
+  const orgCount = user.organizations?.length ?? 0;
+  const needsOrg = !isAdmin && orgCount === 0;
+  if (needsOrg) return navId === 'setupOrganization';
+  if (navId === 'setupOrganization') return false;
+  if (navId === 'organizations' && !isAdmin) return false;
+  if (navId === 'users' && !isAdmin && !isManager) return false;
+  if (navId === 'organizationBilling') {
+    if (!user.organization) return false;
+    return isAdmin || isManager;
+  }
+  return true;
+}
 
 function authScreenFromPath() {
-  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  const path = normalizePath(window.location.pathname);
   if (path === '/inscription') return 'register';
   if (path === '/mot-de-passe-oublie') return 'forgot';
   if (path === '/reinitialisation-mot-de-passe') return 'reset';
@@ -21,10 +118,86 @@ function authScreenFromPath() {
   return 'login';
 }
 
+/** Écran obligatoire après connexion si plusieurs organisations. */
+function OrganizationContextPicker({ user, onComplete }) {
+  const orgs = user.organizations ?? [];
+  const [selectedId, setSelectedId] = useState(() => user.organization?.id ?? orgs[0]?.id ?? null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!selectedId) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch('/api/me/active-organization', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: selectedId }),
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok) {
+        setError((data && data.error) || 'Échec de la sélection');
+        setBusy(false);
+        return;
+      }
+      sessionStorage.setItem(ORG_SESSION_KEY, '1');
+      onComplete();
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="admin-org-context-overlay" role="dialog" aria-modal="true" aria-labelledby="org-context-title">
+      <div className="admin-org-context-card">
+        <h2 id="org-context-title">Organisation de travail</h2>
+        <p>
+          Votre compte est rattaché à plusieurs organisations. Choisissez celle dans laquelle vous travaillez pour cette
+          session. Vous pourrez la modifier à tout moment depuis le menu latéral.
+        </p>
+        {error ? (
+          <p className="admin-org-context-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="admin-org-context-list" role="radiogroup" aria-label="Organisations">
+          {orgs.map((o) => (
+            <label key={o.id} className="admin-org-context-option">
+              <input
+                type="radio"
+                name="org-context"
+                checked={selectedId === o.id}
+                onChange={() => setSelectedId(o.id)}
+              />
+              <span>
+                <strong>{o.name}</strong>
+              </span>
+            </label>
+          ))}
+        </div>
+        <button type="button" className="btn" onClick={() => void submit()} disabled={busy || !selectedId}>
+          {busy ? 'Validation…' : 'Continuer'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('dashboard');
+  /** Chemins profonds (/webhooks/2/edit) — tenu au pas avec l’historique */
+  const [pathname, setPathname] = useState(() => window.location.pathname);
   const [authScreen, setAuthScreen] = useState(() => authScreenFromPath());
   const [authNotice, setAuthNotice] = useState(null);
 
@@ -42,12 +215,45 @@ export default function App() {
     [],
   );
 
+  const navigateDashboard = useCallback((navId) => {
+    setActiveNav(navId);
+    const next = navIdToPath(navId);
+    if (normalizePath(window.location.pathname) !== next) {
+      window.history.pushState({}, '', next);
+    }
+    setPathname(window.location.pathname);
+  }, []);
+
+  const navigateWebhooks = useCallback((route) => {
+    const next = pathForWebhooksRoute(route);
+    window.history.pushState({}, '', next);
+    setPathname(next);
+  }, []);
+
+  const webhooksRoute = useMemo(() => {
+    if (activeNav !== 'formWebhooks') return { kind: 'list' };
+    return parseWebhooksRoute(pathname) ?? { kind: 'list' };
+  }, [activeNav, pathname]);
+
   const refreshSession = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/me', { credentials: 'include' });
       if (res.ok) {
-        const data = await res.json();
+        let data = await res.json();
+        const isAdm = data.roles?.includes('ROLE_ADMIN');
+        const orgs = data.organizations ?? [];
+        if (!isAdm && orgs.length === 1 && !data.organization) {
+          const r2 = await fetch('/api/me/active-organization', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ organizationId: orgs[0].id }),
+          });
+          if (r2.ok) {
+            data = await r2.json();
+          }
+        }
         setUser(data);
       } else {
         setUser(null);
@@ -64,10 +270,60 @@ export default function App() {
   }, [refreshSession]);
 
   useEffect(() => {
-    const onPop = () => setAuthScreen(authScreenFromPath());
+    const onPop = () => {
+      setPathname(window.location.pathname);
+      if (!user) {
+        setAuthScreen(authScreenFromPath());
+        return;
+      }
+      const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
+      if (needsOrgSetupOnly) {
+        setActiveNav('setupOrganization');
+        return;
+      }
+      const nav = pathToNavId(window.location.pathname);
+      if (nav && userCanAccessNav(user, nav)) {
+        setActiveNav(nav);
+        return;
+      }
+      if (nav === null && !AUTH_PATHS.includes(normalizePath(window.location.pathname))) {
+        setActiveNav('dashboard');
+        if (normalizePath(window.location.pathname) !== '/') {
+          window.history.replaceState({}, '', '/');
+          setPathname('/');
+        }
+      }
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || loading) return;
+
+    const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
+    if (needsOrgSetupOnly) {
+      setActiveNav('setupOrganization');
+      if (normalizePath(window.location.pathname) !== '/mon-organisation') {
+        window.history.replaceState({}, '', '/mon-organisation');
+        setPathname('/mon-organisation');
+      }
+      return;
+    }
+
+    const nav = pathToNavId(window.location.pathname);
+    if (nav && userCanAccessNav(user, nav)) {
+      setActiveNav(nav);
+      setPathname(window.location.pathname);
+      return;
+    }
+
+    if (normalizePath(window.location.pathname) !== '/') {
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
+    }
+    setActiveNav('dashboard');
+  }, [user, loading]);
 
   useEffect(() => {
     if (user) return;
@@ -75,6 +331,7 @@ export default function App() {
     if (q.get('verified') === '1') {
       setAuthNotice({ type: 'ok', text: 'Votre adresse e-mail est confirmée. Vous pouvez vous connecter.' });
       window.history.replaceState({}, '', '/');
+      setPathname('/');
       setAuthScreen('login');
     }
     const verr = q.get('verify_error');
@@ -86,19 +343,35 @@ export default function App() {
       };
       setAuthNotice({ type: 'err', text: map[verr] ?? 'La confirmation a échoué.' });
       window.history.replaceState({}, '', '/');
+      setPathname('/');
       setAuthScreen('login');
     }
   }, [user]);
 
   const handleLogout = async () => {
     await fetch('/api/logout', { credentials: 'include', method: 'GET' });
+    try {
+      sessionStorage.removeItem(ORG_SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
     setUser(null);
     setActiveNav('dashboard');
+    const p = normalizePath(window.location.pathname);
+    if (!AUTH_PATHS.includes(p)) {
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
+    } else {
+      setPathname(window.location.pathname);
+    }
+    setAuthScreen(authScreenFromPath());
   };
 
   useEffect(() => {
     if (user && !user.roles.includes('ROLE_ADMIN') && activeNav === 'organizations') {
       setActiveNav('dashboard');
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
     }
   }, [user, activeNav]);
 
@@ -108,15 +381,43 @@ export default function App() {
     const isManager = user.roles.includes('ROLE_MANAGER');
     if (!isAdmin && !isManager && activeNav === 'users') {
       setActiveNav('dashboard');
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
     }
   }, [user, activeNav]);
 
   useEffect(() => {
     if (!user) return;
-    if (user.roles.includes('ROLE_ADMIN')) return;
-    if (user.organization) return;
-    setActiveNav('setupOrganization');
-  }, [user]);
+    const isAdmin = user.roles.includes('ROLE_ADMIN');
+    const isManager = user.roles.includes('ROLE_MANAGER');
+    if ((!isAdmin && !isManager) || !user.organization) {
+      if (activeNav === 'organizationBilling') {
+        setActiveNav('dashboard');
+        window.history.replaceState({}, '', '/');
+        setPathname('/');
+      }
+    }
+  }, [user, activeNav]);
+
+  const switchOrganization = useCallback(
+    async (organizationId) => {
+      const res = await fetch('/api/me/active-organization', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId }),
+      });
+      if (res.ok) {
+        try {
+          sessionStorage.setItem(ORG_SESSION_KEY, '1');
+        } catch {
+          /* ignore */
+        }
+        await refreshSession();
+      }
+    },
+    [refreshSession],
+  );
 
   if (loading) {
     return (
@@ -130,22 +431,30 @@ export default function App() {
   }
 
   if (user) {
-    const needsOrgSetup = !user.roles.includes('ROLE_ADMIN') && !user.organization;
+    const isAdmin = user.roles.includes('ROLE_ADMIN');
+    const orgs = user.organizations ?? [];
+    const needsOrgSetup = !isAdmin && orgs.length === 0;
+    const showOrgPicker = !isAdmin && orgs.length > 1 && !sessionStorage.getItem(ORG_SESSION_KEY);
+
+    if (showOrgPicker) {
+      return <OrganizationContextPicker user={user} onComplete={() => void refreshSession()} />;
+    }
 
     return (
       <DashboardLayout
         user={user}
         activeNav={activeNav}
-        onNavigate={setActiveNav}
+        onNavigate={navigateDashboard}
         onLogout={handleLogout}
+        onOrganizationSwitch={orgs.length > 1 ? switchOrganization : undefined}
       >
         {needsOrgSetup ? (
           <div className="content-card">
-            <SetupOrganization onSuccess={refreshSession} onNavigate={setActiveNav} />
+            <SetupOrganization onSuccess={refreshSession} onNavigate={navigateDashboard} />
           </div>
         ) : null}
         {!needsOrgSetup && activeNav === 'dashboard' ? (
-          <DashboardHome user={user} onNavigate={setActiveNav} onSessionRefresh={refreshSession} />
+          <DashboardHome user={user} onNavigate={navigateDashboard} onSessionRefresh={refreshSession} />
         ) : null}
         {!needsOrgSetup && activeNav === 'organizations' && user.roles.includes('ROLE_ADMIN') ? (
           <div className="content-card">
@@ -159,7 +468,7 @@ export default function App() {
         ) : null}
         {!needsOrgSetup && activeNav === 'formWebhooks' ? (
           <div className="content-card">
-            <FormWebhooks user={user} />
+            <FormWebhooks user={user} route={webhooksRoute} onWebhooksNavigate={navigateWebhooks} />
           </div>
         ) : null}
         {!needsOrgSetup &&
@@ -167,6 +476,14 @@ export default function App() {
         (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
           <div className="content-card">
             <Users user={user} />
+          </div>
+        ) : null}
+        {!needsOrgSetup &&
+        activeNav === 'organizationBilling' &&
+        user.organization &&
+        (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
+          <div className="content-card">
+            <OrganizationBilling user={user} onSessionRefresh={refreshSession} />
           </div>
         ) : null}
       </DashboardLayout>
@@ -180,9 +497,9 @@ export default function App() {
       <div className="login-split-brand">
         <div className="login-brand-inner">
           <span className="login-brand-badge" />
-          <h1 className="login-brand-title">Webhooky</h1>
+          <h1 className="login-brand-title">Webhooky Builders</h1>
           <p className="login-brand-tagline">
-            Automatisez vos webhooks et vos envois (Mailjet) — Webhooky, tableau de bord pour vos organisations.
+            Automatisez vos webhooks et vos envois (Mailjet) — tableau de bord pour vos organisations, sur webhooky.builders.
           </p>
           <ul className="login-brand-list">
             <li>Sessions sécurisées</li>
@@ -205,6 +522,16 @@ export default function App() {
           {authScreen === 'forgot' ? <ForgotPasswordForm /> : null}
           {authScreen === 'reset' ? <ResetPasswordForm /> : null}
           {authScreen === 'invitation' ? <InvitationForm /> : null}
+          <p className="login-vitrine-foot">
+            <a
+              href="https://webhooky.fr"
+              className="login-inline-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Site vitrine — webhooky.fr
+            </a>
+          </p>
         </div>
       </div>
     </div>

@@ -1,0 +1,16 @@
+---
+description: Après des modifications de code dans ce dépôt, créer un commit et pousser vers le remote.
+alwaysApply: true
+---
+
+# Git — commit et push systématiques
+
+Lorsque tu modifies des fichiers du projet dans une session de travail :
+
+1. Vérifie les changements avec `git status` / `git diff`.
+2. Crée un **commit** avec un message clair en français (phrase complète, concis) décrivant l’intention du changement.
+3. Exécute **`git push`** vers la branche suivie si un remote est configuré (`origin` ou équivalent).
+
+Si le dépôt n’est pas encore initialisé ou s’il n’y a pas de remote, indique-le brièvement à l’utilisateur après le commit local, sans bloquer le reste du travail.
+
+Ne commite jamais de secrets (`.env` avec mots de passe réels, clés API, etc.).
