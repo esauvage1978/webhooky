@@ -1,37 +1,35 @@
 ---
-description: Après modifications — builds (vitrine, builder), schéma Doctrine, puis commit et push.
+description: À chaque modification — avant toute chose, builds vitrine + builder + Doctrine, puis Git.
 alwaysApply: true
 ---
 
-# Après des modifications dans ce dépôt
+# À chaque modification dans ce dépôt
 
-À chaque série de changements que tu apportes au code, exécute **dans l’ordre** :
+**Avant toute autre action** (message à l’utilisateur, commit, push, suite du travail, etc.), dès que tu as modifié des fichiers, exécute **dans cet ordre exact** :
 
 ## 1. Site vitrine
 
-Dans le dossier `site_vitrine` :
-
 ```bash
-npm run build
+cd site_vitrine && npm run build
 ```
 
-## 2. Builder (back-end + assets)
-
-Dans le dossier `builder` :
+## 2. Builder — schéma Doctrine puis assets
 
 ```bash
-php bin/console doctrine:schema:update --force
-npm run build
+cd builder && php bin/console doctrine:schema:update --force
+cd builder && npm run build
 ```
 
-En cas d’échec d’une commande, corrige le problème avant de poursuivre (commits, etc.).
+Si une commande échoue, corrige le problème en priorité ; ne continue pas comme si le build était OK.
 
-## 3. Git
+---
 
-1. Vérifie les changements avec `git status` / `git diff`.
-2. Crée un **commit** avec un message clair en français (phrase complète, concis) décrivant l’intention du changement.
-3. Exécute **`git push`** vers la branche suivie si un remote est configuré.
+Ensuite seulement : vérifications Git, commit, push.
 
-Si le dépôt n’a pas de remote, indique-le après le commit local.
+1. `git status` / `git diff`.
+2. **Commit** avec un message clair en français.
+3. **`git push`** si un remote est configuré.
+
+Sans remote, indique-le après le commit local.
 
 Ne commite jamais de secrets (`.env` avec mots de passe réels, clés API, etc.).
