@@ -1,16 +1,37 @@
 ---
-description: Après des modifications de code dans ce dépôt, créer un commit et pousser vers le remote.
+description: Après modifications — builds (vitrine, builder), schéma Doctrine, puis commit et push.
 alwaysApply: true
 ---
 
-# Git — commit et push systématiques
+# Après des modifications dans ce dépôt
 
-Lorsque tu modifies des fichiers du projet dans une session de travail :
+À chaque série de changements que tu apportes au code, exécute **dans l’ordre** :
+
+## 1. Site vitrine
+
+Dans le dossier `site_vitrine` :
+
+```bash
+npm run build
+```
+
+## 2. Builder (back-end + assets)
+
+Dans le dossier `builder` :
+
+```bash
+php bin/console doctrine:schema:update --force
+npm run build
+```
+
+En cas d’échec d’une commande, corrige le problème avant de poursuivre (commits, etc.).
+
+## 3. Git
 
 1. Vérifie les changements avec `git status` / `git diff`.
 2. Crée un **commit** avec un message clair en français (phrase complète, concis) décrivant l’intention du changement.
-3. Exécute **`git push`** vers la branche suivie si un remote est configuré (`origin` ou équivalent).
+3. Exécute **`git push`** vers la branche suivie si un remote est configuré.
 
-Si le dépôt n’est pas encore initialisé ou s’il n’y a pas de remote, indique-le brièvement à l’utilisateur après le commit local, sans bloquer le reste du travail.
+Si le dépôt n’a pas de remote, indique-le après le commit local.
 
 Ne commite jamais de secrets (`.env` avec mots de passe réels, clés API, etc.).
