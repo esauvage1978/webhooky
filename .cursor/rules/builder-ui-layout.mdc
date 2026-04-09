@@ -1,0 +1,37 @@
+---
+description: Mise en page des écrans du builder — hero hors carte, corps en content-card (modèle console).
+globs: builder/assets/**/*.jsx
+alwaysApply: false
+---
+
+# Interfaces du builder (Webhooky)
+
+Toute **nouvelle page ou écran** rendu dans `DashboardLayout` doit suivre ce modèle, aligné sur Utilisateurs, Projets, Intégrations, Workflows (liste / fiche / édition / journaux), Organisations, Facturation, Compte et tableau de bord.
+
+## Structure obligatoire
+
+1. **Conteneur** : `className="users-shell"` (+ éventuellement un identifiant de page, ex. `ma-page-page`).
+2. **En-tête hors carte** : `<header className="users-hero users-hero--minimal">`
+   - **Titre** : `<h1 className="users-hero-title">` avec une icône Font Awesome cohérente (`fa-solid fa-…`, `aria-hidden`) + `<span>` pour le libellé.
+   - **Bloc gauche** : `<div className="users-hero-text">` — y placer liens/boutons « retour » (`fw-back`, `fw-detail-page-back` si besoin), sous-titre en `<p className="users-hero-sub muted">` si utile.
+   - **Actions à droite** : `<div className="users-hero-actions wp-projects-hero-actions">` — CTA principaux, secondaires, menus.
+3. **Corps** : `<div className="content-card">` englobe tout le reste (formulaires, tableaux, onglets + panneaux, grilles, messages d’erreur du corps de page).
+4. **Modales / backdrops** : restent **en dehors** de la `content-card`, au niveau du `users-shell` (comme sur Utilisateurs / Projets).
+
+## `App.jsx`
+
+- **Ne pas** envelopper la page dans `<div className="content-card">`. Le composant de page porte lui-même le hero + la carte.
+
+## Exceptions
+
+- **Éléments embarqués** dans un autre flux (ex. `SetupOrganization` avec `embeddedInOnboarding`) : pas de double hero ; garder un bloc compact (formulaire seul) si le parent fournit déjà titre et intro.
+- **Écrans d’auth** (login, etc.) : hors périmètre de cette convention.
+
+## CSS
+
+- Pour l’alignement haut du hero : `.ma-page-page .users-hero--minimal { align-items: flex-start; }` si plusieurs lignes ou chips.
+- Boutons hero avec icône : classes `wp-proj-hero-btn` + règles sous la page si besoin (voir `.integrations-page .wp-proj-hero-btn`, `.fw-workflows-list-page`).
+
+## Références dans le dépôt
+
+À imiter : `Users.jsx`, `WebhookProjects.jsx`, `Integrations.jsx`, `ServiceConnections.jsx`, `FormWebhooks.jsx` (vues list / detail / editor / logs), `Organizations.jsx`, `OrganizationBilling.jsx`, `AccountProfile.jsx`, `DashboardHome.jsx`.
