@@ -3962,6 +3962,40 @@ h1 {
   margin-top: 0;
 }
 
+.fw-workflow-editor-page .users-hero--minimal,
+.fw-workflow-logs-page .users-hero--minimal {
+  align-items: flex-start;
+}
+
+.fw-editor-hero-tools {
+  align-self: center;
+}
+
+.fw-logs-page-back-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.organizations-page .users-hero--minimal,
+.account-settings-page .users-hero--minimal,
+.setup-organization-page .users-hero--minimal {
+  align-items: flex-start;
+}
+
+.dashboard-home-hero {
+  align-items: flex-start;
+}
+
+.dashboard-home-intro {
+  max-width: 52ch;
+}
+
+.org-billing-inner .users-tabs.org-billing-tabs {
+  margin-top: 0;
+}
+
 .fw-workflow-detail-page .users-hero--minimal {
   align-items: flex-start;
 }

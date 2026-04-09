@@ -145,23 +145,43 @@ export default function Organizations({ user, onOrganizationChanged }) {
   };
 
   if (loading) {
-    return <p className="muted">Organisations…</p>;
+    return (
+      <div className="users-shell organizations-page">
+        <header className="users-hero users-hero--minimal">
+          <h1 className="users-hero-title">
+            <i className="fa-solid fa-building" aria-hidden />
+            <span>Organisations</span>
+          </h1>
+        </header>
+        <div className="content-card">
+          <p className="muted">Organisations…</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <section className="org-section">
-      <h2>Organisations</h2>
+    <div className="users-shell organizations-page org-section">
+      <header className="users-hero users-hero--minimal">
+        <h1 className="users-hero-title">
+          <i className="fa-solid fa-building" aria-hidden />
+          <span>Organisations</span>
+        </h1>
+        {isAdmin && editingId !== 'new' ? (
+          <div className="users-hero-actions wp-projects-hero-actions">
+            <button type="button" className="btn secondary small" onClick={startCreate}>
+              Nouvelle organisation
+            </button>
+          </div>
+        ) : null}
+      </header>
+
+      <div className="content-card">
       {error ? <p className="error">{error}</p> : null}
 
       {!isAdmin && items.length === 0 ? (
         <p className="muted">Aucune organisation associée à votre compte. Contactez un administrateur.</p>
       ) : null}
-
-      {isAdmin && editingId !== 'new' && (
-        <button type="button" className="btn secondary small" onClick={startCreate}>
-          Nouvelle organisation
-        </button>
-      )}
 
       {isAdmin && editingId === 'new' && (
         <form className="org-form" onSubmit={(e) => void submitCreate(e)}>
@@ -269,6 +289,7 @@ export default function Organizations({ user, onOrganizationChanged }) {
           </tbody>
         </table>
       </div>
-    </section>
+      </div>
+    </div>
   );
 }

@@ -10,7 +10,12 @@ async function parseJson(res) {
   }
 }
 
-export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnboarding = false }) {
+export default function SetupOrganization({
+  onSuccess,
+  onNavigate,
+  embeddedInOnboarding = false,
+  useAdminOrganizationEndpoint = false,
+}) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [fields, setFields] = useState({});
@@ -22,7 +27,8 @@ export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnb
     setFields({});
     setPending(true);
     try {
-      const res = await fetch('/api/organizations/bootstrap', {
+      const endpoint = useAdminOrganizationEndpoint ? '/api/onboarding/organization' : '/api/organizations/bootstrap';
+      const res = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -31,7 +37,13 @@ export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnb
       const data = await parseJson(res);
       if (!res.ok) {
         if (data?.fields && typeof data.fields === 'object') setFields(data.fields);
-        setError(data?.error && typeof data.error === 'string' ? data.error : 'Création impossible');
+        const msg =
+          data?.error && typeof data.error === 'string'
+            ? data.error
+            : data?.code === 'organization_name_taken'
+              ? 'Ce nom d’organisation est déjà utilisé.'
+              : 'Création impossible';
+        setError(msg);
         return;
       }
       await onSuccess?.();
@@ -45,13 +57,8 @@ export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnb
     }
   };
 
-  return (
-    <section className="org-section">
-      <h2>Créer votre organisation</h2>
-      <p className="muted" style={{ maxWidth: '40rem' }}>
-        Votre compte n’est pas encore rattaché à une structure. Définissez le nom de votre organisation pour
-        accéder au tableau de bord, à Mailjet et aux webhooks. Ce nom peut être modifié plus tard.
-      </p>
+  if (embeddedInOnboarding) {
+    return (
       <form className="org-form mailjet-form" onSubmit={(e) => void submit(e)} style={{ maxWidth: '28rem' }}>
         <label className="field">
           <span>Nom de l’organisation</span>
@@ -70,6 +77,43 @@ export default function SetupOrganization({ onSuccess, onNavigate, embeddedInOnb
           {pending ? 'Création…' : 'Créer et continuer'}
         </button>
       </form>
-    </section>
+    );
+  }
+
+  return (
+    <div className="users-shell setup-organization-page org-section">
+      <header className="users-hero users-hero--minimal">
+        <div className="users-hero-text">
+          <h1 className="users-hero-title">
+            <i className="fa-solid fa-building" aria-hidden />
+            <span>Créer votre organisation</span>
+          </h1>
+          <p className="users-hero-sub muted" style={{ maxWidth: '40rem' }}>
+            Votre compte n’est pas encore rattaché à une structure. Définissez le nom de votre organisation pour
+            accéder au tableau de bord, à Mailjet et aux webhooks. Ce nom peut être modifié plus tard.
+          </p>
+        </div>
+      </header>
+      <div className="content-card">
+        <form className="org-form mailjet-form" onSubmit={(e) => void submit(e)} style={{ maxWidth: '28rem' }}>
+        <label className="field">
+          <span>Nom de l’organisation</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={180}
+            placeholder="Ex. Ma société"
+            autoComplete="organization"
+          />
+        </label>
+        {fields.name ? <p className="error">{fields.name}</p> : null}
+        {error ? <p className="error">{error}</p> : null}
+        <button type="submit" className="btn" disabled={pending}>
+          {pending ? 'Création…' : 'Créer et continuer'}
+        </button>
+      </form>
+      </div>
+    </div>
   );
 }

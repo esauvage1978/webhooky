@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
 async function parseJson(res) {
   const text = await res.text();
@@ -10,46 +10,160 @@ async function parseJson(res) {
   }
 }
 
-export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
+/** Jauge semi-circulaire : événements consommés / enveloppe totale (forfait). */
+function MgrEventQuotaGauge({ consumed, allowance, planLabel }) {
+  const allowanceNum = Number(allowance) || 0;
+  const consumedNum = Math.max(0, Number(consumed) || 0);
+  const pct = allowanceNum > 0 ? Math.min(100, (consumedNum / allowanceNum) * 100) : 0;
+  const r = 85;
+  const c = Math.PI * r;
+  const offset = c * (1 - pct / 100);
+
+  return (
+    <div className="dash-mgr-gauge-card">
+      <h2>Quota événements</h2>
+      {planLabel ? <p className="dash-mgr-plan-name">{planLabel}</p> : null}
+      <div className="dash-gauge-wrap">
+        <svg className="dash-gauge-svg" viewBox="0 0 220 130" aria-hidden="true">
+          <path
+            d="M 25 120 A 85 85 0 0 0 195 120"
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="14"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 25 120 A 85 85 0 0 0 195 120"
+            fill="none"
+            stroke="var(--coral, #ff5a36)"
+            strokeWidth="14"
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.45s ease' }}
+          />
+        </svg>
+        <div className="dash-gauge-center">
+          <div className="dash-gauge-pct">{Math.round(pct)}%</div>
+          <div className="dash-gauge-sub">
+            {consumedNum.toLocaleString('fr-FR')} / {allowanceNum.toLocaleString('fr-FR')}
+          </div>
+        </div>
+      </div>
+      <p className="dash-mgr-gauge-legend">
+        Utilisation du quota sur la période en cours. Une exécution en échec peut tout de même consommer un
+        événement selon votre règlement.
+      </p>
+    </div>
+  );
+}
+
+export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOpenWorkflow }) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const isManager = user.roles.includes('ROLE_MANAGER');
+  /** Gestionnaire d’organisation hors rôle admin : tableau de bord allégé (compteurs projet / mois). */
+  const isManagerOnly = isManager && !isAdmin && !!user.organization;
+  const orgId = user.organization?.id ?? null;
   const [orgCount, setOrgCount] = useState(null);
   const [mjCount, setMjCount] = useState(null);
+  const [connCount, setConnCount] = useState(null);
   const [webhooks, setWebhooks] = useState(null);
+  /** Données /api/organizations/{id}/usage (réceptions par période, par projet, etc.) */
+  const [usage, setUsage] = useState(null);
   const [packDefs, setPackDefs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [upgradeBusy, setUpgradeBusy] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
+  const [recentErrors, setRecentErrors] = useState([]);
+  const [recentErrorsLoading, setRecentErrorsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rOrg, rMj, rWh, rPlans] = await Promise.all([
+      const rUsagePromise =
+        orgId != null
+          ? fetch(`/api/organizations/${orgId}/usage`, { credentials: 'include' })
+          : Promise.resolve(null);
+
+      const [rOrg, rSc, rWh, rPlans, rUsage] = await Promise.all([
         fetch('/api/organizations', { credentials: 'include' }),
-        fetch('/api/mailjets', { credentials: 'include' }),
+        fetch('/api/service-connections', { credentials: 'include' }),
         fetch('/api/form-webhooks', { credentials: 'include' }),
         fetch('/api/subscription/plans'),
+        rUsagePromise,
       ]);
       const dOrg = await parseJson(rOrg);
-      const dMj = await parseJson(rMj);
+      const dSc = await parseJson(rSc);
       const dWh = await parseJson(rWh);
       const dPlans = await parseJson(rPlans);
+      const dUsage = rUsage ? await parseJson(rUsage) : null;
       setOrgCount(rOrg.ok && Array.isArray(dOrg) ? dOrg.length : 0);
-      setMjCount(rMj.ok && Array.isArray(dMj) ? dMj.length : 0);
+      const connections = rSc.ok && Array.isArray(dSc) ? dSc : [];
+      setMjCount(connections.filter((c) => c.type === 'mailjet').length);
+      setConnCount(connections.length);
       setWebhooks(rWh.ok && Array.isArray(dWh) ? dWh : []);
+      if (rUsage && rUsage.ok && dUsage) setUsage(dUsage);
+      else setUsage(null);
       if (rPlans.ok && dPlans?.eventPacks) setPackDefs(dPlans.eventPacks);
     } catch {
       setOrgCount(0);
       setMjCount(0);
+      setConnCount(0);
       setWebhooks([]);
+      setUsage(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isManagerOnly || !Array.isArray(webhooks) || webhooks.length === 0) {
+      setRecentErrors([]);
+      setRecentErrorsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRecentErrorsLoading(true);
+    const maxWh = 14;
+    const slice = webhooks.slice(0, maxWh);
+    void (async () => {
+      try {
+        const results = await Promise.all(
+          slice.map(async (w) => {
+            const res = await fetch(`/api/form-webhooks/${w.id}/logs?limit=25`, { credentials: 'include' });
+            const data = await parseJson(res);
+            if (!res.ok || !Array.isArray(data?.items)) return [];
+            return data.items
+              .filter((item) => item.status === 'error')
+              .map((item) => ({
+                ...item,
+                webhookId: w.id,
+                webhookName: w.name,
+              }));
+          }),
+        );
+        if (cancelled) return;
+        const flat = results.flat();
+        flat.sort((a, b) => {
+          const ta = a.receivedAt ? new Date(a.receivedAt).getTime() : 0;
+          const tb = b.receivedAt ? new Date(b.receivedAt).getTime() : 0;
+          return tb - ta;
+        });
+        setRecentErrors(flat.slice(0, 12));
+      } catch {
+        if (!cancelled) setRecentErrors([]);
+      } finally {
+        if (!cancelled) setRecentErrorsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isManagerOnly, webhooks]);
 
   const sub = user.subscription;
   const canManageBilling = user.organization && (isManager || isAdmin);
@@ -95,38 +209,64 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
   const eventsPct =
     sub?.eventsAllowance > 0 ? Math.min(100, ((sub.eventsConsumed ?? 0) / sub.eventsAllowance) * 100) : 0;
 
+  const webhookTableRows = useMemo(() => {
+    if (!Array.isArray(webhooks) || webhooks.length === 0) return [];
+    return [...webhooks].sort((a, b) => {
+      const pa = (a.project?.name ?? '').localeCompare(b.project?.name ?? '', 'fr', { sensitivity: 'base' });
+      if (pa !== 0) return pa;
+      return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+    });
+  }, [webhooks]);
+
+  const currentMonthByProject = usage?.currentMonth?.byProject ?? [];
+  const currentMonthIngress = usage?.currentMonth?.ingressCount ?? 0;
+  const openWorkflow = onOpenWorkflow ?? (() => {});
+
   return (
-    <div className="dashboard-home">
-      <div className="dashboard-hero">
-        <h1 className="dashboard-title">Bonjour</h1>
-        <p className="dashboard-subtitle">
-          Vue d’ensemble de votre espace <strong>Webhooky</strong> — gérez les organisations, les clés Mailjet et vos
-          intégrations.
-        </p>
-      </div>
-
-      <div className="dashboard-cards">
-        <article className="dash-card dash-card-accent">
-          <h2 className="dash-card-title">Organisations</h2>
-          <p className="dash-card-stat">{loading ? '…' : orgCount}</p>
-          <p className="dash-card-desc">
-            {isAdmin ? 'Structures gérées sur la plateforme.' : 'Votre structure rattachée au compte.'}
+    <div className="users-shell dashboard-home">
+      <header className="users-hero users-hero--minimal dashboard-home-hero">
+        <div className="users-hero-text">
+          <h1 className="users-hero-title">
+            <i className="fa-solid fa-gauge-high" aria-hidden />
+            <span>Bonjour</span>
+          </h1>
+          <p className="users-hero-sub muted dashboard-home-intro">
+            {isManagerOnly
+              ? 'Vue d’ensemble visuelle : quota événements, activité du mois et dernières exécutions en erreur. La facturation détaillée reste sous « Organisation & facturation ».'
+              : 'Voici l’essentiel : quotas, webhooks et accès rapide à vos outils depuis les cartes ci-dessous.'}
           </p>
-          {isAdmin ? (
-            <button type="button" className="btn btn-card-action" onClick={() => onNavigate('organizations')}>
-              Gérer les organisations
-            </button>
-          ) : null}
-        </article>
+        </div>
+      </header>
 
-        <article className="dash-card dash-card-dark">
-          <h2 className="dash-card-title">Configurations Mailjet</h2>
-          <p className="dash-card-stat">{loading ? '…' : mjCount}</p>
-          <p className="dash-card-desc">Paires de clés API enregistrées pour l’envoi e-mail.</p>
-          <button type="button" className="btn btn-card-action-light" onClick={() => onNavigate('mailjets')}>
-            Ouvrir Mailjet
-          </button>
-        </article>
+      <div className="content-card dashboard-home-card">
+        <div className="dashboard-cards">
+        {!isManagerOnly ? (
+          <Fragment>
+            <article className="dash-card dash-card-accent">
+              <h2 className="dash-card-title">Organisations</h2>
+              <p className="dash-card-stat">{loading ? '…' : orgCount}</p>
+              <p className="dash-card-desc">
+                {isAdmin ? 'Structures gérées sur la plateforme.' : 'Votre structure rattachée au compte.'}
+              </p>
+              {isAdmin ? (
+                <button type="button" className="btn btn-card-action" onClick={() => onNavigate('organizations')}>
+                  Gérer les organisations
+                </button>
+              ) : null}
+            </article>
+
+            <article className="dash-card dash-card-dark">
+              <h2 className="dash-card-title">Intégrations</h2>
+              <p className="dash-card-stat">
+                {loading ? '…' : `${mjCount ?? 0} Mailjet · ${connCount ?? 0} connect.`}
+              </p>
+              <p className="dash-card-desc">Mailjet, Slack, SMS, Telegram, HTTP, Pushover…</p>
+              <button type="button" className="btn btn-card-action-light" onClick={() => onNavigate('integrations')}>
+                Gérer les intégrations
+              </button>
+            </article>
+          </Fragment>
+        ) : null}
 
         {sub && user.organization ? (
           <article
@@ -166,6 +306,10 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
               <p className="error small">Les réceptions sur vos webhooks sont refusées (abonnement ou quota).</p>
             ) : null}
 
+            {canManageBilling && (sub.plan === 'free' || sub.blockReason || relevantPacks.length > 0) ? (
+              <p className="muted small">Tarifs upgrades et packs affichés hors taxes (HT) ; TVA en sus à la facturation.</p>
+            ) : null}
+
             {canManageBilling && (sub.plan === 'free' || sub.blockReason) ? (
               <div className="dash-upgrade-row">
                 <button
@@ -174,7 +318,7 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
                   disabled={upgradeBusy}
                   onClick={() => void upgradePlan('starter')}
                 >
-                  Starter — 9 €/mois (5 000 év.)
+                  Starter — 9 € HT/mois (5 000 év.)
                 </button>
                 <button
                   type="button"
@@ -182,7 +326,7 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
                   disabled={upgradeBusy}
                   onClick={() => void upgradePlan('pro')}
                 >
-                  Pro — 29 €/mois (50 000 év.)
+                  Pro — 29 € HT/mois (50 000 év.)
                 </button>
               </div>
             ) : null}
@@ -200,7 +344,7 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
                       title={p.label}
                       onClick={() => void buyPack(p.id)}
                     >
-                      +{p.eventsAdded.toLocaleString()} — {p.priceEur} €
+                      +{p.eventsAdded.toLocaleString()} — {p.priceEur} € HT
                     </button>
                   ))}
                 </div>
@@ -238,43 +382,184 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh }) {
         </article>
       </div>
 
-      {(isAdmin || user.organization) && (
-        <section className="dashboard-webhooks-section" aria-labelledby="dash-webhooks-heading">
-          <div className="dashboard-webhooks-head">
-            <h2 id="dash-webhooks-heading" className="dashboard-section-title">
-              Webhooks formulaires
-            </h2>
-            <button type="button" className="btn secondary small" onClick={() => onNavigate('formWebhooks')}>
-              Gérer les webhooks
-            </button>
-          </div>
-          {loading || webhooks === null ? (
-            <p className="muted">Chargement des webhooks…</p>
-          ) : webhooks.length === 0 ? (
-            <p className="muted">
-              Aucun webhook pour l’instant. Créez-en un pour recevoir vos formulaires et les envoyer à Mailjet.
-            </p>
-          ) : (
-            <div className="dashboard-webhook-grid">
-              {webhooks.map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  className="dash-card dash-card-webhook-mini"
-                  onClick={() => onNavigate('formWebhooks')}
-                >
-                  <span className="dash-card-title">Webhook</span>
-                  <span className="dash-webhook-name">{w.name}</span>
-                  <span className="dash-webhook-stat" aria-label={`${w.logsCount ?? 0} journaux`}>
-                    {w.logsCount ?? 0}
-                  </span>
-                  <span className="dash-webhook-stat-label">journaux enregistrés</span>
+      {(isAdmin || user.organization) &&
+        (isManagerOnly ? (
+          <section className="dashboard-webhooks-section dash-mgr-visual" aria-labelledby="dash-manager-visual-heading">
+            <div className="dashboard-webhooks-head">
+              <h2 id="dash-manager-visual-heading" className="dashboard-section-title">
+                Tableau de bord
+              </h2>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" className="btn secondary small" onClick={() => onNavigate('organizationBilling')}>
+                  Organisation &amp; facturation
                 </button>
-              ))}
+                <button type="button" className="btn small" onClick={() => onNavigate('formWebhooks')}>
+                  Tous les workflows
+                </button>
+              </div>
             </div>
-          )}
-        </section>
-      )}
+
+            <div className="dash-mgr-top">
+              {sub && user.organization ? (
+                <MgrEventQuotaGauge
+                  consumed={sub.eventsConsumed ?? 0}
+                  allowance={sub.eventsAllowance ?? 0}
+                  planLabel={sub.planLabel}
+                />
+              ) : (
+                <div className="dash-mgr-gauge-card">
+                  <h2>Quota événements</h2>
+                  <p className="muted small">Abonnement ou organisation non chargé.</p>
+                </div>
+              )}
+              <div className="dash-mgr-kpis" role="list">
+                <article className="dash-mgr-kpi" role="listitem">
+                  <div className="dash-mgr-kpi-icon" aria-hidden>
+                    ⚡
+                  </div>
+                  <p className="dash-mgr-kpi-value">{loading ? '…' : (webhooks?.length ?? 0).toLocaleString('fr-FR')}</p>
+                  <p className="dash-mgr-kpi-label">Workflows</p>
+                </article>
+                <article className="dash-mgr-kpi" role="listitem">
+                  <div className="dash-mgr-kpi-icon" aria-hidden>
+                    📥
+                  </div>
+                  <p className="dash-mgr-kpi-value">
+                    {loading || usage === null ? '…' : currentMonthIngress.toLocaleString('fr-FR')}
+                  </p>
+                  <p className="dash-mgr-kpi-label">Réceptions (mois)</p>
+                </article>
+                <article className="dash-mgr-kpi" role="listitem">
+                  <div className="dash-mgr-kpi-icon" aria-hidden>
+                    ✓
+                  </div>
+                  <p className="dash-mgr-kpi-value">{sub?.eventsRemaining != null ? sub.eventsRemaining.toLocaleString('fr-FR') : '—'}</p>
+                  <p className="dash-mgr-kpi-label">Événements restants</p>
+                </article>
+                <article className="dash-mgr-kpi" role="listitem">
+                  <div className="dash-mgr-kpi-icon" aria-hidden>
+                    ⏱
+                  </div>
+                  <p className="dash-mgr-kpi-value">{sub?.webhooksOperational === false ? 'Suspendu' : 'OK'}</p>
+                  <p className="dash-mgr-kpi-label">Réception webhooks</p>
+                </article>
+              </div>
+            </div>
+
+            <div className="dash-mgr-errors">
+              <h3>
+                <span aria-hidden>⚠</span> Dernières exécutions en erreur
+              </h3>
+              {recentErrorsLoading ? (
+                <p className="muted small">Analyse des journaux sur vos workflows…</p>
+              ) : recentErrors.length === 0 ? (
+                <p className="muted small">Aucune erreur récente sur les workflows interrogés. Ouvrez les journaux d’un workflow pour l’historique complet.</p>
+              ) : (
+                <ul className="dash-mgr-errors-list">
+                  {recentErrors.map((e) => (
+                    <li key={`${e.webhookId}-${e.id}`} className="dash-mgr-error-item">
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => openWorkflow({ kind: 'logs', id: e.webhookId })}
+                      >
+                        Journaux
+                      </button>
+                      <div>
+                        <strong>{e.webhookName}</strong>
+                        <span className="dash-mgr-error-meta">
+                          {' '}
+                          ·{' '}
+                          {e.receivedAt
+                            ? new Date(e.receivedAt).toLocaleString('fr-FR', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })
+                            : '—'}
+                        </span>
+                      </div>
+                      {e.errorDetail ? <p className="dash-mgr-error-msg">{e.errorDetail}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="dash-mgr-projects-block">
+              <h3>Réceptions par projet — mois en cours</h3>
+              {loading ? (
+                <p className="muted">Chargement des statistiques…</p>
+              ) : usage === null ? (
+                <p className="muted">Impossible de charger les statistiques d’usage.</p>
+              ) : currentMonthByProject.length === 0 ? (
+                <p className="muted">
+                  Aucune réception ce mois-ci. Les compteurs comptent une ligne par exécution enregistrée sur un workflow.
+                </p>
+              ) : (
+                <div className="dash-project-counters" role="list">
+                  {currentMonthByProject.map((row) => (
+                    <article key={row.projectId} className="dash-project-counter-card" role="listitem">
+                      <h3 className="dash-project-counter-name">{row.projectName}</h3>
+                      <p className="dash-project-counter-value">{row.ingressCount?.toLocaleString('fr-FR') ?? '0'}</p>
+                      <p className="muted small dash-project-counter-hint">réceptions (mois en cours)</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="dashboard-webhooks-section" aria-labelledby="dash-webhooks-heading">
+            <div className="dashboard-webhooks-head">
+              <h2 id="dash-webhooks-heading" className="dashboard-section-title">
+                Webhooks formulaires
+              </h2>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" className="btn secondary small" onClick={() => onNavigate('webhookProjects')}>
+                  Projets
+                </button>
+                <button type="button" className="btn secondary small" onClick={() => onNavigate('formWebhooks')}>
+                  Gérer les webhooks
+                </button>
+              </div>
+            </div>
+            {loading || webhooks === null ? (
+              <p className="muted">Chargement des webhooks…</p>
+            ) : webhooks.length === 0 ? (
+              <p className="muted">
+                Aucun webhook pour l’instant. Créez-en un pour recevoir vos formulaires et les envoyer à Mailjet.
+              </p>
+            ) : (
+              <div className="org-table-wrap">
+                <table className="org-table" aria-label="Workflows par projet">
+                  <thead>
+                    <tr>
+                      <th>Projet</th>
+                      <th>Workflow</th>
+                      {isAdmin ? <th>Organisation</th> : null}
+                      <th>Événements (journaux)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {webhookTableRows.map((w) => (
+                      <tr key={w.id}>
+                        <td>{w.project?.name ?? '—'}</td>
+                        <td>
+                          <button type="button" className="btn secondary small" onClick={() => onNavigate('formWebhooks')}>
+                            {w.name}
+                          </button>
+                        </td>
+                        {isAdmin ? <td className="muted small">{w.organization?.name ?? '—'}</td> : null}
+                        <td>{w.logsCount ?? 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

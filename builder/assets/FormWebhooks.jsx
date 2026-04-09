@@ -2690,30 +2690,28 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
       ) : null}
 
       {view === 'editor' && (
-        <div className="content-card">
-          <>
-            <div className="fw-subhead fw-subhead--editor">
-            <div className="fw-subhead-main">
-              <button type="button" className="fw-back" onClick={cancelEdit}>
+        <div className="users-shell fw-workflow-editor-page">
+          <header className="users-hero users-hero--minimal">
+            <div className="users-hero-text">
+              <button type="button" className="fw-back fw-detail-page-back" onClick={cancelEdit}>
                 {isCreate ? '← Workflows' : '← Fiche workflow'}
               </button>
-              <div className="fw-subhead-titles">
-                <h2 className="fw-subhead-title">
-                  {isCreate ? 'Nouveau workflow' : `Modifier « ${form.name} »`}
-                </h2>
-                <p className="fw-subhead-meta">
-                  {form.webhookVersion != null ? (
-                    <>
-                      Version <strong>{form.webhookVersion}</strong>
-                      {' · '}
-                    </>
-                  ) : null}
-                  Déclencheur : webhook POST · {form.actions?.length ?? 0} action
-                  {(form.actions?.length ?? 0) !== 1 ? 's' : ''} (Mailjet et/ou connecteurs tiers)
-                </p>
-              </div>
+              <h1 className="users-hero-title">
+                <i className="fa-solid fa-diagram-project" aria-hidden />
+                <span>{isCreate ? 'Nouveau workflow' : `Modifier « ${form.name} »`}</span>
+              </h1>
+              <p className="users-hero-sub muted">
+                {form.webhookVersion != null ? (
+                  <>
+                    Version <strong>{form.webhookVersion}</strong>
+                    {' · '}
+                  </>
+                ) : null}
+                Déclencheur : webhook POST · {form.actions?.length ?? 0} action
+                {(form.actions?.length ?? 0) !== 1 ? 's' : ''} (Mailjet et/ou connecteurs tiers)
+              </p>
             </div>
-            <div className="fw-subhead-tools">
+            <div className="users-hero-actions fw-projects-hero-actions fw-editor-hero-tools">
               <label className="fw-webhook-active-toggle">
                 <input
                   type="checkbox"
@@ -2725,58 +2723,65 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                 <span>{form.active ? 'Webhook actif' : 'Webhook désactivé'}</span>
               </label>
             </div>
+          </header>
+
+          <div className="content-card">
+            {saveSuccessMessage ? (
+              <div className="fw-save-success-banner" role="status">
+                {saveSuccessMessage}
+              </div>
+            ) : null}
+            <div className="fw-editor-layout">
+              <nav className="fw-editor-rail" role="tablist" aria-label="Sections de l’éditeur">
+                {EDITOR_NAV.filter((s) => (isCreate ? s.id !== 'history' : true)).map((s) => (
+                  <button
+                    key={s.id}
+                    id={`fw-editor-tab-${s.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={editorNavSection === s.id}
+                    tabIndex={editorNavSection === s.id ? 0 : -1}
+                    className={`fw-rail-step ${editorNavSection === s.id ? 'fw-rail-active' : ''}`}
+                    onClick={() => setEditorNavSection(s.id)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </nav>
+              <div className="fw-editor-column">{editorForm}</div>
             </div>
-          {saveSuccessMessage ? (
-            <div className="fw-save-success-banner" role="status">
-              {saveSuccessMessage}
-            </div>
-          ) : null}
-          <div className="fw-editor-layout">
-            <nav className="fw-editor-rail" role="tablist" aria-label="Sections de l’éditeur">
-              {EDITOR_NAV.filter((s) => (isCreate ? s.id !== 'history' : true)).map((s) => (
-                <button
-                  key={s.id}
-                  id={`fw-editor-tab-${s.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={editorNavSection === s.id}
-                  tabIndex={editorNavSection === s.id ? 0 : -1}
-                  className={`fw-rail-step ${editorNavSection === s.id ? 'fw-rail-active' : ''}`}
-                  onClick={() => setEditorNavSection(s.id)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </nav>
-            <div className="fw-editor-column">{editorForm}</div>
           </div>
-          </>
         </div>
       )}
 
       {view === 'logs' && (
-        <div className="content-card">
-          <>
-            <div className="fw-subhead">
-            <div className="fw-subhead-back-row">
-              <button
-                type="button"
-                className="fw-back"
-                onClick={() => logsWebhookId != null && goToDetailById(logsWebhookId)}
-              >
-                ← Fiche workflow
-              </button>
-              <button type="button" className="fw-back fw-back--muted" onClick={goToList}>
-                Tous les workflows
-              </button>
+        <div className="users-shell fw-workflow-logs-page">
+          <header className="users-hero users-hero--minimal">
+            <div className="users-hero-text">
+              <div className="fw-logs-page-back-row">
+                <button
+                  type="button"
+                  className="fw-back"
+                  onClick={() => logsWebhookId != null && goToDetailById(logsWebhookId)}
+                >
+                  ← Fiche workflow
+                </button>
+                <button type="button" className="fw-back fw-back--muted" onClick={goToList}>
+                  Tous les workflows
+                </button>
+              </div>
+              <h1 className="users-hero-title">
+                <i className="fa-solid fa-clipboard-list" aria-hidden />
+                <span>Journaux · {logsWebhookName}</span>
+              </h1>
+              <p className="users-hero-sub muted">
+                Historique des réceptions pour ce webhook. Sélectionnez une ligne pour lire le détail et chaque action.
+              </p>
             </div>
-            <h2 className="fw-subhead-title">Journaux · {logsWebhookName}</h2>
-            <p className="fw-subhead-meta">
-              Historique des réceptions pour ce webhook. Sélectionnez une ligne pour lire le détail et chaque action.
-            </p>
-          </div>
+          </header>
 
-          <div className="fw-logs-layout">
+          <div className="content-card">
+            <div className="fw-logs-layout">
             <div className="fw-logs-list">
               <div className="fw-logs-list-head">Exécutions récentes</div>
               {logs?.error ? (
@@ -2912,7 +2917,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
               ) : null}
             </div>
           </div>
-          </>
+          </div>
         </div>
       )}
     </section>

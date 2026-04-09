@@ -604,9 +604,7 @@ export default function App() {
         onOrganizationSwitch={orgs.length > 1 ? switchOrganization : undefined}
       >
         {needsOrgSetup && activeNav !== 'accountProfile' && activeNav !== 'changePassword' ? (
-          <div className="content-card">
-            <SetupOrganization onSuccess={refreshSession} onNavigate={navigateDashboard} />
-          </div>
+          <SetupOrganization onSuccess={refreshSession} onNavigate={navigateDashboard} />
         ) : null}
         {!needsOrgSetup && activeNav === 'dashboard' ? (
           <DashboardHome
@@ -617,9 +615,7 @@ export default function App() {
           />
         ) : null}
         {!needsOrgSetup && activeNav === 'organizations' && user.roles.includes('ROLE_ADMIN') ? (
-          <div className="content-card">
-            <Organizations user={user} onOrganizationChanged={refreshSession} />
-          </div>
+          <Organizations user={user} onOrganizationChanged={refreshSession} />
         ) : null}
         {!needsOrgSetup && activeNav === 'integrations' ? (
           <Integrations user={user} />
@@ -649,19 +645,13 @@ export default function App() {
         activeNav === 'organizationBilling' &&
         user.organization &&
         (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
-          <div className="content-card">
-            <OrganizationBilling user={user} onSessionRefresh={refreshSession} />
-          </div>
+          <OrganizationBilling user={user} onSessionRefresh={refreshSession} />
         ) : null}
         {activeNav === 'accountProfile' ? (
-          <div className="content-card">
-            <AccountProfile user={user} onSessionRefresh={refreshSession} />
-          </div>
+          <AccountProfile user={user} onSessionRefresh={refreshSession} />
         ) : null}
         {activeNav === 'changePassword' ? (
-          <div className="content-card">
-            <AccountChangePassword />
-          </div>
+          <AccountChangePassword />
         ) : null}
       </DashboardLayout>
     );
