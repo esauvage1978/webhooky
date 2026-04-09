@@ -28,6 +28,7 @@ function formatDateTime(iso) {
 
 export default function Users({ user }) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
+  const isManager = !isAdmin && user.roles.includes('ROLE_MANAGER');
   const [inviteOpen, setInviteOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef(null);
@@ -119,6 +120,13 @@ export default function Users({ user }) {
   useEffect(() => {
     void refreshAccounts();
   }, [refreshAccounts]);
+
+  useEffect(() => {
+    if (isManager && filterRole === 'admin') {
+      setFilterRole('');
+      setListPage(1);
+    }
+  }, [isManager, filterRole]);
 
   useEffect(() => {
     if (!moreMenuOpen) return;
@@ -320,7 +328,7 @@ export default function Users({ user }) {
               }}
             >
               <option value="">Tous</option>
-              <option value="admin">Administrateur</option>
+              {isAdmin ? <option value="admin">Administrateur</option> : null}
               <option value="manager">Gestionnaire</option>
               <option value="member">Utilisateur</option>
             </select>
