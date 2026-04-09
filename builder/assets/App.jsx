@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { setAppSessionKnownLoggedIn } from './sessionFetch.js';
 import LoginForm from './LoginForm.jsx';
 import ForgotPasswordForm from './ForgotPasswordForm.jsx';
 import RegisterForm from './RegisterForm.jsx';
@@ -6,13 +7,17 @@ import ResetPasswordForm from './ResetPasswordForm.jsx';
 import DashboardLayout from './DashboardLayout.jsx';
 import DashboardHome from './DashboardHome.jsx';
 import Organizations from './Organizations.jsx';
-import Mailjets from './Mailjets.jsx';
+import Integrations from './Integrations.jsx';
 import FormWebhooks from './FormWebhooks.jsx';
+import WebhookProjects from './WebhookProjects.jsx';
 import SetupOrganization from './SetupOrganization.jsx';
 import InvitationForm from './InvitationForm.jsx';
 import Users from './Users.jsx';
+import UsersJournal from './UsersJournal.jsx';
 import OrganizationBilling from './OrganizationBilling.jsx';
 import OnboardingWizard from './OnboardingWizard.jsx';
+import AccountProfile from './AccountProfile.jsx';
+import AccountChangePassword from './AccountChangePassword.jsx';
 
 const ORG_SESSION_KEY = 'webhookyOrgSessionOk';
 const AUTH_PATHS = ['/inscription', '/mot-de-passe-oublie', '/reinitialisation-mot-de-passe', '/invitation'];
@@ -21,26 +26,60 @@ function normalizePath(pathname) {
   return (pathname || '/').replace(/\/$/, '') || '/';
 }
 
-/** @returns {{ kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'edit'; id: number } | { kind: 'logs'; id: number } | null} */
+/** Préfixe Symfony (`app.request.basePath`), ex. `/webhooky/public` sous WAMP. */
+function getWebhookyBasePath() {
+  if (typeof window === 'undefined') return '';
+  const b = window.__WEBHOOKY_BASE_PATH__;
+  if (typeof b !== 'string' || b === '') return '';
+  return b.replace(/\/$/, '');
+}
+
+/** @param {string} path */
+function absoluteAppPath(path) {
+  const base = getWebhookyBasePath();
+  const rel = path.startsWith('/') ? path : `/${path}`;
+  if (!base) return rel;
+  if (rel === '/') return base;
+  return `${base}${rel}`;
+}
+
+/**
+ * Chemins /workflows avec préfixe d’appli (ex. /public/workflows/5/edit).
+ * Ne pas ancrer en `^/workflows` : sinon sous-répertoire → null → l’UI traite la route comme « liste » et vide l’éditeur.
+ *
+ * @returns {{ kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'edit'; id: number } | { kind: 'logs'; id: number } | null}
+ */
 function parseWebhooksRoute(pathname) {
   const p = normalizePath(pathname);
-  if (p === '/webhooks') return { kind: 'list' };
-  const editMatch = p.match(/^\/webhooks\/(\d+)\/edit$/);
+  if (p === '/workflows' || /\/workflows$/.test(p)) return { kind: 'list' };
+  const editMatch = p.match(/\/workflows\/(\d+)\/edit$/);
   if (editMatch) return { kind: 'edit', id: parseInt(editMatch[1], 10) };
-  const logsMatch = p.match(/^\/webhooks\/(\d+)\/logs$/);
+  const logsMatch = p.match(/\/workflows\/(\d+)\/logs$/);
   if (logsMatch) return { kind: 'logs', id: parseInt(logsMatch[1], 10) };
-  const detailMatch = p.match(/^\/webhooks\/(\d+)$/);
+  const detailMatch = p.match(/\/workflows\/(\d+)$/);
   if (detailMatch) return { kind: 'detail', id: parseInt(detailMatch[1], 10) };
   return null;
 }
 
 /** @param {{ kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'edit'; id: number } | { kind: 'logs'; id: number }} route */
 function pathForWebhooksRoute(route) {
-  if (!route || route.kind === 'list') return '/webhooks';
-  if (route.kind === 'detail') return `/webhooks/${route.id}`;
-  if (route.kind === 'edit') return `/webhooks/${route.id}/edit`;
-  if (route.kind === 'logs') return `/webhooks/${route.id}/logs`;
-  return '/webhooks';
+  const root = absoluteAppPath('/workflows');
+  if (!route || route.kind === 'list') return root;
+  if (route.kind === 'detail') return `${root}/${route.id}`;
+  if (route.kind === 'edit') return `${root}/${route.id}/edit`;
+  if (route.kind === 'logs') return `${root}/${route.id}/logs`;
+  return root;
+}
+
+/** Ancienne URL publique « …/webhooks » → « …/workflows » (avec ou sans préfixe d’appli). */
+function replaceLegacyWebhooksUrlIfNeeded() {
+  const p = normalizePath(window.location.pathname);
+  if (/(^|\/)webhooks(\/|$)/.test(p)) {
+    const next = normalizePath(p.replace(/(^|\/)webhooks(?=\/|$)/g, '$1workflows'));
+    window.history.replaceState({}, '', next);
+    return next;
+  }
+  return p;
 }
 
 /** @param {string} pathname */
@@ -48,13 +87,24 @@ function pathToNavId(pathname) {
   const p = normalizePath(pathname);
   if (AUTH_PATHS.includes(p)) return null;
   if (p === '/' || p === '/dashboard') return 'dashboard';
+  if (/(^|\/)(workflows|webhooks)(\/|$)/.test(p)) {
+    return 'formWebhooks';
+  }
+  if (/(^|\/)users\/journal$/.test(p) || /(^|\/)utilisateurs\/journal$/.test(p)) {
+    return 'usersJournal';
+  }
+  if (/(^|\/)projets-workflows$/.test(p)) {
+    return 'webhookProjects';
+  }
   const seg = p.slice(1).split('/')[0] || '';
   switch (seg) {
+    case 'workflows':
     case 'webhooks':
       return 'formWebhooks';
     case 'mailjet':
     case 'mailjets':
-      return 'mailjets';
+    case 'integrations':
+      return 'integrations';
     case 'organizations':
     case 'organisations':
       return 'organizations';
@@ -65,6 +115,10 @@ function pathToNavId(pathname) {
       return 'setupOrganization';
     case 'facturation':
       return 'organizationBilling';
+    case 'mon-profil':
+      return 'accountProfile';
+    case 'changer-mot-de-passe':
+      return 'changePassword';
     default:
       return null;
   }
@@ -72,24 +126,45 @@ function pathToNavId(pathname) {
 
 /** @param {string} navId */
 function navIdToPath(navId) {
+  let rel = '/';
   switch (navId) {
     case 'dashboard':
-      return '/';
+      rel = '/';
+      break;
     case 'formWebhooks':
-      return '/webhooks';
-    case 'mailjets':
-      return '/mailjet';
+      rel = '/workflows';
+      break;
+    case 'webhookProjects':
+      rel = '/projets-workflows';
+      break;
+    case 'integrations':
+      rel = '/integrations';
+      break;
     case 'organizations':
-      return '/organizations';
+      rel = '/organizations';
+      break;
     case 'users':
-      return '/users';
+      rel = '/users';
+      break;
+    case 'usersJournal':
+      rel = '/users/journal';
+      break;
     case 'setupOrganization':
-      return '/mon-organisation';
+      rel = '/mon-organisation';
+      break;
     case 'organizationBilling':
-      return '/facturation';
+      rel = '/facturation';
+      break;
+    case 'accountProfile':
+      rel = '/mon-profil';
+      break;
+    case 'changePassword':
+      rel = '/changer-mot-de-passe';
+      break;
     default:
-      return '/';
+      rel = '/';
   }
+  return absoluteAppPath(rel);
 }
 
 /** @param {object} user @param {string} navId */
@@ -97,13 +172,16 @@ function userCanAccessNav(user, navId) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const isManager = user.roles.includes('ROLE_MANAGER');
   const orgCount = user.organizations?.length ?? 0;
-  const onboardingRequired = !isAdmin && user.onboarding?.required;
+  const onboardingRequired = user.onboarding?.required;
   if (onboardingRequired) return false;
+  if (navId === 'accountProfile' || navId === 'changePassword') {
+    return true;
+  }
   const needsOrg = !isAdmin && orgCount === 0;
   if (needsOrg) return navId === 'setupOrganization';
   if (navId === 'setupOrganization') return false;
   if (navId === 'organizations' && !isAdmin) return false;
-  if (navId === 'users' && !isAdmin && !isManager) return false;
+  if ((navId === 'users' || navId === 'usersJournal') && !isAdmin && !isManager) return false;
   if (navId === 'organizationBilling') {
     if (!user.organization) return false;
     return isAdmin || isManager;
@@ -198,8 +276,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('dashboard');
-  /** Chemins profonds (/webhooks/2/edit) — tenu au pas avec l’historique */
-  const [pathname, setPathname] = useState(() => window.location.pathname);
+  /** Chemins profonds (/workflows/2/edit) — tenu au pas avec l’historique */
+  const [pathname, setPathname] = useState(() => replaceLegacyWebhooksUrlIfNeeded());
   const [authScreen, setAuthScreen] = useState(() => authScreenFromPath());
   const [authNotice, setAuthNotice] = useState(null);
 
@@ -232,15 +310,25 @@ export default function App() {
     setPathname(next);
   }, []);
 
+  /** Ouvre un workflow (détail / journaux / édition) depuis le tableau de bord. */
+  const openWorkflowFromDashboard = useCallback(
+    (route) => {
+      setActiveNav('formWebhooks');
+      navigateWebhooks(route);
+    },
+    [navigateWebhooks],
+  );
+
   const webhooksRoute = useMemo(() => {
     if (activeNav !== 'formWebhooks') return { kind: 'list' };
     return parseWebhooksRoute(pathname) ?? { kind: 'list' };
   }, [activeNav, pathname]);
 
-  const refreshSession = useCallback(async () => {
-    setLoading(true);
+  const refreshSession = useCallback(async (opts = {}) => {
+    const quiet = opts.quiet === true;
+    if (!quiet) setLoading(true);
     try {
-      const res = await fetch('/api/me', { credentials: 'include' });
+      const res = await fetch('/api/me', { credentials: 'include', headers: { Accept: 'application/json' } });
       if (res.ok) {
         let data = await res.json();
         const isAdm = data.roles?.includes('ROLE_ADMIN');
@@ -263,7 +351,7 @@ export default function App() {
     } catch {
       setUser(null);
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, []);
 
@@ -272,28 +360,66 @@ export default function App() {
   }, [refreshSession]);
 
   useEffect(() => {
+    setAppSessionKnownLoggedIn(!!user);
+  }, [user]);
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setAppSessionKnownLoggedIn(false);
+      try {
+        sessionStorage.removeItem(ORG_SESSION_KEY);
+      } catch {
+        /* ignore */
+      }
+      setUser(null);
+      setActiveNav('dashboard');
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
+      setAuthScreen('login');
+      setAuthNotice({
+        type: 'err',
+        text: 'Votre session a expiré. Veuillez vous reconnecter.',
+      });
+      void fetch('/api/logout', { credentials: 'include', method: 'GET' });
+    };
+    window.addEventListener('webhooky:session-expired', onSessionExpired);
+    return () => window.removeEventListener('webhooky:session-expired', onSessionExpired);
+  }, []);
+
+  useEffect(() => {
     const onPop = () => {
-      setPathname(window.location.pathname);
+      let popPath = replaceLegacyWebhooksUrlIfNeeded();
+      setPathname(popPath);
       if (!user) {
         setAuthScreen(authScreenFromPath());
         return;
       }
-      if (!user.roles.includes('ROLE_ADMIN') && user.onboarding?.required) {
+      if (user.onboarding?.required) {
         return;
       }
       const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
       if (needsOrgSetupOnly) {
+        const navSetup = pathToNavId(popPath);
+        if (navSetup === 'accountProfile' || navSetup === 'changePassword') {
+          setActiveNav(navSetup);
+          return;
+        }
         setActiveNav('setupOrganization');
         return;
       }
-      const nav = pathToNavId(window.location.pathname);
+      if (popPath === '/mailjet' || popPath === '/mailjets') {
+        window.history.replaceState({}, '', '/integrations');
+        popPath = '/integrations';
+        setPathname('/integrations');
+      }
+      const nav = pathToNavId(popPath);
       if (nav && userCanAccessNav(user, nav)) {
         setActiveNav(nav);
         return;
       }
-      if (nav === null && !AUTH_PATHS.includes(normalizePath(window.location.pathname))) {
+      if (nav === null && !AUTH_PATHS.includes(popPath)) {
         setActiveNav('dashboard');
-        if (normalizePath(window.location.pathname) !== '/') {
+        if (popPath !== '/') {
           window.history.replaceState({}, '', '/');
           setPathname('/');
         }
@@ -306,12 +432,18 @@ export default function App() {
   useEffect(() => {
     if (!user || loading) return;
 
-    if (!user.roles.includes('ROLE_ADMIN') && user.onboarding?.required) {
+    if (user.onboarding?.required) {
       return;
     }
 
     const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
     if (needsOrgSetupOnly) {
+      const navSetup = pathToNavId(window.location.pathname);
+      if (navSetup === 'accountProfile' || navSetup === 'changePassword') {
+        setActiveNav(navSetup);
+        setPathname(window.location.pathname);
+        return;
+      }
       setActiveNav('setupOrganization');
       if (normalizePath(window.location.pathname) !== '/mon-organisation') {
         window.history.replaceState({}, '', '/mon-organisation');
@@ -320,14 +452,21 @@ export default function App() {
       return;
     }
 
-    const nav = pathToNavId(window.location.pathname);
+    let syncPath = replaceLegacyWebhooksUrlIfNeeded();
+    if (syncPath === '/mailjet' || syncPath === '/mailjets') {
+      window.history.replaceState({}, '', '/integrations');
+      syncPath = '/integrations';
+      setPathname('/integrations');
+    }
+
+    const nav = pathToNavId(syncPath);
     if (nav && userCanAccessNav(user, nav)) {
       setActiveNav(nav);
-      setPathname(window.location.pathname);
+      setPathname(syncPath);
       return;
     }
 
-    if (normalizePath(window.location.pathname) !== '/') {
+    if (syncPath !== '/') {
       window.history.replaceState({}, '', '/');
       setPathname('/');
     }
@@ -358,6 +497,7 @@ export default function App() {
   }, [user]);
 
   const handleLogout = async () => {
+    setAppSessionKnownLoggedIn(false);
     await fetch('/api/logout', { credentials: 'include', method: 'GET' });
     try {
       sessionStorage.removeItem(ORG_SESSION_KEY);
@@ -388,7 +528,7 @@ export default function App() {
     if (!user) return;
     const isAdmin = user.roles.includes('ROLE_ADMIN');
     const isManager = user.roles.includes('ROLE_MANAGER');
-    if (!isAdmin && !isManager && activeNav === 'users') {
+    if (!isAdmin && !isManager && (activeNav === 'users' || activeNav === 'usersJournal')) {
       setActiveNav('dashboard');
       window.history.replaceState({}, '', '/');
       setPathname('/');
@@ -442,13 +582,13 @@ export default function App() {
   if (user) {
     const isAdmin = user.roles.includes('ROLE_ADMIN');
     const orgs = user.organizations ?? [];
-    const onboardingRequired = !isAdmin && user.onboarding?.required;
+    const onboardingRequired = user.onboarding?.required;
     const needsOrgSetup = !isAdmin && !onboardingRequired && orgs.length === 0;
     const showOrgPicker =
       !isAdmin && !onboardingRequired && orgs.length > 1 && !sessionStorage.getItem(ORG_SESSION_KEY);
 
     if (onboardingRequired) {
-      return <OnboardingWizard user={user} onRefresh={refreshSession} />;
+      return <OnboardingWizard user={user} onRefresh={() => refreshSession({ quiet: true })} />;
     }
 
     if (showOrgPicker) {
@@ -463,35 +603,51 @@ export default function App() {
         onLogout={handleLogout}
         onOrganizationSwitch={orgs.length > 1 ? switchOrganization : undefined}
       >
-        {needsOrgSetup ? (
+        {needsOrgSetup && activeNav !== 'accountProfile' && activeNav !== 'changePassword' ? (
           <div className="content-card">
             <SetupOrganization onSuccess={refreshSession} onNavigate={navigateDashboard} />
           </div>
         ) : null}
         {!needsOrgSetup && activeNav === 'dashboard' ? (
-          <DashboardHome user={user} onNavigate={navigateDashboard} onSessionRefresh={refreshSession} />
+          <DashboardHome
+            user={user}
+            onNavigate={navigateDashboard}
+            onSessionRefresh={refreshSession}
+            onOpenWorkflow={openWorkflowFromDashboard}
+          />
         ) : null}
         {!needsOrgSetup && activeNav === 'organizations' && user.roles.includes('ROLE_ADMIN') ? (
           <div className="content-card">
             <Organizations user={user} onOrganizationChanged={refreshSession} />
           </div>
         ) : null}
-        {!needsOrgSetup && activeNav === 'mailjets' ? (
-          <div className="content-card">
-            <Mailjets user={user} />
+        {!needsOrgSetup && activeNav === 'integrations' ? (
+          <div className="content-card content-card--integrations-wide">
+            <Integrations user={user} />
           </div>
         ) : null}
         {!needsOrgSetup && activeNav === 'formWebhooks' ? (
           <div className="content-card">
-            <FormWebhooks user={user} route={webhooksRoute} onWebhooksNavigate={navigateWebhooks} />
+            <FormWebhooks
+              user={user}
+              route={webhooksRoute}
+              onWebhooksNavigate={navigateWebhooks}
+              onAppNavigate={navigateDashboard}
+            />
           </div>
+        ) : null}
+        {!needsOrgSetup && activeNav === 'webhookProjects' ? (
+          <WebhookProjects user={user} onNavigate={navigateDashboard} />
         ) : null}
         {!needsOrgSetup &&
         activeNav === 'users' &&
         (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
-          <div className="content-card">
-            <Users user={user} />
-          </div>
+          <Users user={user} />
+        ) : null}
+        {!needsOrgSetup &&
+        activeNav === 'usersJournal' &&
+        (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
+          <UsersJournal user={user} />
         ) : null}
         {!needsOrgSetup &&
         activeNav === 'organizationBilling' &&
@@ -499,6 +655,16 @@ export default function App() {
         (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_MANAGER')) ? (
           <div className="content-card">
             <OrganizationBilling user={user} onSessionRefresh={refreshSession} />
+          </div>
+        ) : null}
+        {activeNav === 'accountProfile' ? (
+          <div className="content-card">
+            <AccountProfile user={user} onSessionRefresh={refreshSession} />
+          </div>
+        ) : null}
+        {activeNav === 'changePassword' ? (
+          <div className="content-card">
+            <AccountChangePassword />
           </div>
         ) : null}
       </DashboardLayout>
