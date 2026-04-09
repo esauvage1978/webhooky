@@ -622,9 +622,7 @@ export default function App() {
           </div>
         ) : null}
         {!needsOrgSetup && activeNav === 'integrations' ? (
-          <div className="content-card content-card--integrations-wide">
-            <Integrations user={user} />
-          </div>
+          <Integrations user={user} />
         ) : null}
         {!needsOrgSetup && activeNav === 'formWebhooks' ? (
           <div className="content-card">
