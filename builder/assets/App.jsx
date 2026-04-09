@@ -625,14 +625,12 @@ export default function App() {
           <Integrations user={user} />
         ) : null}
         {!needsOrgSetup && activeNav === 'formWebhooks' ? (
-          <div className="content-card">
-            <FormWebhooks
-              user={user}
-              route={webhooksRoute}
-              onWebhooksNavigate={navigateWebhooks}
-              onAppNavigate={navigateDashboard}
-            />
-          </div>
+          <FormWebhooks
+            user={user}
+            route={webhooksRoute}
+            onWebhooksNavigate={navigateWebhooks}
+            onAppNavigate={navigateDashboard}
+          />
         ) : null}
         {!needsOrgSetup && activeNav === 'webhookProjects' ? (
           <WebhookProjects user={user} onNavigate={navigateDashboard} />
