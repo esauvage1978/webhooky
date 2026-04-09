@@ -2494,80 +2494,79 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
       )}
 
       {view === 'detail' && detailWebhook ? (
-        <div className="content-card">
-          <>
-            <div className="fw-subhead">
-              <button type="button" className="fw-back" onClick={goToList}>
+        <div className="users-shell fw-workflow-detail-page">
+          <header className="users-hero users-hero--minimal">
+            <div className="users-hero-text">
+              <button type="button" className="fw-back fw-detail-page-back" onClick={goToList}>
                 ← Tous les workflows
               </button>
+              <h1 className="users-hero-title">
+                <i className="fa-solid fa-diagram-project" aria-hidden />
+                <span>{detailWebhook.name}</span>
+              </h1>
             </div>
+            <div className="users-hero-actions fw-projects-hero-actions fw-detail-page-actions">
+              <button
+                type="button"
+                className="btn fw-btn-primary-detail"
+                onClick={() => startEdit(detailWebhook)}
+              >
+                Éditer le workflow
+              </button>
+              <button type="button" className="btn secondary" onClick={() => openLogs(detailWebhook.id)}>
+                Journaux
+              </button>
+              <WebhookActionsMenu
+                menuKey={detailWebhook.id}
+                menuOpen={detailActionsMenuOpenId}
+                onMenuOpenChange={setDetailActionsMenuOpenId}
+                triggerVariant="dots"
+                showFiche={false}
+                onLogs={() => openLogs(detailWebhook.id)}
+                onEdit={() => startEdit(detailWebhook)}
+                onDuplicate={() => void duplicateWebhook(detailWebhook)}
+                onDelete={() => void remove(detailWebhook.id)}
+                duplicateDisabled={saving || (user.subscription != null && !user.subscription.canCreateWebhook)}
+                duplicateTitle={
+                  user.subscription != null && !user.subscription.canCreateWebhook
+                    ? 'Limite de workflows atteinte pour votre forfait'
+                    : 'Dupliquer avec le suffixe « copy »'
+                }
+              />
+            </div>
+          </header>
 
-            <div className="fw-detail-shell">
-            <header className="fw-detail-hero">
-              <div className="fw-detail-hero-top">
-                <div>
-                  <h1 className="fw-detail-hero-title">{detailWebhook.name}</h1>
-                  <div className="fw-detail-hero-chips">
-                    <span className={`fw-detail-chip ${detailWebhook.active ? 'fw-detail-chip--accent' : ''}`}>
-                      {detailWebhook.active ? 'Actif' : 'Inactif'}
+          <div className="content-card">
+            <div className="fw-detail-shell fw-detail-shell--in-card">
+              <div className="fw-detail-page-summary">
+                <div className="fw-detail-hero-chips">
+                  <span className={`fw-detail-chip ${detailWebhook.active ? 'fw-detail-chip--accent' : ''}`}>
+                    {detailWebhook.active ? 'Actif' : 'Inactif'}
+                  </span>
+                  {typeof detailWebhook.logsCount === 'number' ? (
+                    <span className="fw-detail-chip">
+                      {detailWebhook.logsCount} exécution{detailWebhook.logsCount !== 1 ? 's' : ''}
                     </span>
-                    {typeof detailWebhook.logsCount === 'number' ? (
-                      <span className="fw-detail-chip">
-                        {detailWebhook.logsCount} exécution{detailWebhook.logsCount !== 1 ? 's' : ''}
-                      </span>
-                    ) : null}
-                    {isAdmin && detailWebhook.organization?.name ? (
-                      <span className="fw-detail-chip">Org. {detailWebhook.organization.name}</span>
-                    ) : null}
-                    {resolveWebhookProjectLabel(detailWebhook, projects) !== '—' ? (
-                      <span className="fw-detail-chip">Projet {resolveWebhookProjectLabel(detailWebhook, projects)}</span>
-                    ) : null}
-                    {detailWebhook.version != null ? (
-                      <span className="fw-detail-chip">v.{detailWebhook.version}</span>
-                    ) : null}
-                  </div>
-                  {detailWebhook.description ? (
-                    <p className="fw-detail-desc" style={{ marginTop: '0.75rem' }}>
-                      {detailWebhook.description}
-                    </p>
-                  ) : (
-                    <p className="fw-detail-desc" style={{ marginTop: '0.75rem' }}>
-                      Webhook POST : aperçu du flux, URL et notifications ci-dessous. Les exécutions sont dans les
-                      journaux.
-                    </p>
-                  )}
+                  ) : null}
+                  {isAdmin && detailWebhook.organization?.name ? (
+                    <span className="fw-detail-chip">Org. {detailWebhook.organization.name}</span>
+                  ) : null}
+                  {resolveWebhookProjectLabel(detailWebhook, projects) !== '—' ? (
+                    <span className="fw-detail-chip">Projet {resolveWebhookProjectLabel(detailWebhook, projects)}</span>
+                  ) : null}
+                  {detailWebhook.version != null ? (
+                    <span className="fw-detail-chip">v.{detailWebhook.version}</span>
+                  ) : null}
                 </div>
-                <div className="fw-detail-hero-actions">
-                  <button
-                    type="button"
-                    className="btn fw-btn-primary-detail"
-                    onClick={() => startEdit(detailWebhook)}
-                  >
-                    Éditer le workflow
-                  </button>
-                  <button type="button" className="btn secondary" onClick={() => openLogs(detailWebhook.id)}>
-                    Journaux
-                  </button>
-                  <WebhookActionsMenu
-                    menuKey={detailWebhook.id}
-                    menuOpen={detailActionsMenuOpenId}
-                    onMenuOpenChange={setDetailActionsMenuOpenId}
-                    triggerVariant="dots"
-                    showFiche={false}
-                    onLogs={() => openLogs(detailWebhook.id)}
-                    onEdit={() => startEdit(detailWebhook)}
-                    onDuplicate={() => void duplicateWebhook(detailWebhook)}
-                    onDelete={() => void remove(detailWebhook.id)}
-                    duplicateDisabled={saving || (user.subscription != null && !user.subscription.canCreateWebhook)}
-                    duplicateTitle={
-                      user.subscription != null && !user.subscription.canCreateWebhook
-                        ? 'Limite de workflows atteinte pour votre forfait'
-                        : 'Dupliquer avec le suffixe « copy »'
-                    }
-                  />
-                </div>
+                {detailWebhook.description ? (
+                  <p className="fw-detail-desc fw-detail-page-desc">{detailWebhook.description}</p>
+                ) : (
+                  <p className="fw-detail-desc fw-detail-page-desc">
+                    Webhook POST : aperçu du flux, URL et notifications ci-dessous. Les exécutions sont dans les
+                    journaux.
+                  </p>
+                )}
               </div>
-            </header>
 
             <div className="fw-detail-tabs" role="tablist" aria-label="Sections de la fiche workflow">
               <button
@@ -2686,7 +2685,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
               </div>
             ) : null}
             </div>
-          </>
+          </div>
         </div>
       ) : null}
 

@@ -3954,6 +3954,32 @@ h1 {
   max-width: 960px;
 }
 
+.fw-detail-shell--in-card {
+  max-width: 100%;
+}
+
+.fw-detail-shell--in-card .fw-detail-tabs {
+  margin-top: 0;
+}
+
+.fw-workflow-detail-page .users-hero--minimal {
+  align-items: flex-start;
+}
+
+.fw-detail-page-back {
+  margin-bottom: 0.35rem;
+}
+
+.fw-detail-page-summary {
+  margin-bottom: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.fw-detail-page-desc {
+  margin-top: 0.65rem;
+  max-width: 70ch;
+}
+
 .fw-detail-hero {
   position: relative;
   padding: 1.35rem 1.5rem 1.5rem;
