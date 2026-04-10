@@ -5,6 +5,7 @@ const TOPBAR_SECTION_LABELS = {
   changePassword: 'Changer mon mot de passe',
   usersJournal: 'Journal des actions',
   adminSupervision: 'Supervision',
+  adminOptions: 'Options plateforme',
 };
 
 const NAV_SETUP_ONLY = [{ id: 'setupOrganization', label: 'Mon organisation', icon: MdiDomain }];
@@ -14,6 +15,8 @@ const NAV_DASHBOARD = { id: 'dashboard', label: 'Tableau de bord', icon: MdiView
 const NAV_ORGANIZATIONS = { id: 'organizations', label: 'Organisations', icon: MdiDomain };
 
 const NAV_ADMIN_SUPERVISION = { id: 'adminSupervision', label: 'Supervision', icon: MdiShieldAlert };
+
+const NAV_ADMIN_OPTIONS = { id: 'adminOptions', label: 'Options', icon: MdiTune };
 
 const NAV_USERS = { id: 'users', label: 'Utilisateurs', icon: MdiPeople };
 
@@ -44,6 +47,7 @@ function navSectionsForUser(user) {
   if (isAdmin) {
     adminItems.push(NAV_ORGANIZATIONS);
     adminItems.push(NAV_ADMIN_SUPERVISION);
+    adminItems.push(NAV_ADMIN_OPTIONS);
   }
   const canManageTeam = isAdmin || isManager;
   if (canManageTeam && user.organization) {
@@ -89,6 +93,17 @@ function MdiShieldAlert() {
       <path
         fill="currentColor"
         d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16 2-4.18L14 17h-4zm2-9.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.71z"
+      />
+    </svg>
+  );
+}
+
+function MdiTune() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm12 4v-2H11v2h8zm0-4v-2h-4v2h4z"
       />
     </svg>
   );

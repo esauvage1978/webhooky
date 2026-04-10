@@ -5,6 +5,13 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # Limiteur pour l’ingress webhook (service limiter.webhook_ingest, ex. Api\WebhookController).
+    rate_limiter:
+        webhook_ingest:
+            policy: sliding_window
+            limit: 300
+            interval: '1 minute'
+
     #esi: true
     #fragments: true
 

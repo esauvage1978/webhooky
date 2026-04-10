@@ -33,10 +33,12 @@ final class ApiMeController extends AbstractController
     }
 
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
-    #[IsGranted('ROLE_USER')]
     public function me(): JsonResponse
     {
-        $user = $this->requireUser();
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return new JsonResponse(null);
+        }
 
         return new JsonResponse($this->buildMePayload($user));
     }

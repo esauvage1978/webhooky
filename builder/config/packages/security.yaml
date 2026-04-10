@@ -39,6 +39,8 @@ security:
         - { path: ^/api/admin, roles: ROLE_ADMIN }
         - { path: ^/api/organizations/.+/subscription, roles: ROLE_USER }
         - { path: ^/api/onboarding, roles: ROLE_USER }
+        # GET /api/me seul : session anonyme → 200 + JSON null (pas de 403/401, plus d’exception profiler).
+        - { path: ^/api/me$, roles: PUBLIC_ACCESS }
         - { path: ^/api/me, roles: ROLE_USER }
         - { path: ^/api/users, roles: ROLE_USER }
         - { path: ^/api/organizations, roles: ROLE_USER }

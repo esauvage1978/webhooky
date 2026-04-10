@@ -18,6 +18,7 @@ import Users from '../users/Users.jsx';
 import UsersJournal from '../users/UsersJournal.jsx';
 
 const AdminSupervision = lazy(() => import('../admin/AdminSupervision.jsx'));
+const AdminOptions = lazy(() => import('../admin/AdminOptions.jsx'));
 const FormWebhooks = lazy(() => import('../workflows/FormWebhooks.jsx'));
 const OrganizationBilling = lazy(() => import('../organization/OrganizationBilling.jsx'));
 const Organizations = lazy(() => import('../organization/Organizations.jsx'));
@@ -359,6 +360,14 @@ export default function App() {
   }, [user, activeNav]);
 
   useEffect(() => {
+    if (user && !user.roles.includes('ROLE_ADMIN') && activeNav === 'adminOptions') {
+      setActiveNav('dashboard');
+      window.history.replaceState({}, '', '/');
+      setPathname('/');
+    }
+  }, [user, activeNav]);
+
+  useEffect(() => {
     if (!user) return;
     const isAdmin = user.roles.includes('ROLE_ADMIN');
     const isManager = user.roles.includes('ROLE_MANAGER');
@@ -459,6 +468,11 @@ export default function App() {
         {!needsOrgSetup && activeNav === 'adminSupervision' && user.roles.includes('ROLE_ADMIN') ? (
           <Suspense fallback={<RouteFallback />}>
             <AdminSupervision />
+          </Suspense>
+        ) : null}
+        {!needsOrgSetup && activeNav === 'adminOptions' && user.roles.includes('ROLE_ADMIN') ? (
+          <Suspense fallback={<RouteFallback />}>
+            <AdminOptions />
           </Suspense>
         ) : null}
         {!needsOrgSetup && activeNav === 'integrations' ? (

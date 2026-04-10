@@ -69,6 +69,9 @@ export function pathToNavId(pathname) {
   if (/(^|\/)admin\/supervision$/.test(p)) {
     return 'adminSupervision';
   }
+  if (/(^|\/)admin\/options$/.test(p)) {
+    return 'adminOptions';
+  }
   const seg = p.slice(1).split('/')[0] || '';
   switch (seg) {
     case 'workflows':
@@ -137,6 +140,9 @@ export function navIdToPath(navId) {
     case 'adminSupervision':
       rel = '/admin/supervision';
       break;
+    case 'adminOptions':
+      rel = '/admin/options';
+      break;
     default:
       rel = '/';
   }
@@ -153,7 +159,7 @@ export function userCanAccessNav(user, navId) {
   if (navId === 'accountProfile' || navId === 'changePassword') {
     return true;
   }
-  if (navId === 'adminSupervision') {
+  if (navId === 'adminSupervision' || navId === 'adminOptions') {
     return isAdmin;
   }
   const needsOrg = !isAdmin && orgCount === 0;

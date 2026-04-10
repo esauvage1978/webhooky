@@ -921,10 +921,6 @@ body {
 }
 
 /* ——— Dashboard home ——— */
-.dashboard-home {
-  max-width: 1100px;
-}
-
 .dashboard-hero {
   margin-bottom: 1.75rem;
 }
@@ -941,7 +937,6 @@ body {
   margin: 0;
   font-size: 1rem;
   color: var(--text-muted);
-  max-width: 52ch;
 }
 
 .dashboard-subtitle strong {
@@ -4007,10 +4002,6 @@ h1 {
 
 .dashboard-home-hero {
   align-items: flex-start;
-}
-
-.dashboard-home-intro {
-  max-width: 52ch;
 }
 
 .org-billing-inner .users-tabs.org-billing-tabs {
