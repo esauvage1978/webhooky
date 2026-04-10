@@ -22,11 +22,16 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
     private const CATEGORY = 'Options';
 
     /**
-     * @var list<array{optionName: string, optionValue: string}>
+     * @var list<array{optionName: string, optionValue: string, createOnly?: bool}>
      */
     private const DEFAULT_ROWS = [
         ['optionName' => 'option_category', 'optionValue' => 'Options;Hook'],
         ['optionName' => 'option_domaine', 'optionValue' => 'WebHooky'],
+        [
+            'optionName' => 'WEBHOOKY_ERROR_NOTIFY_WEBHOOK_URL',
+            'optionValue' => 'https://webhooky.builders/webhook/form/ed1f0664-9437-489d-9579-31bda85b8d92',
+            'createOnly' => true,
+        ],
     ];
 
     public function __construct(
@@ -47,6 +52,9 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
             $option = $this->optionRepository->findFirstByOptionName($row['optionName']);
 
             if ($option instanceof Option) {
+                if (!empty($row['createOnly'])) {
+                    continue;
+                }
                 if ($option->getOptionValue() !== $row['optionValue']) {
                     $option->setOptionValue($row['optionValue']);
                     ++$updated;

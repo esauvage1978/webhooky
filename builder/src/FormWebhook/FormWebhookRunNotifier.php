@@ -29,10 +29,7 @@ final class FormWebhookRunNotifier
         private readonly LoggerInterface $logger,
         #[Lazy]
         private readonly FormWebhookIngressHandlerInterface $formWebhookIngressHandler,
-        #[Autowire('%app.webhooky.error_notify_webhook_url%')]
-        private readonly string $errorNotifyWebhookUrlDefault,
-        #[Autowire('%env(WEBHOOKY_ERROR_NOTIFY_WEBHOOK_URL)%')]
-        private readonly string $errorNotifyWebhookUrlEnv,
+        private readonly ErrorNotifyWebhookUrlResolver $errorNotifyWebhookUrlResolver,
         #[Autowire('%app.webhooky.error_notify_from%')]
         private readonly string $errorNotifyFromEmail,
         #[Autowire('%app.webhooky.public_url%')]
@@ -169,9 +166,7 @@ final class FormWebhookRunNotifier
 
     private function resolveErrorNotifyWebhookUrl(): string
     {
-        $fromEnv = trim($this->errorNotifyWebhookUrlEnv);
-
-        return $fromEnv !== '' ? $fromEnv : trim($this->errorNotifyWebhookUrlDefault);
+        return $this->errorNotifyWebhookUrlResolver->resolve();
     }
 
     private function extractFormWebhookToken(string $webhookUrl): ?string
