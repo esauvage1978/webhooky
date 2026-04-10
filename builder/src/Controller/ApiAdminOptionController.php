@@ -38,11 +38,11 @@ final class ApiAdminOptionController extends AbstractController
     #[Route('/meta/choices', name: 'api_admin_options_meta_choices', methods: ['GET'])]
     public function metaChoices(): JsonResponse
     {
-        $catRow = $this->optionRepository->findOneByCategoryOptionNameNullDomain(
+        $catRow = $this->optionRepository->findOneByCategoryAndOptionName(
             self::META_CATEGORY,
             self::META_OPTION_CATEGORY_LIST,
         );
-        $domRow = $this->optionRepository->findOneByCategoryOptionNameNullDomain(
+        $domRow = $this->optionRepository->findOneByCategoryAndOptionName(
             self::META_CATEGORY,
             self::META_OPTION_DOMAIN_LIST,
         );

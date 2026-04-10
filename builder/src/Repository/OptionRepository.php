@@ -18,14 +18,18 @@ class OptionRepository extends ServiceEntityRepository
         parent::__construct($registry, Option::class);
     }
 
-    public function findOneByCategoryOptionNameNullDomain(string $category, string $optionName): ?Option
+    /**
+     * Première ligne pour (catégorie, nom d’option), quel que soit le domaine (utile pour les options « méta » listes).
+     */
+    public function findOneByCategoryAndOptionName(string $category, string $optionName): ?Option
     {
         return $this->createQueryBuilder('o')
             ->where('o.category = :cat')
             ->andWhere('o.optionName = :name')
-            ->andWhere('o.domain IS NULL')
             ->setParameter('cat', $category)
             ->setParameter('name', $optionName)
+            ->orderBy('o.id', 'ASC')
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
     }

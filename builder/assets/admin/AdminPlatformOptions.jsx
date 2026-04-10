@@ -46,7 +46,7 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
   const loadOptionMeta = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/options/meta/choices', apiJsonInit());
-      const data = await parseJson(res);
+      const data = (await parseJson(res)) ?? {};
       if (!res.ok) {
         setOptionMeta({ categories: [], domains: [], error: data?.error ?? 'Listes indisponibles' });
         return;

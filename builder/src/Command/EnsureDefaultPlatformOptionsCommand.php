@@ -46,9 +46,10 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
             $option = $repo->createQueryBuilder('o')
                 ->where('o.category = :cat')
                 ->andWhere('o.optionName = :name')
-                ->andWhere('o.domain IS NULL')
                 ->setParameter('cat', self::CATEGORY)
                 ->setParameter('name', $row['optionName'])
+                ->orderBy('o.id', 'ASC')
+                ->setMaxResults(1)
                 ->getQuery()
                 ->getOneOrNullResult();
 
