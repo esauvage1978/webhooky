@@ -349,29 +349,6 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
             </p>
           </article>
         ) : null}
-
-        <article className="dash-card dash-card-outline">
-          <h2 className="dash-card-title">Compte</h2>
-          <ul className="dash-list">
-            <li>
-              <span className="dash-list-label">E-mail</span>
-              <span className="dash-list-value">{user.email}</span>
-            </li>
-            <li>
-              <span className="dash-list-label">Rôles</span>
-              <span className="dash-list-value">{user.roles.filter((r) => r !== 'ROLE_USER').join(', ') || 'Utilisateur'}</span>
-            </li>
-            {user.organization ? (
-              <li>
-                <span className="dash-list-label">Organisation</span>
-                <span className="dash-list-value">
-                  {user.organization.name}{' '}
-                  <small className="dash-id">#{user.organization.id}</small>
-                </span>
-              </li>
-            ) : null}
-          </ul>
-        </article>
       </div>
 
       {(isAdmin || user.organization) &&
