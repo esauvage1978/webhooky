@@ -262,91 +262,107 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
 
         {sub && user.organization ? (
           <article
-            className={`dash-card ${sub.blockReason || !sub.webhooksOperational ? 'dash-card-warn' : 'dash-card-muted'}`}
+            className={`dash-card dash-card-plan-fullwidth ${
+              sub.blockReason || !sub.webhooksOperational ? 'dash-card-warn' : 'dash-card-muted'
+            }`}
           >
-            <h2 className="dash-card-title">Forfait &amp; événements</h2>
-            <p className="dash-card-desc">
-              <strong>{sub.planLabel}</strong>
-            </p>
-            <p className="dash-card-stat subtle">
-              {sub.webhookCount ?? 0}
-              {sub.maxWebhooks != null ? ` / ${sub.maxWebhooks}` : ''} webhook(s)
-            </p>
+            <div className="dash-card-plan-compact">
+              <div className="dash-card-plan-top">
+                <h2 className="dash-card-title dash-card-plan-title">Forfait &amp; événements</h2>
+                <div className="dash-card-plan-top-meta">
+                  <p className="dash-card-desc dash-card-plan-planline">
+                    <strong>{sub.planLabel}</strong>
+                  </p>
+                  <p className="dash-card-stat subtle dash-card-plan-webhooks">
+                    {sub.webhookCount ?? 0}
+                    {sub.maxWebhooks != null ? ` / ${sub.maxWebhooks}` : ''} webhook(s)
+                  </p>
+                </div>
+              </div>
 
-            <div className="dash-events-meter" aria-label="Utilisation du quota d’événements">
-              <div className="dash-events-meter-label">
-                <span>
-                  Événements : <strong>{sub.eventsConsumed ?? 0}</strong> / {sub.eventsAllowance ?? 0}
-                </span>
-                {sub.eventsExtraQuota > 0 ? (
-                  <span className="muted small">
-                    (dont {sub.eventsIncluded ?? 0} inclus + {sub.eventsExtraQuota} pack)
-                  </span>
+              <div className="dash-card-plan-meter-row">
+                <div className="dash-events-meter dash-events-meter--compact" aria-label="Utilisation du quota d’événements">
+                  <div className="dash-events-meter-label">
+                    <span>
+                      Événements : <strong>{sub.eventsConsumed ?? 0}</strong> / {sub.eventsAllowance ?? 0}
+                    </span>
+                    {sub.eventsExtraQuota > 0 ? (
+                      <span className="muted small">
+                        (dont {sub.eventsIncluded ?? 0} inclus + {sub.eventsExtraQuota} pack)
+                      </span>
+                    ) : null}
+                    <span className="muted small dash-events-meter-remain">
+                      {sub.eventsRemaining ?? 0} restant(s)
+                      {sub.plan === 'free' ? ' — pas de dépassement : upgrade obligatoire au-delà.' : null}
+                    </span>
+                  </div>
+                  <div className="dash-events-bar">
+                    <div className="dash-events-bar-fill" style={{ width: `${eventsPct}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              {sub.blockReason ? <p className="error small dash-card-plan-alert">{sub.blockReason}</p> : null}
+              {!sub.webhooksOperational ? (
+                <p className="error small dash-card-plan-alert">
+                  Les réceptions sur vos webhooks sont refusées (abonnement ou quota).
+                </p>
+              ) : null}
+
+              <div className="dash-card-plan-foot">
+                {canManageBilling && (sub.plan === 'free' || sub.blockReason || relevantPacks.length > 0) ? (
+                  <p className="muted small dash-card-plan-foot-note">
+                    Tarifs upgrades et packs affichés hors taxes (HT) ; TVA en sus à la facturation.
+                  </p>
                 ) : null}
-              </div>
-              <div className="dash-events-bar">
-                <div className="dash-events-bar-fill" style={{ width: `${eventsPct}%` }} />
-              </div>
-              <p className="muted small">
-                {sub.eventsRemaining ?? 0} restant(s)
-                {sub.plan === 'free' ? ' — pas de dépassement : upgrade obligatoire au-delà.' : null}
-              </p>
-            </div>
 
-            {sub.blockReason ? <p className="error small">{sub.blockReason}</p> : null}
-            {!sub.webhooksOperational ? (
-              <p className="error small">Les réceptions sur vos webhooks sont refusées (abonnement ou quota).</p>
-            ) : null}
-
-            {canManageBilling && (sub.plan === 'free' || sub.blockReason || relevantPacks.length > 0) ? (
-              <p className="muted small">Tarifs upgrades et packs affichés hors taxes (HT) ; TVA en sus à la facturation.</p>
-            ) : null}
-
-            {canManageBilling && (sub.plan === 'free' || sub.blockReason) ? (
-              <div className="dash-upgrade-row">
-                <button
-                  type="button"
-                  className="btn secondary small"
-                  disabled={upgradeBusy}
-                  onClick={() => void upgradePlan('starter')}
-                >
-                  Starter — 9 € HT/mois (5 000 év.)
-                </button>
-                <button
-                  type="button"
-                  className="btn small"
-                  disabled={upgradeBusy}
-                  onClick={() => void upgradePlan('pro')}
-                >
-                  Pro — 29 € HT/mois (50 000 év.)
-                </button>
-              </div>
-            ) : null}
-
-            {canManageBilling && relevantPacks.length > 0 ? (
-              <div className="dash-pack-row">
-                <span className="muted small">Packs d’événements (simulation) :</span>
-                <div className="dash-upgrade-row">
-                  {relevantPacks.map((p) => (
+                {canManageBilling && (sub.plan === 'free' || sub.blockReason) ? (
+                  <div className="dash-upgrade-row">
                     <button
-                      key={p.id}
                       type="button"
                       className="btn secondary small"
                       disabled={upgradeBusy}
-                      title={p.label}
-                      onClick={() => void buyPack(p.id)}
+                      onClick={() => void upgradePlan('starter')}
                     >
-                      +{p.eventsAdded.toLocaleString()} — {p.priceEur} € HT
+                      Starter — 9 € HT/mois (5 000 év.)
                     </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+                    <button
+                      type="button"
+                      className="btn small"
+                      disabled={upgradeBusy}
+                      onClick={() => void upgradePlan('pro')}
+                    >
+                      Pro — 29 € HT/mois (50 000 év.)
+                    </button>
+                  </div>
+                ) : null}
 
-            {upgradeMsg ? <p className="muted small">{upgradeMsg}</p> : null}
-            <p className="muted small">
-              Paiement réel : voir <code className="mono">docs/PAIEMENT_STRIPE.md</code>
-            </p>
+                {canManageBilling && relevantPacks.length > 0 ? (
+                  <div className="dash-pack-row dash-pack-row--inline">
+                    <span className="muted small">Packs (simulation) :</span>
+                    <div className="dash-upgrade-row">
+                      {relevantPacks.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="btn secondary small"
+                          disabled={upgradeBusy}
+                          title={p.label}
+                          onClick={() => void buyPack(p.id)}
+                        >
+                          +{p.eventsAdded.toLocaleString()} — {p.priceEur} € HT
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {upgradeMsg ? <p className="muted small dash-card-plan-msg">{upgradeMsg}</p> : null}
+              <p className="muted small dash-card-plan-stripe">
+                Paiement réel : <code className="mono">docs/PAIEMENT_STRIPE.md</code>
+              </p>
+            </div>
           </article>
         ) : null}
       </div>

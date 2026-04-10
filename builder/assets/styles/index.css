@@ -2641,6 +2641,133 @@ h1 {
   color: var(--text-muted);
 }
 
+/* Forfait & événements : pleine largeur, bandeau bas */
+.dashboard-cards .dash-card-plan-fullwidth {
+  grid-column: 1 / -1;
+}
+
+.dash-card-plan-fullwidth {
+  padding: 0.85rem 1.25rem 0.95rem;
+}
+
+.dash-card-plan-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dash-card-plan-title {
+  margin: 0 !important;
+}
+
+.dash-card-plan-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1.25rem;
+}
+
+.dash-card-plan-top-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+}
+
+.dash-card-plan-planline {
+  margin: 0 !important;
+  font-size: 0.95rem;
+}
+
+.dash-card-plan-webhooks {
+  margin: 0 !important;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.dash-card-plan-meter-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.dash-events-meter--compact {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  margin: 0 !important;
+}
+
+.dash-events-meter--compact .dash-events-meter-label {
+  width: 100%;
+  margin-bottom: 0.2rem;
+}
+
+.dash-events-meter-remain {
+  margin-inline-start: auto;
+  text-align: right;
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+
+@media (max-width: 640px) {
+  .dash-events-meter-label {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dash-events-meter-remain {
+    margin-inline-start: 0;
+    text-align: left;
+    min-width: 0;
+  }
+}
+
+.dash-card-plan-alert {
+  margin: 0 !important;
+}
+
+.dash-card-plan-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.dash-card-plan-foot-note {
+  margin: 0 !important;
+  flex: 1 1 12rem;
+  min-width: min(100%, 14rem);
+}
+
+.dash-card-plan-foot .dash-upgrade-row {
+  margin-top: 0;
+}
+
+.dash-pack-row--inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0 !important;
+}
+
+.dash-pack-row--inline .dash-upgrade-row {
+  margin-top: 0;
+}
+
+.dash-card-plan-msg {
+  margin: 0.15rem 0 0 !important;
+}
+
+.dash-card-plan-stripe {
+  margin: 0 !important;
+  font-size: 0.78rem !important;
+}
+
 .dash-upgrade-row {
   display: flex;
   flex-wrap: wrap;
