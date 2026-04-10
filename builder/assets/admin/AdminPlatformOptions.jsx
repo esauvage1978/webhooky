@@ -15,8 +15,9 @@ const emptyPlatformOptionForm = () => ({
  * CRUD options (app_option) — API /api/admin/options (ROLE_ADMIN côté serveur).
  * @param {object} [props]
  * @param {Record<string, unknown>} [props.contentCardProps] — ex. role tabpanel pour Supervision
+ * @param {boolean} [props.showHubLayout] — page dédiée : hero façon Intégrations + carte pleine largeur
  */
-export default function AdminPlatformOptions({ contentCardProps = {} }) {
+export default function AdminPlatformOptions({ contentCardProps = {}, showHubLayout = false }) {
   const [opts, setOpts] = useState({
     items: [],
     total: 0,
@@ -144,68 +145,120 @@ export default function AdminPlatformOptions({ contentCardProps = {} }) {
     void loadPlatformOptions(1);
   }, []);
 
+  const cardClassName = [
+    'content-card',
+    showHubLayout ? 'content-card--integrations-wide' : '',
+    contentCardProps.className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const { className: _omit, ...restCardProps } = contentCardProps;
+
+  const filterFields = (
+    <>
+      <label className="users-filter-min">
+        <span className="users-filter-min-label muted">Catégorie</span>
+        <input
+          type="search"
+          value={optFilters.category}
+          onChange={(e) => setOptFilters((f) => ({ ...f, category: e.target.value }))}
+          placeholder="Exact…"
+          autoComplete="off"
+        />
+      </label>
+      <label className="users-filter-min">
+        <span className="users-filter-min-label muted">Domaine</span>
+        <input
+          type="search"
+          value={optFilters.domain}
+          onChange={(e) => setOptFilters((f) => ({ ...f, domain: e.target.value }))}
+          placeholder="Exact…"
+          autoComplete="off"
+        />
+      </label>
+      <label className="users-filter-min">
+        <span className="users-filter-min-label muted">Nom d’option</span>
+        <input
+          type="search"
+          value={optFilters.optionName}
+          onChange={(e) => setOptFilters((f) => ({ ...f, optionName: e.target.value }))}
+          placeholder="Contient…"
+          autoComplete="off"
+        />
+      </label>
+    </>
+  );
+
+  const filterActions = (
+    <>
+      <button
+        type="button"
+        className={showHubLayout ? 'btn secondary small' : 'btn btn-primary'}
+        onClick={() => void loadPlatformOptions(1)}
+      >
+        Filtrer
+      </button>
+      <button
+        type="button"
+        className={showHubLayout ? 'btn secondary small' : 'btn btn-secondary'}
+        onClick={() => {
+          const empty = { category: '', domain: '', optionName: '' };
+          setOptFilters(empty);
+          void loadPlatformOptions(1, empty);
+        }}
+      >
+        Réinitialiser
+      </button>
+      {!showHubLayout ? (
+        <button type="button" className="btn btn-primary" onClick={openCreateOption}>
+          Nouvelle option
+        </button>
+      ) : null}
+    </>
+  );
+
   return (
     <Fragment>
-    <div className="content-card" {...contentCardProps}>
-      <ErrorAlert>{opts.error}</ErrorAlert>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Paramètres clé/valeur (réservés aux administrateurs). Table SQL <span className="mono">app_option</span>.
-      </p>
-      <div className="users-filters-minimal admin-supervision-resource-filters">
-        <label className="users-filter-min">
-          <span className="users-filter-min-label muted">Catégorie</span>
-          <input
-            type="search"
-            value={optFilters.category}
-            onChange={(e) => setOptFilters((f) => ({ ...f, category: e.target.value }))}
-            placeholder="Exact…"
-            autoComplete="off"
-          />
-        </label>
-        <label className="users-filter-min">
-          <span className="users-filter-min-label muted">Domaine</span>
-          <input
-            type="search"
-            value={optFilters.domain}
-            onChange={(e) => setOptFilters((f) => ({ ...f, domain: e.target.value }))}
-            placeholder="Exact…"
-            autoComplete="off"
-          />
-        </label>
-        <label className="users-filter-min">
-          <span className="users-filter-min-label muted">Nom d’option</span>
-          <input
-            type="search"
-            value={optFilters.optionName}
-            onChange={(e) => setOptFilters((f) => ({ ...f, optionName: e.target.value }))}
-            placeholder="Contient…"
-            autoComplete="off"
-          />
-        </label>
-        <div className="users-filter-min admin-supervision-filter-actions">
-          <button type="button" className="btn btn-primary" onClick={() => void loadPlatformOptions(1)}>
-            Filtrer
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              const empty = { category: '', domain: '', optionName: '' };
-              setOptFilters(empty);
-              void loadPlatformOptions(1, empty);
-            }}
-          >
-            Réinitialiser
-          </button>
-          <button type="button" className="btn btn-primary" onClick={openCreateOption}>
-            Nouvelle option
-          </button>
-        </div>
-      </div>
+      {showHubLayout ? (
+        <header className="users-hero users-hero--minimal">
+          <div className="integrations-hero-intro">
+            <h1 className="users-hero-title">
+              <i className="fa-solid fa-sliders" aria-hidden />
+              <span>Options plateforme</span>
+            </h1>
+          </div>
+          <div className="users-hero-actions wp-projects-hero-actions">
+            <button type="button" className="fw-btn-primary wp-proj-hero-btn" onClick={openCreateOption}>
+              <i className="fa-solid fa-plus" aria-hidden />
+              <span>Nouvelle option</span>
+            </button>
+          </div>
+        </header>
+      ) : null}
 
-      {opts.loading ? <p className="muted">Chargement…</p> : null}
-      <div className="org-table-wrap">
-        <table className="org-table org-table--resource-audit">
+      <div className={cardClassName} {...restCardProps}>
+        <ErrorAlert>{opts.error}</ErrorAlert>
+        {!showHubLayout ? (
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Paramètres clé/valeur (réservés aux administrateurs). Table SQL <span className="mono">app_option</span>.
+          </p>
+        ) : null}
+
+        {showHubLayout ? (
+          <div className="admin-options-toolbar">
+            <div className="admin-options-toolbar-fields">{filterFields}</div>
+            <div className="admin-options-toolbar-actions">{filterActions}</div>
+          </div>
+        ) : (
+          <div className="users-filters-minimal admin-supervision-resource-filters">
+            {filterFields}
+            <div className="users-filter-min admin-supervision-filter-actions">{filterActions}</div>
+          </div>
+        )}
+
+        {opts.loading ? <p className="muted">Chargement…</p> : null}
+        <div className={showHubLayout ? 'integrations-block__table-wrap org-table-wrap' : 'org-table-wrap'}>
+        <table className={showHubLayout ? 'org-table mailjet-table' : 'org-table org-table--resource-audit'}>
           <thead>
             <tr>
               <th>Id</th>
@@ -214,7 +267,7 @@ export default function AdminPlatformOptions({ contentCardProps = {} }) {
               <th>Nom</th>
               <th>Commentaire</th>
               <th>Valeur</th>
-              <th />
+              <th className="org-table-th-actions" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -239,17 +292,40 @@ export default function AdminPlatformOptions({ contentCardProps = {} }) {
                     ? `${row.optionValue.slice(0, 77)}…`
                     : row.optionValue}
                 </td>
-                <td className="nowrap">
-                  <button type="button" className="btn btn-secondary small" onClick={() => openEditOption(row)}>
-                    Modifier
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="btn btn-secondary small"
-                    onClick={() => void deletePlatformOption(row.id)}
-                  >
-                    Supprimer
-                  </button>
+                <td className={showHubLayout ? 'actions' : 'nowrap'}>
+                  {showHubLayout ? (
+                    <div className="org-table-actions-inner">
+                      <button
+                        type="button"
+                        className="btn secondary small org-table-action-btn"
+                        onClick={() => openEditOption(row)}
+                      >
+                        <i className="fa-solid fa-pen-to-square" aria-hidden />
+                        <span>Modifier</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn danger small org-table-action-btn"
+                        onClick={() => void deletePlatformOption(row.id)}
+                      >
+                        <i className="fa-solid fa-trash-can" aria-hidden />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-secondary small" onClick={() => openEditOption(row)}>
+                        Modifier
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="btn btn-secondary small"
+                        onClick={() => void deletePlatformOption(row.id)}
+                      >
+                        Supprimer
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -257,7 +333,7 @@ export default function AdminPlatformOptions({ contentCardProps = {} }) {
         </table>
       </div>
       {opts.total > opts.perPage ? (
-        <div className="admin-supervision-pager">
+        <div className={showHubLayout ? 'admin-options-pager' : 'admin-supervision-pager'}>
           <button
             type="button"
             className="btn btn-secondary"
