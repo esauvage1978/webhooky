@@ -38,14 +38,10 @@ final class ApiAdminOptionController extends AbstractController
     #[Route('/meta/choices', name: 'api_admin_options_meta_choices', methods: ['GET'])]
     public function metaChoices(): JsonResponse
     {
-        $catRow = $this->optionRepository->findOneByCategoryAndOptionName(
-            self::META_CATEGORY,
-            self::META_OPTION_CATEGORY_LIST,
-        );
-        $domRow = $this->optionRepository->findOneByCategoryAndOptionName(
-            self::META_CATEGORY,
-            self::META_OPTION_DOMAIN_LIST,
-        );
+        $catRow = $this->optionRepository->findFirstByOptionName(self::META_OPTION_CATEGORY_LIST)
+            ?? $this->optionRepository->findOneByCategoryAndOptionName(self::META_CATEGORY, self::META_OPTION_CATEGORY_LIST);
+        $domRow = $this->optionRepository->findFirstByOptionName(self::META_OPTION_DOMAIN_LIST)
+            ?? $this->optionRepository->findOneByCategoryAndOptionName(self::META_CATEGORY, self::META_OPTION_DOMAIN_LIST);
 
         return new JsonResponse([
             'categories' => $this->splitChoiceList($catRow),
@@ -256,8 +252,21 @@ final class ApiAdminOptionController extends AbstractController
             return [];
         }
 
-        $parts = array_map(trim(...), explode(';', $raw));
+        // Séparateur « ; » ASCII ou pleine chasse (saisie bureautique).
+        $normalized = str_replace("\u{FF1B}", ';', $raw);
+        $segments = preg_split('/\s*;\s*/', $normalized, -1, \PREG_SPLIT_NO_EMPTY);
+        if ($segments === false) {
+            return [];
+        }
 
-        return array_values(array_unique(array_filter($parts, static fn (string $s): bool => '' !== $s)));
+        $parts = [];
+        foreach ($segments as $segment) {
+            $t = trim((string) $segment);
+            if ('' !== $t) {
+                $parts[] = $t;
+            }
+        }
+
+        return array_values(array_unique($parts));
     }
 }

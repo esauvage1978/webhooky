@@ -35,6 +35,20 @@ class OptionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Première ligne portant ce nom d’option (liste méta option_category / option_domaine : ne pas dépendre de la colonne category).
+     */
+    public function findFirstByOptionName(string $optionName): ?Option
+    {
+        return $this->createQueryBuilder('o')
+            ->where('o.optionName = :name')
+            ->setParameter('name', $optionName)
+            ->orderBy('o.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * @return array{items: list<Option>, total: int}
      */
     public function findFilteredPaginatedForAdmin(

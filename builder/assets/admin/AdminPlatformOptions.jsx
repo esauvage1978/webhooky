@@ -2,6 +2,21 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import ErrorAlert from '../components/ui/ErrorAlert.jsx';
 import { apiJsonInit, parseJson } from '../lib/http.js';
 
+/** Réponse API `meta/choices` : tableau attendu ; tolère une chaîne « a;b » (séparateur ; ou ; pleine chasse). */
+function normalizeMetaChoicesList(value) {
+  if (Array.isArray(value)) {
+    return value.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    return value
+      .replace(/\uFF1B/g, ';')
+      .split(/\s*;\s*/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 /** Si la valeur en base n’est pas dans la liste méta, on l’affiche quand même dans le select. */
 function orderedChoicesWithOrphan(choices, current) {
   const c = typeof current === 'string' ? current.trim() : '';
@@ -52,8 +67,8 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
         return;
       }
       setOptionMeta({
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        domains: Array.isArray(data.domains) ? data.domains : [],
+        categories: normalizeMetaChoicesList(data.categories),
+        domains: normalizeMetaChoicesList(data.domains),
         error: '',
       });
     } catch {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Option;
+use App\Repository\OptionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -30,6 +31,7 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly OptionRepository $optionRepository,
     ) {
         parent::__construct();
     }
@@ -37,21 +39,12 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $repo = $this->entityManager->getRepository(Option::class);
 
         $created = 0;
         $updated = 0;
 
         foreach (self::DEFAULT_ROWS as $row) {
-            $option = $repo->createQueryBuilder('o')
-                ->where('o.category = :cat')
-                ->andWhere('o.optionName = :name')
-                ->setParameter('cat', self::CATEGORY)
-                ->setParameter('name', $row['optionName'])
-                ->orderBy('o.id', 'ASC')
-                ->setMaxResults(1)
-                ->getQuery()
-                ->getOneOrNullResult();
+            $option = $this->optionRepository->findFirstByOptionName($row['optionName']);
 
             if ($option instanceof Option) {
                 if ($option->getOptionValue() !== $row['optionValue']) {
