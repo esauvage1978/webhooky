@@ -222,11 +222,11 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
             <i className="fa-solid fa-gauge-high" aria-hidden />
             <span>Bonjour</span>
           </h1>
-          <p className="users-hero-sub muted dashboard-home-intro">
-            {isManagerOnly
-              ? 'Vue d’ensemble visuelle : quota événements, activité du mois et dernières exécutions en erreur. La facturation détaillée reste sous « Organisation & facturation ».'
-              : 'Voici l’essentiel : quotas, webhooks et accès rapide à vos outils depuis les cartes ci-dessous.'}
-          </p>
+          {!isManagerOnly ? (
+            <p className="users-hero-sub muted dashboard-home-intro">
+              Voici l’essentiel : quotas, webhooks et accès rapide à vos outils depuis les cartes ci-dessous.
+            </p>
+          ) : null}
         </div>
       </header>
 
