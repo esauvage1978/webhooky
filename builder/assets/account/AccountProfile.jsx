@@ -57,7 +57,13 @@ export default function AccountProfile({ user, onSessionRefresh }) {
         <form className="mailjet-form account-form account-section" onSubmit={(e) => void submit(e)}>
         <label className="field">
           <span>E-mail</span>
-          <input value={user.email} readOnly className="input-readonly" autoComplete="username" />
+          <input
+            value={typeof user.email === 'string' ? user.email : ''}
+            readOnly
+            className="input-readonly"
+            autoComplete="username"
+            placeholder={user.email ? undefined : 'Non communiqué par la session — reconnectez-vous ou contactez le support'}
+          />
         </label>
         <label className="field">
           <span>Nom d’affichage</span>
