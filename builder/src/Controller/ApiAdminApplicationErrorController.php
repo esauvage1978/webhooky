@@ -30,7 +30,28 @@ final class ApiAdminApplicationErrorController extends AbstractController
         $page = max(1, (int) $request->query->get('page', '1'));
         $offset = ($page - 1) * $limit;
 
-        $data = $this->applicationErrorLogRepository->findPaginatedForAdmin($offset, $limit);
+        $dateFrom = null;
+        $dateTo = null;
+        $df = $request->query->get('dateFrom');
+        if (\is_string($df) && $df !== '') {
+            try {
+                $dateFrom = new \DateTimeImmutable($df);
+            } catch (\Exception) {
+            }
+        }
+        $dt = $request->query->get('dateTo');
+        if (\is_string($dt) && $dt !== '') {
+            try {
+                if (1 === preg_match('/^\d{4}-\d{2}-\d{2}$/', $dt)) {
+                    $dateTo = new \DateTimeImmutable($dt.' 23:59:59');
+                } else {
+                    $dateTo = new \DateTimeImmutable($dt);
+                }
+            } catch (\Exception) {
+            }
+        }
+
+        $data = $this->applicationErrorLogRepository->findPaginatedForAdmin($offset, $limit, $dateFrom, $dateTo);
 
         return new JsonResponse([
             'items' => array_map(fn (ApplicationErrorLog $e) => $this->serializeList($e), $data['items']),

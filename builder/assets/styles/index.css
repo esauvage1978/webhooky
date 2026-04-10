@@ -5367,6 +5367,14 @@ h1 {
   gap: 0.5rem;
 }
 
+.admin-supervision-unbounded-warning {
+  padding: 0.65rem 0.85rem;
+  margin: 0 0 1rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--warn, #c47f00) 14%, transparent);
+}
+
 .admin-resource-audit-row.selected {
   background: rgba(46, 160, 120, 0.08);
 }

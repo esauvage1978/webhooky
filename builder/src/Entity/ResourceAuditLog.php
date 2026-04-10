@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'resource_audit_log')]
 #[ORM\Index(name: 'IDX_resource_audit_resource', columns: ['resource_type', 'resource_id', 'occurred_at'])]
 #[ORM\Index(name: 'IDX_resource_audit_org_time', columns: ['organization_id', 'occurred_at'])]
+#[ORM\Index(name: 'IDX_resource_audit_occurred_at', columns: ['occurred_at'])]
 class ResourceAuditLog
 {
     public const RESOURCE_FORM_WEBHOOK = 'form_webhook';

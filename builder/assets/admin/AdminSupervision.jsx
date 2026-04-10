@@ -30,6 +30,20 @@ const RESOURCE_TYPE_LABELS = {
   service_connection: 'Connecteur',
 };
 
+function formatDateYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Derniers `days` jours (inclus), en date locale — limite les requêtes COUNT sur toute l’historique. */
+function defaultSupervisionDateRangeDays(days = 7) {
+  const end = new Date();
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (days - 1));
+  return { dateFrom: formatDateYMD(start), dateTo: formatDateYMD(end) };
+}
+
 function levelBadgeClass(level) {
   if (level === 'critical') return 'danger';
   if (level === 'warning') return 'warn';
@@ -44,6 +58,7 @@ function sourceLabel(source) {
 export default function AdminSupervision() {
   const [tab, setTab] = useState('errors');
   const [errList, setErrList] = useState({ items: [], total: 0, page: 1, perPage: 50, loading: true, error: '' });
+  const [errFilters, setErrFilters] = useState(() => defaultSupervisionDateRangeDays(7));
   const [errDetail, setErrDetail] = useState({ loading: false, data: null, error: '' });
   const [selectedErrId, setSelectedErrId] = useState(null);
   const [resAudit, setResAudit] = useState({
@@ -54,46 +69,69 @@ export default function AdminSupervision() {
     loading: true,
     error: '',
   });
-  const [resFilters, setResFilters] = useState({
+  const [resFilters, setResFilters] = useState(() => ({
     resourceType: '',
     action: '',
     organizationId: '',
     actorEmail: '',
     resourceId: '',
-    dateFrom: '',
-    dateTo: '',
-  });
+    ...defaultSupervisionDateRangeDays(7),
+  }));
   const [resPerPage, setResPerPage] = useState(50);
   const [orgOptions, setOrgOptions] = useState([]);
   const [selectedResAuditId, setSelectedResAuditId] = useState(null);
   const [resAuditDetail, setResAuditDetail] = useState({ loading: false, data: null, error: '' });
-  const [userAudit, setUserAudit] = useState({ items: [], loading: true, error: '' });
+  const [userAudit, setUserAudit] = useState({
+    items: [],
+    total: 0,
+    page: 1,
+    perPage: 50,
+    loading: true,
+    error: '',
+  });
+  const [userFilters, setUserFilters] = useState(() => ({
+    organizationId: '',
+    action: '',
+    actorEmail: '',
+    targetEmail: '',
+    ...defaultSupervisionDateRangeDays(7),
+  }));
+  const [userPerPage, setUserPerPage] = useState(50);
 
-  const loadErrors = useCallback(async (page = 1) => {
-    setErrList((s) => ({ ...s, loading: true, error: '' }));
-    try {
-      const res = await fetch(`/api/admin/application-errors?limit=50&page=${page}`, apiJsonInit());
-      const data = await parseJson(res);
-      if (!res.ok) {
-        setErrList((s) => ({
-          ...s,
+  const loadErrors = useCallback(
+    async (page = 1, filters = errFilters) => {
+      setErrList((s) => ({ ...s, loading: true, error: '' }));
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', '50');
+        params.set('page', String(page));
+        if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+        if (filters.dateTo) params.set('dateTo', filters.dateTo);
+
+        const res = await fetch(`/api/admin/application-errors?${params}`, apiJsonInit());
+        const data = await parseJson(res);
+        if (!res.ok) {
+          setErrList((s) => ({
+            ...s,
+            loading: false,
+            error: data?.error ?? 'Chargement impossible',
+          }));
+          return;
+        }
+        setErrList({
+          items: data.items ?? [],
+          total: data.total ?? 0,
+          page: data.page ?? 1,
+          perPage: data.perPage ?? 50,
           loading: false,
-          error: data?.error ?? 'Chargement impossible',
-        }));
-        return;
+          error: '',
+        });
+      } catch {
+        setErrList((s) => ({ ...s, loading: false, error: 'Erreur réseau' }));
       }
-      setErrList({
-        items: data.items ?? [],
-        total: data.total ?? 0,
-        page: data.page ?? 1,
-        perPage: data.perPage ?? 50,
-        loading: false,
-        error: '',
-      });
-    } catch {
-      setErrList((s) => ({ ...s, loading: false, error: 'Erreur réseau' }));
-    }
-  }, []);
+    },
+    [errFilters],
+  );
 
   const openErrorDetail = useCallback(async (id) => {
     setSelectedErrId(id);
@@ -169,20 +207,46 @@ export default function AdminSupervision() {
     }
   }, []);
 
-  const loadUserAudit = useCallback(async () => {
-    setUserAudit({ items: [], loading: true, error: '' });
-    try {
-      const res = await fetch('/api/users/audit-logs', apiJsonInit());
-      const data = await parseJson(res);
-      if (!res.ok || !Array.isArray(data)) {
-        setUserAudit({ items: [], loading: false, error: 'Chargement impossible' });
-        return;
+  const loadUserAudit = useCallback(
+    async (page = 1, opts = {}) => {
+      const limit = opts.limit ?? userPerPage;
+      const filters = opts.filters ?? userFilters;
+      setUserAudit((s) => ({ ...s, loading: true, error: '' }));
+      try {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('limit', String(limit));
+        if (filters.organizationId) params.set('organizationId', filters.organizationId);
+        if (filters.action) params.set('action', filters.action);
+        if (filters.actorEmail.trim()) params.set('actorEmail', filters.actorEmail.trim());
+        if (filters.targetEmail.trim()) params.set('targetEmail', filters.targetEmail.trim());
+        if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+        if (filters.dateTo) params.set('dateTo', filters.dateTo);
+
+        const res = await fetch(`/api/admin/user-account-audit-logs?${params}`, apiJsonInit());
+        const data = await parseJson(res);
+        if (!res.ok) {
+          setUserAudit((s) => ({
+            ...s,
+            loading: false,
+            error: data?.error ?? 'Chargement impossible',
+          }));
+          return;
+        }
+        setUserAudit({
+          items: data.items ?? [],
+          total: data.total ?? 0,
+          page: data.page ?? 1,
+          perPage: data.perPage ?? limit,
+          loading: false,
+          error: '',
+        });
+      } catch {
+        setUserAudit((s) => ({ ...s, loading: false, error: 'Erreur réseau' }));
       }
-      setUserAudit({ items: data, loading: false, error: '' });
-    } catch {
-      setUserAudit({ items: [], loading: false, error: 'Erreur réseau' });
-    }
-  }, []);
+    },
+    [userPerPage, userFilters],
+  );
 
   useEffect(() => {
     if (tab === 'errors') void loadErrors(1);
@@ -193,7 +257,7 @@ export default function AdminSupervision() {
   }, [tab, loadResourceAudit]);
 
   useEffect(() => {
-    if (tab !== 'resources') return;
+    if (tab !== 'resources' && tab !== 'users') return;
     void (async () => {
       try {
         const res = await fetch('/api/organizations', apiJsonInit());
@@ -206,8 +270,10 @@ export default function AdminSupervision() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab === 'users') void loadUserAudit();
+    if (tab === 'users') void loadUserAudit(1);
   }, [tab, loadUserAudit]);
+
+  const resourceAuditUnbounded = !resFilters.dateFrom && !resFilters.dateTo;
 
   return (
     <div className="users-shell admin-supervision-page">
@@ -218,7 +284,8 @@ export default function AdminSupervision() {
             <span>Supervision plateforme</span>
           </h1>
           <p className="users-hero-sub muted">
-            Erreurs applicatives détaillées, journal des modifications (workflows, connecteurs) et actions sur les comptes.
+            Journaux paginés et filtrés par période (7&nbsp;jours par défaut) pour rester efficace avec de gros volumes. Élargissez
+            les dates ou retirez la plage seulement si nécessaire — le dénombrement global peut être coûteux.
           </p>
         </div>
       </header>
@@ -228,6 +295,40 @@ export default function AdminSupervision() {
       {tab === 'errors' ? (
         <div className="content-card" role="tabpanel" id="panel-errors" aria-labelledby="tab-errors">
           <ErrorAlert>{errList.error}</ErrorAlert>
+          <div className="users-filters-minimal admin-supervision-resource-filters admin-supervision-errors-filters">
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Du</span>
+              <input
+                type="date"
+                value={errFilters.dateFrom}
+                onChange={(e) => setErrFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+              />
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Au</span>
+              <input
+                type="date"
+                value={errFilters.dateTo}
+                onChange={(e) => setErrFilters((f) => ({ ...f, dateTo: e.target.value }))}
+              />
+            </label>
+            <div className="users-filter-min admin-supervision-filter-actions">
+              <button type="button" className="btn btn-primary" onClick={() => void loadErrors(1)}>
+                Filtrer
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const next = defaultSupervisionDateRangeDays(7);
+                  setErrFilters(next);
+                  void loadErrors(1, next);
+                }}
+              >
+                7&nbsp;jours
+              </button>
+            </div>
+          </div>
           {errList.loading ? <p className="muted">Chargement…</p> : null}
           {!errList.loading && errList.items.length === 0 && !errList.error ? (
             <p className="muted">Aucune erreur enregistrée pour l’instant.</p>
@@ -334,6 +435,12 @@ export default function AdminSupervision() {
         <div className="content-card" role="tabpanel" id="panel-resources" aria-labelledby="tab-resources">
           <ErrorAlert>{resAudit.error}</ErrorAlert>
           <ErrorAlert>{resAuditDetail.error}</ErrorAlert>
+          {resourceAuditUnbounded ? (
+            <p className="muted small admin-supervision-unbounded-warning">
+              <strong>Sans plage de dates</strong>, le total parcourt tout l’historique — peut être très lent avec des millions de
+              lignes. Préférez des filtres (dates, organisation, type).
+            </p>
+          ) : null}
           {resAudit.loading ? <p className="muted">Chargement…</p> : null}
 
           <div className="admin-supervision-split admin-supervision-split--resource-audit">
@@ -425,6 +532,7 @@ export default function AdminSupervision() {
                     <option value="25">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
+                    <option value="200">200</option>
                   </select>
                 </label>
                 <div className="users-filter-min admin-supervision-filter-actions">
@@ -439,22 +547,39 @@ export default function AdminSupervision() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      const empty = {
+                      const next = {
                         resourceType: '',
                         action: '',
                         organizationId: '',
                         actorEmail: '',
                         resourceId: '',
-                        dateFrom: '',
-                        dateTo: '',
+                        ...defaultSupervisionDateRangeDays(7),
                       };
-                      setResFilters(empty);
+                      setResFilters(next);
                       setSelectedResAuditId(null);
                       setResAuditDetail({ loading: false, data: null, error: '' });
-                      void loadResourceAudit(1, { filters: empty });
+                      void loadResourceAudit(1, { filters: next });
                     }}
                   >
-                    Réinitialiser
+                    7&nbsp;jours + critères
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          'Retirer la limite de dates ? Le dénombrement peut être très lent (gros volumes).',
+                        )
+                      ) {
+                        return;
+                      }
+                      const next = { ...resFilters, dateFrom: '', dateTo: '' };
+                      setResFilters(next);
+                      void loadResourceAudit(1, { filters: next });
+                    }}
+                  >
+                    Toute période
                   </button>
                 </div>
               </div>
@@ -568,6 +693,110 @@ export default function AdminSupervision() {
       {tab === 'users' ? (
         <div className="content-card" role="tabpanel" id="panel-users" aria-labelledby="tab-users">
           <ErrorAlert>{userAudit.error}</ErrorAlert>
+          <div className="users-filters-minimal admin-supervision-resource-filters">
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Organisation</span>
+              <select
+                value={userFilters.organizationId}
+                onChange={(e) => setUserFilters((f) => ({ ...f, organizationId: e.target.value }))}
+              >
+                <option value="">Toutes</option>
+                {orgOptions.map((o) => (
+                  <option key={o.id} value={String(o.id)}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Action</span>
+              <select
+                value={userFilters.action}
+                onChange={(e) => setUserFilters((f) => ({ ...f, action: e.target.value }))}
+              >
+                <option value="">Toutes</option>
+                {Object.entries(USER_ACTION_LABELS).map(([k, label]) => (
+                  <option key={k} value={k}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">E-mail acteur</span>
+              <input
+                type="search"
+                value={userFilters.actorEmail}
+                onChange={(e) => setUserFilters((f) => ({ ...f, actorEmail: e.target.value }))}
+                placeholder="Contient…"
+                autoComplete="off"
+              />
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">E-mail cible</span>
+              <input
+                type="search"
+                value={userFilters.targetEmail}
+                onChange={(e) => setUserFilters((f) => ({ ...f, targetEmail: e.target.value }))}
+                placeholder="Contient…"
+                autoComplete="off"
+              />
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Du</span>
+              <input
+                type="date"
+                value={userFilters.dateFrom}
+                onChange={(e) => setUserFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+              />
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Au</span>
+              <input
+                type="date"
+                value={userFilters.dateTo}
+                onChange={(e) => setUserFilters((f) => ({ ...f, dateTo: e.target.value }))}
+              />
+            </label>
+            <label className="users-filter-min">
+              <span className="users-filter-min-label muted">Par page</span>
+              <select
+                value={String(userPerPage)}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setUserPerPage(n);
+                  void loadUserAudit(1, { limit: n });
+                }}
+              >
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
+            </label>
+            <div className="users-filter-min admin-supervision-filter-actions">
+              <button type="button" className="btn btn-primary" onClick={() => void loadUserAudit(1)}>
+                Filtrer
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const next = {
+                    organizationId: '',
+                    action: '',
+                    actorEmail: '',
+                    targetEmail: '',
+                    ...defaultSupervisionDateRangeDays(7),
+                  };
+                  setUserFilters(next);
+                  void loadUserAudit(1, { filters: next });
+                }}
+              >
+                7&nbsp;jours + critères
+              </button>
+            </div>
+          </div>
           {userAudit.loading ? <p className="muted">Chargement…</p> : null}
           <div className="org-table-wrap">
             <table className="org-table">
@@ -581,11 +810,18 @@ export default function AdminSupervision() {
                 </tr>
               </thead>
               <tbody>
+                {userAudit.items.length === 0 && !userAudit.loading ? (
+                  <tr>
+                    <td colSpan={5} className="muted">
+                      Aucune entrée sur cette page (affinez la période ou les filtres).
+                    </td>
+                  </tr>
+                ) : null}
                 {userAudit.items.map((log) => (
                   <tr key={log.id}>
                     <td className="muted nowrap">{new Date(log.occurredAt).toLocaleString('fr-FR')}</td>
                     <td>{USER_ACTION_LABELS[log.action] ?? log.action}</td>
-                    <td>{log.actor ? log.actor.email : '—'}</td>
+                    <td>{userActorLabel(log.actor)}</td>
                     <td>{log.targetEmail ?? '—'}</td>
                     <td>{log.organization ? log.organization.name : '—'}</td>
                   </tr>
@@ -593,6 +829,29 @@ export default function AdminSupervision() {
               </tbody>
             </table>
           </div>
+          {userAudit.total > userAudit.perPage ? (
+            <div className="admin-supervision-pager">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={userAudit.page <= 1}
+                onClick={() => void loadUserAudit(userAudit.page - 1)}
+              >
+                Précédent
+              </button>
+              <span className="muted small">
+                Page {userAudit.page} · {userAudit.total} entrée(s)
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={userAudit.page * userAudit.perPage >= userAudit.total}
+                onClick={() => void loadUserAudit(userAudit.page + 1)}
+              >
+                Suivant
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -605,13 +864,17 @@ export default function AdminSupervision() {
   );
 }
 
-function resourceActorLabel(actor) {
+function userActorLabel(actor) {
   if (!actor) return '—';
   const name = actor.displayName;
   const em = actor.email ?? '';
   if (name && em) return `${name} · ${em}`;
   if (em) return em;
   return '—';
+}
+
+function resourceActorLabel(actor) {
+  return userActorLabel(actor);
 }
 
 function DiffChangeBlock({ ch }) {

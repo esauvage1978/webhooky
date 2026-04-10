@@ -21,17 +21,27 @@ class ApplicationErrorLogRepository extends ServiceEntityRepository
     /**
      * @return array{items: list<ApplicationErrorLog>, total: int}
      */
-    public function findPaginatedForAdmin(int $offset, int $limit): array
-    {
+    public function findPaginatedForAdmin(
+        int $offset,
+        int $limit,
+        ?\DateTimeImmutable $dateFrom = null,
+        ?\DateTimeImmutable $dateTo = null,
+    ): array {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
 
-        $total = (int) $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $qb = $this->createQueryBuilder('e');
+        if ($dateFrom instanceof \DateTimeImmutable) {
+            $qb->andWhere('e.createdAt >= :df')->setParameter('df', $dateFrom);
+        }
+        if ($dateTo instanceof \DateTimeImmutable) {
+            $qb->andWhere('e.createdAt <= :dt')->setParameter('dt', $dateTo);
+        }
 
-        $items = $this->createQueryBuilder('e')
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(e.id)')->getQuery()->getSingleScalarResult();
+
+        $items = $qb
             ->orderBy('e.createdAt', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($limit)

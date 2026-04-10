@@ -14,6 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: UserAccountAuditLogRepository::class)]
 #[ORM\Table(name: 'user_account_audit_log')]
 #[ORM\Index(name: 'IDX_user_audit_org_occurred', columns: ['organization_id', 'occurred_at'])]
+#[ORM\Index(name: 'IDX_user_audit_occurred_at', columns: ['occurred_at'])]
 class UserAccountAuditLog
 {
     public const ACTION_USER_INVITED = 'user.invited';
