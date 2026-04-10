@@ -7,6 +7,8 @@ namespace App\Repository;
 use App\Entity\Organization;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -93,5 +95,82 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->orderBy('u.email', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Liste paginée avec filtres — pour gestionnaires / administrateurs.
+     *
+     * @return array{items: list<User>, total: int}
+     */
+    public function findForListingPaginated(
+        ?Organization $organizationScope,
+        string $search,
+        string $roleFilter,
+        int $page,
+        int $perPage,
+    ): array {
+        $qb = $this->createQueryBuilder('u');
+        $distinct = false;
+
+        if ($organizationScope instanceof Organization) {
+            $qb->innerJoin('u.organizationMemberships', 'm')
+                ->andWhere('m.organization = :orgScope')
+                ->setParameter('orgScope', $organizationScope);
+            $distinct = true;
+        }
+
+        $search = trim($search);
+        if ($search !== '') {
+            $like = '%'.mb_strtolower($search).'%';
+            $qb->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->like('LOWER(u.email)', ':searchLike'),
+                    $qb->expr()->like('LOWER(COALESCE(u.displayName, \'\'))', ':searchLike'),
+                ),
+            );
+            $qb->setParameter('searchLike', $like);
+        }
+
+        $this->applyRoleFilterToQueryBuilder($qb, $roleFilter);
+
+        $qb->orderBy('u.email', 'ASC')
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage);
+
+        $paginator = new Paginator($qb, $distinct);
+
+        return [
+            'items' => iterator_to_array($paginator->getIterator()),
+            'total' => $paginator->count(),
+        ];
+    }
+
+    private function applyRoleFilterToQueryBuilder(QueryBuilder $qb, string $roleFilter): void
+    {
+        $roleFilter = mb_strtolower(trim($roleFilter));
+        if ($roleFilter === '') {
+            return;
+        }
+
+        if ($roleFilter === 'admin') {
+            $qb->andWhere('u.roles LIKE :rfAdmin')
+                ->setParameter('rfAdmin', '%ROLE_ADMIN%');
+
+            return;
+        }
+
+        if ($roleFilter === 'manager') {
+            $qb->andWhere('u.roles LIKE :rfMgr')
+                ->setParameter('rfMgr', '%ROLE_MANAGER%');
+
+            return;
+        }
+
+        if ($roleFilter === 'member') {
+            $qb->andWhere('u.roles NOT LIKE :rfAdminEx')
+                ->andWhere('u.roles NOT LIKE :rfMgrEx')
+                ->setParameter('rfAdminEx', '%ROLE_ADMIN%')
+                ->setParameter('rfMgrEx', '%ROLE_MANAGER%');
+        }
     }
 }

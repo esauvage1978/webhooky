@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Mailjet\MailjetAuthPairInterface;
 use App\Repository\MailjetRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: MailjetRepository::class)]
 #[ORM\Table(name: 'mailjet')]
-class Mailjet
+class Mailjet implements MailjetAuthPairInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -1,4 +1,4 @@
-# Mise en œuvre du paiement (Stripe) — Zapier Hub
+# Mise en œuvre du paiement (Stripe) — Webhooky
 
 Ce document décrit **ce qui est déjà en place** dans l’application (modèle d’abonnement par organisation, limites de webhooks, API) et **les étapes concrètes** pour brancher un prestataire de paiement — en pratique **Stripe** — afin que les forfaits deviennent **réellement payants**.
 
@@ -70,7 +70,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 STRIPE_PRICE_SINGLE_WEBHOOK=price_xxx
 STRIPE_PRICE_UNLIMITED=price_yyy
 # URL publique de l’app (déjà souvent présente pour les e-mails)
-APP_PUBLIC_URL=https://votredomaine.fr
+APP_PUBLIC_URL=https://webhooky.builders
 ```
 
 ---

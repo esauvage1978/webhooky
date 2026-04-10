@@ -1,0 +1,87 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL, CONTACT_EMAIL, GOOGLE_ANALYTICS_ID } from '../site.ts';
+
+const title = 'Politique de confidentialité — Webhooky';
+const description =
+  'Traitement des données personnelles dans le cadre du site webhooky.fr et des services proposés via webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container legal-page">
+    <div class="page-hero">
+      <h1>Politique de confidentialité</h1>
+      <p>
+        Cette politique décrit les principes appliquables aux traitements liés au site vitrine et, le cas échéant, au
+        compte et à l’usage de l’application sur <a href={BUILDER_URL}>webhooky.builders</a>.
+      </p>
+    </div>
+
+    <h2>Responsable du traitement</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> identité et coordonnées du responsable de traitement (entreprise ou personne).
+    </div>
+    <p>
+      Pour toute question relative à vos données : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </p>
+
+    <h2>Cookies et traceurs</h2>
+    <p>
+      Sur cette vitrine, des <strong>cookies nécessaires</strong> peuvent être déposés pour mémoriser vos choix (par
+      exemple vos préférences en matière de cookies). Avec votre accord, des cookies de
+      <strong>mesure d’audience</strong> peuvent être utilisés si un outil d’analytique est configuré. Vous pouvez
+      modifier vos choix à tout moment via le
+      lien <strong>Préférences cookies</strong> en pied de page.
+      La mesure d’audience est assurée par <strong>Google Analytics</strong> (Google LLC), propriété
+      <strong>{GOOGLE_ANALYTICS_ID}</strong>, chargée uniquement après acceptation de cette catégorie.
+    </p>
+
+    <h2>Données collectées</h2>
+    <p>Selon vos interactions, peuvent être traitées notamment :</p>
+    <ul>
+      <li>données de navigation et journaux techniques (adresse IP, date/heure, pages consultées) ;</li>
+      <li>données de contact si vous utilisez une fonctionnalité prévue à cet effet ;</li>
+      <li>données de compte, d’organisation et d’usage lorsque vous créez un compte sur l’application ;</li>
+      <li>
+        contenus transmis via les webhooks et métadonnées associées — ces données relèvent en premier lieu de votre
+        responsabilité en tant qu’utilisateur professionnel ou responsable de traitement vis-à-vis de vos propres
+        personnes concernées.
+      </li>
+    </ul>
+
+    <h2>Finalités et bases légales</h2>
+    <p>Exemples : exécution du service, intérêt légitime (sécurité, amélioration du produit), obligation légale, consentement lorsque requis.</p>
+
+    <h2>Destinataires et sous-traitants</h2>
+    <p>
+      Les données peuvent être communiquées à des prestataires d’hébergement, de messagerie, de paiement, d’analytique ou
+      d’outils tiers que vous connectez volontairement (ex. Mailjet). Une liste actualisée devra figurer dans la version
+      définitive de cette politique après identification de vos sous-traitants effectifs.
+    </p>
+
+    <h2>Durée de conservation</h2>
+    <p>Les durées sont déterminées selon la nature des données et les obligations légales. Précisez vos durées réelles dans votre registre interne.</p>
+
+    <h2>Vos droits</h2>
+    <p>
+      Conformément au RGPD, vous disposez de droits d’accès, de rectification, d’effacement, de limitation, d’opposition
+      et de portabilité dans les conditions prévues par la loi. Vous pouvez introduire une réclamation auprès de la CNIL
+      (cnil.fr).
+    </p>
+
+    <h2>Sécurité</h2>
+    <p>
+      Des mesures techniques et organisationnelles appropriées sont mises en œuvre dans la limite du raisonnable ; aucun
+      dispositif ne garantit une sécurité absolue.
+    </p>
+
+    <h2>Responsabilité de l’utilisateur</h2>
+    <p class="legal-strong">
+      L’éditeur n’est pas responsable des données que vous importez, des webhooks que vous configurez ni des envois
+      réalisés via des services tiers. Vous devez disposer des bases légales et consentements nécessaires à votre propre traitement.
+    </p>
+
+    <h2>Modifications</h2>
+    <p>La présente politique peut être mise à jour. La date de dernière mise à jour pourra être indiquée ici après révision.</p>
+  </main>
+</SiteLayout>

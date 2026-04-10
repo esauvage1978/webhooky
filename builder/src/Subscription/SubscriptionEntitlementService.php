@@ -11,6 +11,9 @@ use App\Repository\OrganizationRepository;
 
 final class SubscriptionEntitlementService
 {
+    /** Plafond affiché / logique interne pour les structures « hors forfait » (évite d’incrémenter le compteur en boucle). */
+    private const INTERNAL_EXEMPT_ALLOWANCE = 2_000_000_000;
+
     public function __construct(
         private readonly FormWebhookRepository $formWebhookRepository,
         private readonly OrganizationRepository $organizationRepository,
@@ -19,6 +22,10 @@ final class SubscriptionEntitlementService
 
     public function isEntitledToWebhooks(Organization $organization): bool
     {
+        if ($organization->isSubscriptionExempt()) {
+            return true;
+        }
+
         if ($organization->getSubscriptionPlan() === SubscriptionPlan::Free) {
             return $this->isFreeTierBillingOk($organization);
         }
@@ -67,6 +74,10 @@ final class SubscriptionEntitlementService
 
     public function getTotalEventsAllowance(Organization $organization): int
     {
+        if ($organization->isSubscriptionExempt()) {
+            return self::INTERNAL_EXEMPT_ALLOWANCE;
+        }
+
         $plan = $organization->getSubscriptionPlan();
 
         return $plan->baseEventsIncluded() + $organization->getEventsExtraQuota();
@@ -95,11 +106,19 @@ final class SubscriptionEntitlementService
 
     public function hasEventQuotaRemaining(Organization $organization): bool
     {
+        if ($organization->isSubscriptionExempt()) {
+            return true;
+        }
+
         return $organization->getEventsConsumed() < $this->getTotalEventsAllowance($organization);
     }
 
     public function getMaxWebhooks(Organization $organization): ?int
     {
+        if ($organization->isSubscriptionExempt()) {
+            return null;
+        }
+
         return $organization->getSubscriptionPlan()->maxWebhooks();
     }
 
@@ -115,6 +134,10 @@ final class SubscriptionEntitlementService
 
     public function canCreateWebhook(Organization $organization): bool
     {
+        if ($organization->isSubscriptionExempt()) {
+            return true;
+        }
+
         if (!$this->isEntitledToWebhooks($organization)) {
             return false;
         }
@@ -132,6 +155,10 @@ final class SubscriptionEntitlementService
      */
     public function buildSnapshot(Organization $organization): array
     {
+        if ($organization->isSubscriptionExempt()) {
+            return $this->buildExemptOrganizationSnapshot($organization);
+        }
+
         $plan = $organization->getSubscriptionPlan();
         $max = $this->getMaxWebhooks($organization);
         $wCount = $this->countWebhooks($organization);
@@ -160,6 +187,7 @@ final class SubscriptionEntitlementService
             'eventsAllowance' => $allowance,
             'eventsRemaining' => $eRemaining,
             'allowEventOverage' => $allowEventOverage,
+            'subscriptionExempt' => false,
             'blockReason' => $this->describeBlockReason(
                 $organization,
                 $entitled,
@@ -169,6 +197,38 @@ final class SubscriptionEntitlementService
                 $eventQuotaBlocked,
                 $allowEventOverage,
             ),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildExemptOrganizationSnapshot(Organization $organization): array
+    {
+        $wCount = $this->countWebhooks($organization);
+        $allowance = self::INTERNAL_EXEMPT_ALLOWANCE;
+        $eConsumed = $organization->getEventsConsumed();
+        $bst = $organization->getBillingStatus();
+
+        return [
+            'plan' => 'pro',
+            'planLabel' => 'Hors forfait (interne)',
+            'trialEndsAt' => $organization->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            'billingStatus' => $bst->value,
+            'billingStatusLabel' => $bst->label(),
+            'currentPeriodEnd' => $organization->getSubscriptionCurrentPeriodEnd()?->format(\DateTimeInterface::ATOM),
+            'maxWebhooks' => null,
+            'webhookCount' => $wCount,
+            'canCreateWebhook' => true,
+            'webhooksOperational' => true,
+            'eventsConsumed' => $eConsumed,
+            'eventsIncluded' => $allowance,
+            'eventsExtraQuota' => 0,
+            'eventsAllowance' => $allowance,
+            'eventsRemaining' => max(0, $allowance - $eConsumed),
+            'allowEventOverage' => true,
+            'subscriptionExempt' => true,
+            'blockReason' => null,
         ];
     }
 

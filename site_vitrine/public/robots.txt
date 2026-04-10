@@ -1,0 +1,6 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap (généré au build : sitemap-index.xml référence les URL)
+Sitemap: https://webhooky.fr/sitemap-index.xml

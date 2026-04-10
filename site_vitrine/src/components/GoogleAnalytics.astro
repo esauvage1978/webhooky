@@ -1,0 +1,71 @@
+---
+/**
+ * Google tag (gtag.js) — même logique que le snippet Google, mais chargé uniquement si
+ * le consentement « mesure d’audience » est accordé (localStorage + événement webhooky:cookie-consent).
+ */
+import {
+  COOKIE_CONSENT_STORAGE_KEY,
+  COOKIE_CONSENT_VERSION,
+  GOOGLE_ANALYTICS_ID,
+} from '../site.ts';
+---
+
+<script
+  is:inline
+  define:vars={{
+    GOOGLE_ANALYTICS_ID,
+    COOKIE_CONSENT_STORAGE_KEY,
+    COOKIE_CONSENT_VERSION,
+  }}
+>
+  (function () {
+    var id = GOOGLE_ANALYTICS_ID;
+    var KEY = COOKIE_CONSENT_STORAGE_KEY;
+    var VER = COOKIE_CONSENT_VERSION;
+    if (!id) return;
+
+    function analyticsAllowedFromStorage() {
+      try {
+        var raw = localStorage.getItem(KEY);
+        if (!raw) return false;
+        var data = JSON.parse(raw);
+        if (data.v !== VER) return false;
+        return !!data.analytics;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function loadGtag() {
+      if (window.__webhookyGtagLoaded) return;
+      window.__webhookyGtagLoaded = true;
+
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', id);
+
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+      document.head.appendChild(s);
+    }
+
+    function maybeLoad() {
+      if (analyticsAllowedFromStorage()) loadGtag();
+    }
+
+    window.addEventListener('webhooky:cookie-consent', function (e) {
+      if (e && e.detail && e.detail.analytics) loadGtag();
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', maybeLoad);
+    } else {
+      maybeLoad();
+    }
+  })();
+</script>

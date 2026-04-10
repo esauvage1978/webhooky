@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c1929">
-    <title>Webhooky</title>
+    <title>Webhooky Builders</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     {% if vite_dev %}
@@ -15,6 +15,7 @@
     {% endif %}
 </head>
 <body>
+<script>window.__WEBHOOKY_BASE_PATH__ = "{{ app.request.basePath|default('')|e('js') }}";</script>
 <div id="root"></div>
 {% if entryScript %}
     <script type="module" src="{{ asset(entryScript starts with '/' ? entryScript|slice(1) : entryScript) }}"></script>

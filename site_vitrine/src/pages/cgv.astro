@@ -1,0 +1,86 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL, CONTACT_EMAIL } from '../site.ts';
+
+const title = 'Conditions générales de vente — Webhooky';
+const description = 'CGV relatives aux offres d’abonnement et prestations associées proposées via webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container legal-page">
+    <div class="page-hero">
+      <h1>Conditions générales de vente (CGV)</h1>
+      <p>
+        Document type relatif aux relations contractuelles liées aux offres payantes du Service accessible sur
+        <a href={BUILDER_URL}>webhooky.builders</a>. À valider juridiquement avant commercialisation.
+      </p>
+    </div>
+
+    <h2>Champ d’application</h2>
+    <p>
+      Les présentes CGV s’appliquent à toute commande ou souscription d’offres payantes (abonnements, options, packs
+      d’événements, etc.) conclue entre le prestataire et le client professionnel ou consommateur, selon les cas.
+    </p>
+
+    <h2>Commande et formation du contrat</h2>
+    <p>
+      La commande est formée selon le parcours en ligne (panier, validation, paiement). Le contrat est conclu à réception
+      de l’acceptation du paiement par le prestataire ou son prestataire de paiement (ex. Stripe).
+    </p>
+
+    <h2>Description des offres et prix</h2>
+    <p>
+      Les caractéristiques essentielles des offres (quotas, fonctionnalités) sont présentées sur la vitrine et dans
+      l’application. Les tarifs affichés (page Tarifs, grille dans l’application) sont indiqués en euros
+      <strong>hors taxes (HT)</strong> ; la taxe sur la valeur ajoutée (TVA) applicable est ajoutée au montant facturé
+      conformément à la réglementation. Le détail TTC est celui indiqué au moment du paiement (ex. tunnel Stripe).
+    </p>
+
+    <h2>Modalités de paiement</h2>
+    <p>Le paiement s’effectue selon les moyens proposés au moment de la souscription (carte bancaire, prélèvement, etc.).</p>
+
+    <h2>Fourniture du Service</h2>
+    <p>
+      L’accès au Service est ouvert après confirmation du paiement initial ou selon les règles de l’offre d’essai le cas
+      échéant. Le Service est délivré par fourniture d’un accès logiciel distant.
+    </p>
+
+    <h2>Rétractation (consommateurs)</h2>
+    <p>
+      Lorsque le droit de rétractation est applicable, ses modalités et exceptions (prestation commencée avec accord
+      exprès, etc.) doivent être précisées conformément au Code de la consommation.
+    </p>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> modèle d’information précontractuelle et formulaire de rétractation si vous adressez
+      des consommateurs.
+    </div>
+
+    <h2>Renouvellement et résiliation</h2>
+    <p>
+      Les abonnements se renouvellent selon la périodicité choisie sauf résiliation dans les conditions prévues
+      (interface compte, délai de préavis, non-renouvellement automatique selon l’offre).
+    </p>
+
+    <h2>Garanties légales et responsabilité</h2>
+    <p>
+      S’appliquent les garanties légales impératives non limitables pour les biens ou prestations concernées. Pour le
+      surplus, voir les limitations prévues aux CGU et ci-après.
+    </p>
+    <p class="legal-strong">
+      Le prestataire n’est pas responsable des actions ou contenus mis en œuvre par le client via le Service (webhooks,
+      e-mails, données traitées). Le client est seul responsable du respect de ses obligations contractuelles et légales
+      vis-à-vis des tiers et des personnes concernées par ses traitements.
+    </p>
+
+    <h2>Facturation et réclamations</h2>
+    <p>
+      Les factures sont mises à disposition selon les modalités du Service. Les réclamations commerciales peuvent être
+      adressées à : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </p>
+
+    <h2>Droit applicable</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> droit applicable et juridiction compétente.
+    </div>
+  </main>
+</SiteLayout>

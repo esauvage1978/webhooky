@@ -19,6 +19,7 @@ final class ApiSubscriptionPlansController extends AbstractController
             'plans' => SubscriptionPlanCatalog::allPlans(),
             'eventPacks' => SubscriptionPlanCatalog::eventPacks(),
             'currency' => 'EUR',
+            'pricingNote' => SubscriptionPlanCatalog::PRICING_NOTE_FR,
         ]);
     }
 }

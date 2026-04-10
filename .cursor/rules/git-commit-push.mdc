@@ -5,20 +5,21 @@ alwaysApply: true
 
 # À chaque modification dans ce dépôt
 
-**Avant toute autre action** (message à l’utilisateur, commit, push, suite du travail, etc.), dès que tu as modifié des fichiers, exécute **dans cet ordre exact** :
+**Avant le message final à l’utilisateur**, dès que des fichiers ont été modifiés, **l’agent exécute lui-même** les builds (ne pas seulement les indiquer). **Toujours** lancer **`cd builder && npm run build`** après toute modification sous `builder/` (y compris `builder/assets/`). **Ne jamais** s’arrêter après un simple `npx vite build` : le script `package.json` du builder enchaîne Vite **et** les commandes PHP prévues.
 
-## 1. Site vitrine
+## 1. Site vitrine (uniquement si `site_vitrine/` a été modifié)
 
 ```bash
 cd site_vitrine && npm run build
 ```
 
-## 2. Builder — schéma Doctrine puis assets
+## 2. Builder (uniquement si `builder/` a été modifié — dont `builder/assets/`)
 
 ```bash
-cd builder && php bin/console doctrine:schema:update --force
 cd builder && npm run build
 ```
+
+Toute modification dans `builder/assets/` (JSX, CSS, etc.) **exige** l’étape 2 avant la fin de la tâche.
 
 Si une commande échoue, corrige le problème en priorité ; ne continue pas comme si le build était OK.
 

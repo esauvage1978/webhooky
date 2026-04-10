@@ -4,7 +4,7 @@ import { BUILDER_URL } from '../site.ts';
 
 const title = 'Documentation — Guide de l’application Webhooky Builders';
 const description =
-  'Guide des écrans et actions pour les gestionnaires et les utilisateurs sur webhooky.builders : webhooks, Mailjet, membres, organisation et facturation.';
+  'Guide des écrans et actions sur webhooky.builders : webhooks, intégrations (Mailjet, Slack, SMS, Telegram…), membres, organisation et facturation.';
 ---
 
 <SiteLayout {title} {description}>
@@ -31,12 +31,13 @@ const description =
           <ul class="doc-toc-sub">
             <li><a href="#webhooks-liste">Liste et opérations</a></li>
             <li><a href="#webhooks-declencheur">Déclencheur et récaps Webhooky</a></li>
-            <li><a href="#webhooks-actions">Actions Mailjet (plusieurs blocs)</a></li>
+            <li><a href="#webhooks-actions">Actions multiples (Mailjet et connecteurs)</a></li>
+            <li><a href="#mailjet-template-language">Mailjet — option « Template language »</a></li>
             <li><a href="#webhooks-notif-erreur">Notifications d’erreur détaillées</a></li>
             <li><a href="#webhooks-quotas">Quotas et forfait</a></li>
           </ul>
         </li>
-        <li><a href="#mailjet">Configurations Mailjet</a></li>
+        <li><a href="#integrations">Intégrations (Mailjet et services tiers)</a></li>
         <li><a href="#users">Gestion des membres (gestionnaire)</a></li>
         <li><a href="#billing">Organisation et facturation</a></li>
         <li><a href="#premiere-org">Première organisation</a></li>
@@ -50,12 +51,12 @@ const description =
       </p>
       <ul>
         <li>
-          <strong>Gestionnaire</strong> — pilote le périmètre de son organisation&nbsp;: workflows webhook, configurations
-          Mailjet, invitations et gestion des membres, organisation et facturation, tableau de bord.
+          <strong>Gestionnaire</strong> — pilote le périmètre de son organisation&nbsp;: workflows webhook, intégrations
+          (Mailjet et connecteurs), invitations et gestion des membres, organisation et facturation, tableau de bord.
         </li>
         <li>
           <strong>Utilisateur</strong> (membre standard) — utilise les outils mis à disposition pour son organisation
-          (par exemple consultation ou exploitation des webhooks et de Mailjet) selon les droits effectifs qui vous sont
+          (par exemple consultation ou exploitation des webhooks et des intégrations) selon les droits effectifs qui vous sont
           attribués. En général, pas d’accès à la gestion des membres ni aux réglages d’abonnement.
         </li>
       </ul>
@@ -91,8 +92,8 @@ const description =
     <section class="doc-section" aria-labelledby="organisations-contexte">
       <h2 id="organisations-contexte">Organisations et contexte de travail</h2>
       <p>
-        Un même compte peut être <strong>membre de plusieurs organisations</strong>. Les webhooks, clés Mailjet,
-        utilisateurs et facturation sont toujours vus <strong>dans le contexte d’une seule organisation à la fois</strong>,
+        Un même compte peut être <strong>membre de plusieurs organisations</strong>. Les webhooks, intégrations (Mailjet,
+        Slack, etc.), utilisateurs et facturation sont toujours vus <strong>dans le contexte d’une seule organisation à la fois</strong>,
         dite organisation active ou organisation de travail.
       </p>
       <ul>
@@ -104,7 +105,7 @@ const description =
         <li>
           <strong>Pendant la session</strong> — un <strong>sélecteur dans la barre latérale</strong> («&nbsp;Organisation
           active&nbsp;») permet de <strong>changer d’organisation à tout moment</strong> sans vous déconnecter. Les listes
-          (workflows, Mailjet, membres, facturation, etc.) se mettent à jour pour refléter l’organisation sélectionnée.
+          (workflows, intégrations, membres, facturation, etc.) se mettent à jour pour refléter l’organisation sélectionnée.
         </li>
         <li>
           <strong>Noms d’organisations</strong> — deux organisations ne peuvent pas porter le <strong>même nom</strong>
@@ -120,12 +121,12 @@ const description =
       <ul>
         <li>
           Pour un <strong>gestionnaire</strong>&nbsp;: vue d’ensemble de l’<strong>organisation active</strong>, indicateurs
-          liés aux quotas et aux webhooks, accès aux sections Mailjet, workflows et facturation.
+          liés aux quotas et aux webhooks, accès aux sections intégrations, workflows et facturation.
         </li>
         <li>
           Pour un <strong>utilisateur</strong>&nbsp;: informations utiles à votre activité dans le contexte de l’organisation
-          choisie (workflows, quotas ou rappels selon les droits), sans les menus réservés à la gestion d’équipe ou de
-          l’abonnement.
+          choisie (workflows, intégrations, quotas ou rappels selon les droits), sans les menus réservés à la gestion
+          d’équipe ou de l’abonnement.
         </li>
         <li>
           Informations sur votre <strong>compte</strong> (e-mail, rôle) et rappel de l’organisation dans laquelle vous
@@ -137,9 +138,10 @@ const description =
     <section class="doc-section" aria-labelledby="webhooks">
       <h2 id="webhooks">Workflows webhook (formulaires)</h2>
       <p>
-        Module pour recevoir des données HTTP (formulaires, intégrations) et enchaîner des actions, en particulier
-        l’envoi d’e-mails via Mailjet. La création, la modification ou la suppression d’un workflow peuvent être
-        limitées selon votre rôle et vos droits.
+        Module pour recevoir des données HTTP (formulaires, intégrations) et enchaîner des <strong>actions multiples</strong>
+        &nbsp;: e-mails Mailjet, messageries d’équipe (Slack, Teams, Discord, Google Chat, Mattermost), SMS Twilio, bot
+        Telegram, requêtes HTTP (Zapier, n8n, API interne), notifications Pushover. La création, la modification ou la
+        suppression d’un workflow peuvent être limitées selon votre rôle et vos droits.
       </p>
 
       <h3 class="doc-h3" id="webhooks-liste">Liste et opérations sur les workflows</h3>
@@ -178,6 +180,11 @@ const description =
         <li><strong>Nom du workflow</strong> — obligatoire, sert à identifier le workflow dans l’interface et dans les e-mails de récapitulatif.</li>
         <li><strong>Description</strong> — facultatif, texte libre pour vos équipes.</li>
         <li>
+          <strong>Projet (classement)</strong> — facultatif&nbsp;: rattache le workflow à un projet de votre organisation
+          pour filtrer et regrouper la liste (plusieurs workflows par projet possible ; un workflow peut rester «&nbsp;sans
+          projet&nbsp;»).
+        </li>
+        <li>
           <strong>Déclencheur actif</strong> — case à cocher&nbsp;: si elle est décochée, l’URL ne traite plus les
           requêtes entrantes (mise en pause sans supprimer la configuration).
         </li>
@@ -199,57 +206,100 @@ const description =
           notification est envoyée lorsqu’une exécution se termine en échec (voir la section
           <a href="#webhooks-notif-erreur">Notifications d’erreur détaillées</a>).
         </li>
-        <li>
-          <strong>Envoyer un récap en cas de succès complet</strong> — case à cocher&nbsp;: notification uniquement
-          lorsque <em>toutes</em> les actions du workflow ont réussi.
-        </li>
       </ul>
 
-      <h3 class="doc-h3" id="webhooks-actions">Actions — envois Mailjet (plusieurs blocs)</h3>
+      <h3 class="doc-h3" id="webhooks-actions">Actions multiples — Mailjet et connecteurs</h3>
       <p>
-        Après un déclenchement traité correctement, les <strong>actions</strong> s’enchaînent dans l’ordre défini dans
-        l’interface. Vous pouvez ajouter <strong>plusieurs actions Mailjet</strong> au même workflow grâce au bouton
-        <strong>«&nbsp;+ Ajouter une action Mailjet&nbsp;»</strong>. Chaque bloc correspond à
-        <strong>une unité d’événement</strong> au regard de votre consommation (un «&nbsp;bloc&nbsp;» = un envoi
-        Mailjet prévu par l’action). La <strong>réponse HTTP globale</strong> vue par le système qui appelle le webhook
-        n’est considérée comme positive que si <strong>toutes</strong> les actions configurées se déroulent avec succès.
+        Après un déclenchement traité correctement, les <strong>actions</strong> s’exécutent <strong>dans l’ordre</strong>
+        défini dans l’éditeur. Vous pouvez combiner librement <strong>plusieurs types</strong> (ex. un envoi Mailjet puis
+        un message Slack puis un SMS). Utilisez le bouton <strong>«&nbsp;+ Ajouter une action&nbsp;»</strong>. Chaque bloc
+        compte comme <strong>une unité d’événement</strong> pour votre quota. La réponse HTTP du webhook n’est
+        <strong>200</strong> que si <strong>toutes</strong> les actions actives réussissent.
       </p>
-      <p>Champs de chaque bloc «&nbsp;Action <var>n</var>&nbsp;» (Mailjet)&nbsp;:</p>
+      <p>
+        <strong>Prérequis</strong>&nbsp;: les services autres que Mailjet se configurent d’abord dans le menu
+        <strong><a href="#integrations">Intégrations</a></strong> (webhook d’équipe, clés Twilio, bot Telegram, etc.).
+        Ensuite, dans chaque action du workflow, vous choisissez le connecteur enregistré du type correspondant.
+      </p>
+      <h4 class="doc-h4">Champs communs à chaque bloc</h4>
+      <ul>
+        <li><strong>Type d’action</strong> — Mailjet ou l’un des connecteurs (Slack, Teams, Discord, Google Chat, Mattermost, Twilio SMS, Telegram, HTTP personnalisé, Pushover).</li>
+        <li>
+          <strong>Mapping JSON — variable / placeholder → champ POST</strong> — JSON&nbsp;: clé = nom utilisé dans le
+          template Mailjet ou dans les placeholders <code class="doc-mono">{'{{'}nom{'}'}</code>, valeur = nom du champ
+          dans la requête entrante.
+        </li>
+        <li>
+          <strong>Exécuter cette action à chaque réception</strong> — case pour activer ou désactiver le bloc sans le
+          supprimer.
+        </li>
+        <li>
+          <strong>Retirer cette action</strong> — au moins une action doit rester pour enregistrer le workflow.
+        </li>
+      </ul>
+      <h4 class="doc-h4">Bloc Mailjet (e-mail template)</h4>
+      <ul>
+        <li><strong>Compte Mailjet</strong> — configurations définies dans <a href="#integrations">Intégrations</a>.</li>
+        <li><strong>ID template Mailjet</strong> — identifiant du modèle dans Mailjet.</li>
+        <li><strong>Champs destinataire</strong> — clés POST pour l’e-mail et le nom, plus e-mail par défaut.</li>
+      </ul>
+      <h4 class="doc-h4 doc-h4-sub" id="mailjet-template-language">
+        Option « Template language » (MJML / dynamique)
+      </h4>
+      <p>
+        Dans l’éditeur, l’interrupteur <strong>Template language (MJML / dynamique)</strong> correspond au paramètre
+        <code class="doc-mono">TemplateLanguage</code> de l’API d’envoi Mailjet (Send v3.1). Il indique à Mailjet si le
+        modèle utilise le <strong>Mailjet Template Language</strong>&nbsp;: syntaxe avec variables
+        <code class="doc-mono">{'{{'}nom{'}'}</code>, éventuellement conditions ou boucles, comme dans les modèles
+        construits dans l’éditeur drag-and-drop Mailjet ou à partir de <strong>MJML</strong>.
+      </p>
       <ul>
         <li>
-          <strong>Compte Mailjet (clés)</strong> — liste des configurations d’API enregistrées pour votre organisation
-          (voir <a href="#mailjet">Configurations Mailjet</a>).
-        </li>
-        <li><strong>ID template Mailjet</strong> — identifiant numérique du modèle à utiliser dans votre espace Mailjet.</li>
-        <li>
-          <strong>Template language (MJML / dynamique)</strong> — case à cocher pour les modèles utilisant le langage de
-          template Mailjet (variables dynamiques).
+          <strong>Activé</strong> (réglage par défaut)&nbsp;: à utiliser pour la <strong>majorité des modèles
+          transactionnels</strong> qui injectent des valeurs dans le corps ou l’objet du message. Les paires du
+          <strong>mapping JSON</strong> du workflow sont alors envoyées dans l’objet <code class="doc-mono">Variables</code>,
+          ce que Mailjet attend lorsque le langage de template est activé sur le modèle.
         </li>
         <li>
-          <strong>Mapping JSON — variable Mailjet → champ POST</strong> — zone de texte au format JSON&nbsp;: chaque clé
-          est le nom de variable attendu par le template Mailjet, chaque valeur est le nom du champ fourni dans la
-          requête HTTP (formulaire ou JSON) pour remplir cette variable.
+          <strong>Désactivé</strong>&nbsp;: réservé aux cas où le modèle <strong>n’utilise pas</strong> ce langage
+          (anciens modèles ou configuration atypique). Si vos variables ne sont pas substituées alors que le modèle est
+          pourtant dynamique, ou si Mailjet renvoie une erreur liée au template, essayez de
+          <strong>réactiver</strong> l’option.
         </li>
+      </ul>
+      <p class="doc-mailjet-ref">
+        Documentation Mailjet (anglais)&nbsp;:
+        <a href="https://dev.mailjet.com/email/guides/send-api-v31/#send-with-template" rel="noopener noreferrer"
+          >Send API v3.1 — envoi avec template</a
+        >.
+      </p>
+      <h4 class="doc-h4">Blocs messageries (Slack, Teams, Discord, Google Chat, Mattermost)</h4>
+      <ul>
+        <li><strong>Connecteur</strong> — l’URL du webhook <strong>HTTPS</strong> est stockée dans la fiche connecteur.</li>
         <li>
-          <strong>Champ POST e-mail destinataire</strong> — nom du champ dans la requête qui contient l’adresse du
-          destinataire (souvent <code class="doc-mono">email</code> ou équivalent).
+          <strong>Message (optionnel)</strong> — texte avec placeholders <code class="doc-mono">{'{{'}champ{'}'}</code>.
+          Si vide, un résumé JSON des champs reçus est envoyé.
         </li>
-        <li>
-          <strong>Champ POST nom destinataire</strong> — nom du champ pour le nom affiché du destinataire, si vous en
-          utilisez un.
-        </li>
-        <li>
-          <strong>E-mail destinataire par défaut</strong> — adresse utilisée lorsque la requête ne fournit pas
-          d’e-mail dans le champ indiqué ci-dessus.
-        </li>
-        <li>
-          <strong>Exécuter cette action à chaque réception</strong> — case à cocher&nbsp;: si elle est décochée, l’action
-          est ignorée pour les prochaines exécutions (bloc conservé mais inactif).
-        </li>
-        <li>
-          <strong>Retirer cette action</strong> — bouton visible lorsqu’il reste au moins deux blocs d’action (vous devez
-          toujours conserver au minimum une action pour enregistrer un workflow valide côté interface).
-        </li>
+      </ul>
+      <h4 class="doc-h4">Twilio SMS</h4>
+      <ul>
+        <li><strong>Connecteur</strong> — <code class="doc-mono">accountSid</code>, <code class="doc-mono">authToken</code>, <code class="doc-mono">fromNumber</code>.</li>
+        <li><strong>Numéro destinataire</strong> — indiquez le champ POST (ex. <code class="doc-mono">phone</code>) et/ou un numéro par défaut (E.164).</li>
+      </ul>
+      <h4 class="doc-h4">Telegram</h4>
+      <ul>
+        <li><strong>Connecteur</strong> — jeton du bot et <code class="doc-mono">chatId</code>.</li>
+        <li><strong>Message</strong> — comme pour Slack, avec placeholders optionnels.</li>
+      </ul>
+      <h4 class="doc-h4">HTTP personnalisé (Zapier, Make, API)</h4>
+      <ul>
+        <li><strong>Connecteur</strong> — URL HTTPS, méthode (POST/PUT/PATCH), en-têtes optionnels.</li>
+        <li><strong>Corps</strong> — dans l’action, corps JSON avec placeholders&nbsp;; sinon envoi d’un objet JSON par défaut.</li>
+      </ul>
+      <h4 class="doc-h4">Pushover</h4>
+      <ul>
+        <li><strong>Connecteur</strong> — <code class="doc-mono">appToken</code> et <code class="doc-mono">userKey</code>.</li>
+        <li><strong>Message</strong> — texte court (placeholders possibles).</li>
       </ul>
 
       <h3 class="doc-h3" id="webhooks-notif-erreur">Notifications d’erreur détaillées</h3>
@@ -269,10 +319,9 @@ const description =
           <strong>l’exécution d’une ou plusieurs actions</strong> (par exemple appel Mailjet).
         </li>
         <li>
-          <strong>Détail par action</strong>&nbsp;: pour chaque action Mailjet exécutée ou tentée, la notification reprend
-          le statut de l’action, l’adresse du destinataire lorsqu’elle est connue, le code HTTP renvoyé par Mailjet,
-          l’identifiant de message Mailjet le cas échéant, et un texte d’erreur explicite lorsque l’API ou la plateforme
-          en renvoie un.
+          <strong>Détail par action</strong>&nbsp;: pour chaque action (Mailjet ou connecteur), la notification reprend le
+          statut, le type d’action, le destinataire ou la cible lorsqu’ils sont connus, le code HTTP renvoyé par le
+          service distant, l’identifiant de message Mailjet le cas échéant, et un texte d’erreur explicite.
         </li>
         <li>
           <strong>Données utiles au debug</strong>&nbsp;: selon la chaîne d’envoi configurée par la plateforme, le
@@ -295,18 +344,29 @@ const description =
       </p>
     </section>
 
-    <section class="doc-section" aria-labelledby="mailjet">
-      <h2 id="mailjet">Configurations Mailjet</h2>
+    <section class="doc-section" aria-labelledby="integrations">
+      <h2 id="integrations">Intégrations — Mailjet et services tiers</h2>
       <p>
-        Gestion des comptes Mailjet utilisés par vos workflows. L’accès en création ou modification dépend de votre
-        rôle et des habilitations.
+        Le menu <strong>Intégrations</strong> regroupe toutes les connexions externes utilisées par vos workflows. Vous
+        y enregistrez d’abord les paramètres sensibles (URLs webhooks, clés API), puis vous les sélectionnez dans chaque
+        <a href="#webhooks-actions">bloc d’action</a> du déclencheur.
       </p>
+      <h3 class="doc-h3">Comptes Mailjet (e-mail transactionnel)</h3>
       <ul>
         <li>Enregistrer une <strong>paire de clés API</strong> Mailjet pour votre organisation (libellé, clés).</li>
         <li><strong>Lister</strong>, <strong>modifier</strong> ou <strong>supprimer</strong> une configuration.</li>
-        <li>
-          Les workflows référencent ces configurations pour envoyer des e-mails à partir de vos templates Mailjet.
-        </li>
+        <li>Réutilisée par les actions de type <strong>Mailjet</strong> dans les workflows.</li>
+      </ul>
+      <h3 class="doc-h3">Connecteurs tiers (neuf types)</h3>
+      <p>
+        Même principe&nbsp;: nom interne + configuration JSON validée par la plateforme. Types disponibles&nbsp;:
+        <strong>Slack</strong>, <strong>Microsoft Teams</strong>, <strong>Discord</strong>, <strong>Google Chat</strong>,
+        <strong>Mattermost</strong> (webhooks HTTPS), <strong>Twilio SMS</strong>, <strong>Telegram</strong> (bot),
+        <strong>HTTP personnalisé</strong> (URL, méthode, en-têtes), <strong>Pushover</strong> (notifications push).
+      </p>
+      <ul>
+        <li>Un connecteur utilisé par un workflow ne peut pas être supprimé tant qu’une action y fait référence.</li>
+        <li>Les administrateurs de plateforme peuvent rattacher un connecteur à n’importe quelle organisation.</li>
       </ul>
     </section>
 
@@ -438,6 +498,18 @@ const description =
     font-size: 1rem;
     font-weight: 700;
     color: var(--ink-soft);
+  }
+
+  .doc-h4.doc-h4-sub {
+    margin-top: 1rem;
+    font-size: 0.98rem;
+    font-weight: 650;
+  }
+
+  .doc-mailjet-ref {
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
   }
 
   .doc-mono {

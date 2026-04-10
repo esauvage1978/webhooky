@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mailjet;
 
-use App\Entity\Mailjet;
+use App\Entity\ApplicationErrorLog;
+use App\Logging\ApplicationErrorLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -18,11 +19,12 @@ final class HttpMailjetTemplateSender implements MailjetTemplateSenderInterface
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly ApplicationErrorLogger $applicationErrorLogger,
     ) {
     }
 
     public function sendTemplate(
-        Mailjet $mailjetConfig,
+        MailjetAuthPairInterface $auth,
         int $templateId,
         bool $templateLanguage,
         string $toEmail,
@@ -47,7 +49,7 @@ final class HttpMailjetTemplateSender implements MailjetTemplateSenderInterface
 
         try {
             $response = $this->httpClient->request('POST', self::ENDPOINT, [
-                'auth_basic' => [$mailjetConfig->getApiKeyPublic(), $mailjetConfig->getApiKeyPrivate()],
+                'auth_basic' => [$auth->getApiKeyPublic(), $auth->getApiKeyPrivate()],
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -75,6 +77,12 @@ final class HttpMailjetTemplateSender implements MailjetTemplateSenderInterface
 
             return new MailjetTemplateSendResult(true, $status, $content, $messageId, null);
         } catch (\Throwable $e) {
+            $this->applicationErrorLogger->logThrowable($e, null, ApplicationErrorLog::SOURCE_HANDLED, [
+                'handler' => 'http_mailjet_template_sender',
+                'templateId' => $templateId,
+                'toEmail' => $toEmail,
+            ]);
+
             return new MailjetTemplateSendResult(false, 0, null, null, $e->getMessage());
         }
     }

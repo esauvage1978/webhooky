@@ -17,11 +17,14 @@ final class FormWebhookLogStatus
 
     public const ERROR = 'error';
 
+    /** Réception traitée / parsée mais aucune action exécutée (ex. workflow désactivé). */
+    public const SKIPPED = 'skipped';
+
     /**
      * @return list<string>
      */
     public static function all(): array
     {
-        return [self::RECEIVED, self::PARSED, self::SENT, self::ERROR];
+        return [self::RECEIVED, self::PARSED, self::SENT, self::ERROR, self::SKIPPED];
     }
 }

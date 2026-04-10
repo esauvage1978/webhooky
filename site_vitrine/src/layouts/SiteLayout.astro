@@ -1,0 +1,22 @@
+---
+import Layout from './Layout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  keywords?: string;
+  robots?: string;
+}
+
+const { title, description, image, keywords, robots } = Astro.props;
+---
+
+<Layout {title} {description} image={image} keywords={keywords} robots={robots}>
+  <slot name="head" slot="head" />
+  <SiteHeader />
+  <slot />
+  <SiteFooter />
+</Layout>

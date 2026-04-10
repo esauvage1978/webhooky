@@ -1,0 +1,318 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL, SITE_NAME, SITE_URL } from '../site.ts';
+
+const title = 'Webhooky — Webhooks et envoi d’e-mails Mailjet';
+const description =
+  'Recevez les soumissions de vos formulaires via des webhooks et déclenchez plusieurs actions, dont l’envoi d’e-mails transactionnels avec Mailjet. Centralisez les intégrations, limitez l’adhérence aux services tiers et gardez l’historique au même endroit — pilotage depuis une interface dédiée.';
+const keywords =
+  'webhook, webhooks, Mailjet, e-mail transactionnel, formulaire, automatisation, intégration, notification, Webhooky';
+const jsonLdWebPage = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: title,
+  description,
+  url: `${SITE_URL}/`,
+  inLanguage: 'fr-FR',
+  isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: `${SITE_URL}/` },
+};
+---
+
+<SiteLayout {title} {description} {keywords}>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLdWebPage)} />
+  <main>
+    <section class="hero container" aria-labelledby="hero-title">
+      <p class="hero-eyebrow">Automatisation · Formulaires · Mailjet</p>
+      <h1 id="hero-title" class="hero-title">
+        Un webhook, <span class="highlight">plusieurs actions</span> — dont vos e-mails Mailjet
+      </h1>
+      <p class="hero-lead">
+        Webhooky transforme chaque soumission en événement exploitable : recevez le payload, enchaînez des actions
+        (notifications, scénarios métier) et <strong>envoyez des e-mails via Mailjet</strong>, le tout configurable depuis
+        votre espace.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn--primary" href={BUILDER_URL}>Ouvrir le tableau de bord</a>
+        <a class="btn btn--secondary" href="#fonctionnalites">Découvrir les possibilités</a>
+      </div>
+      <p class="hero-note">
+        Ce site présente le produit. L’application de gestion est hébergée sur
+        <a href={BUILDER_URL}>webhooky.builders</a>.
+      </p>
+    </section>
+
+    <section id="fonctionnalites" class="section container" aria-labelledby="feat-title">
+      <h2 id="feat-title" class="section-title">Ce que vous pouvez faire aujourd’hui</h2>
+      <p class="section-intro">
+        L’objectif est simple : brancher vos formulaires ou intégrations sur des webhooks fiables, puis orchestrer la
+        suite — avec un focus sur l’envoi d’e-mails transactionnels Mailjet. En traitant les connecteurs tiers dans ce
+        SaaS, vous <strong>réduisez l’adhérence aux prestataires</strong> dans vos projets : changer de routeur e-mail ou
+        de fournisseur SMS se fait côté configuration, sans disperser la logique, tout en gardant <strong>traces et audit
+        au même endroit</strong>.
+      </p>
+      <ul class="cards">
+        <li class="card">
+          <h3>Webhooks entrants</h3>
+          <p>
+            Pointez votre formulaire ou votre outil vers une URL Webhooky : chaque soumission est reçue, journalisée et
+            traitée selon vos règles.
+          </p>
+        </li>
+        <li class="card">
+          <h3>Plusieurs actions par webhook</h3>
+          <p>
+            Pour <strong>un même webhook</strong>, définissez <strong>plusieurs actions</strong> (par exemple plusieurs
+            envois ou scénarios) sans multiplier les points d’entrée côté formulaire.
+          </p>
+        </li>
+        <li class="card">
+          <h3>Mailjet intégré</h3>
+          <p>
+            Reliez vos clés Mailjet et vos modèles : envoyez des messages personnalisés à partir des champs reçus dans le
+            webhook (variables, destinataires, etc.).
+          </p>
+        </li>
+        <li class="card">
+          <h3>Prestataires e-mail & SMS : centralisés, interchangeables</h3>
+          <p>
+            Vous n’êtes pas enfermé dans un seul fournisseur au cœur du code du site : les secrets et les actions (e-mail,
+            SMS, messagerie, etc.) sont gérés dans Webhooky. Si vous changez de prestataire pour les mails ou les SMS, vous
+            basculez le connecteur et conservez vos scénarios — <strong>journalisation et supervision réunis</strong> pour
+            tout tracer simplement.
+          </p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="comment-ca-marche" class="section section--alt" aria-labelledby="steps-title">
+      <div class="container">
+        <h2 id="steps-title" class="section-title">Comment ça marche</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-num">1</span>
+            <div>
+              <h3>Créez une organisation</h3>
+              <p>Sur <a href={BUILDER_URL}>webhooky.builders</a>, configurez votre espace et vos accès.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div>
+              <h3>Ajoutez un webhook et vos actions</h3>
+              <p>Définissez l’URL fournie par votre formulaire, puis enchaînez les actions — dont Mailjet.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div>
+              <h3>Surveillez les exécutions</h3>
+              <p>Consultez l’historique et les journaux pour ajuster vos scénarios en toute confiance.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section container cta-band" aria-labelledby="cta-title">
+      <h2 id="cta-title" class="cta-title">Prêt à connecter vos formulaires ?</h2>
+      <p class="cta-text">L’interface complète vous attend sur webhooky.builders.</p>
+      <a class="btn btn--primary btn--large" href={BUILDER_URL}>Accéder à webhooky.builders</a>
+    </section>
+  </main>
+</SiteLayout>
+
+<style>
+  .hero {
+    position: relative;
+    padding-block: 3.5rem 4rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    right: -140px;
+    top: -160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 90, 54, 0.2) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .hero > * {
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    margin: 0 0 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--coral);
+  }
+
+  .hero-title {
+    margin: 0 0 1.25rem;
+    font-size: clamp(2rem, 4.5vw, 2.85rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    max-width: 20ch;
+    margin-inline: auto;
+    color: var(--ink);
+  }
+
+  .highlight {
+    background: linear-gradient(120deg, var(--coral), var(--coral-soft));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-lead {
+    margin: 0 auto 2rem;
+    max-width: 62ch;
+    color: var(--text-muted);
+    font-size: 1.05rem;
+  }
+
+  .hero-lead strong {
+    color: var(--coral);
+    font-weight: 700;
+  }
+
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .hero-note a {
+    font-weight: 600;
+  }
+
+  .section {
+    padding-block: 4rem;
+  }
+
+  .section--alt {
+    background: var(--surface-elevated);
+    border-block: 1px solid var(--border);
+  }
+
+  .section-title {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .section-intro {
+    margin: 0 0 2.5rem;
+    max-width: 65ch;
+    color: var(--text-muted);
+  }
+
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .card {
+    margin: 0;
+    padding: 1.5rem 1.6rem;
+    background: var(--surface-elevated);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--coral);
+  }
+
+  .card h3 {
+    margin: 0 0 0.65rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.98rem;
+  }
+
+  .steps {
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    max-width: 720px;
+  }
+
+  .steps li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .step-num {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: var(--coral-dim);
+    color: var(--coral);
+    font-weight: 800;
+  }
+
+  .steps h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .steps p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.98rem;
+  }
+
+  .cta-band {
+    text-align: center;
+    padding-block: 4.5rem;
+  }
+
+  .cta-title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.5rem, 3vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .cta-text {
+    margin: 0 0 1.5rem;
+    color: var(--text-muted);
+  }
+</style>

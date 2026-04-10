@@ -1,0 +1,179 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { CONTACT_EMAIL, CONTACT_FORM_WEBHOOK_DEFAULT } from '../site.ts';
+
+const title = 'Contact — Webhooky';
+const description = 'Écrivez-nous via le formulaire de contact. Les messages sont transmis par webhook.';
+const envUrl = import.meta.env.PUBLIC_CONTACT_WEBHOOK_URL;
+const webhookUrl = String(envUrl && envUrl.trim() !== '' ? envUrl : CONTACT_FORM_WEBHOOK_DEFAULT).trim();
+/** En build prod : relais same-origin (public/contact-webhook.php). En dev : appel direct (souvent bloqué par CORS hors origines autorisées côté serveur). */
+const submitUrl = import.meta.env.PROD ? '/contact-webhook.php' : webhookUrl;
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container contact-layout">
+    <div class="page-hero">
+      <h1>Contact</h1>
+      <p>
+        Utilisez le formulaire ci-dessous. En production, l’envoi passe par le <strong>même domaine</strong> (relai serveur)
+        vers le webhook, ce qui évite les blocages navigateur (CORS). Vous pouvez aussi nous écrire à
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+      </p>
+    </div>
+
+    <form class="contact-form" id="contact-form">
+      <div class="field contact-honeypot" aria-hidden="true">
+        <label for="contact-website">Ne pas remplir ce champ</label>
+        <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label for="contact-name">Nom</label>
+        <input type="text" id="contact-name" name="name" required maxlength="120" autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label for="contact-email">E-mail</label>
+        <input
+          type="email"
+          id="contact-email"
+          name="email"
+          required
+          maxlength="180"
+          autocomplete="email"
+        />
+      </div>
+
+      <div class="field">
+        <label for="contact-company">Société <span class="optional-label">(optionnel)</span></label>
+        <input
+          type="text"
+          id="contact-company"
+          name="company"
+          maxlength="180"
+          autocomplete="organization"
+        />
+      </div>
+
+      <div class="field">
+        <label for="contact-objet">Objet <span class="optional-label">(optionnel)</span></label>
+        <input type="text" id="contact-objet" name="objet" maxlength="200" />
+      </div>
+
+      <div class="field">
+        <label for="contact-message">Message</label>
+        <textarea id="contact-message" name="message" required maxlength="8000"></textarea>
+      </div>
+
+      <div class="field field--checkbox">
+        <label class="contact-checkbox-label">
+          <input type="checkbox" id="contact-privacy" name="privacy" value="1" required autocomplete="off" />
+          <span>
+            J’ai lu et j’accepte la
+            <a href="/politique-confidentialite/" target="_blank" rel="noopener noreferrer"
+              >politique de confidentialité</a
+            >
+            <abbr title="obligatoire">*</abbr>.
+          </span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" id="contact-submit" disabled={submitUrl.length === 0}>
+          Envoyer
+        </button>
+      </div>
+
+      <p class="contact-status" id="contact-status" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <script define:vars={{ webhookUrl: String(webhookUrl).trim(), submitUrl: String(submitUrl).trim() }}>
+    const form = document.getElementById('contact-form');
+    const statusEl = document.getElementById('contact-status');
+    const submitBtn = document.getElementById('contact-submit');
+
+    if (form && statusEl) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusEl.textContent = '';
+        statusEl.className = 'contact-status';
+
+        if (!submitUrl) {
+          statusEl.textContent = 'Webhook non configuré. Ajoutez PUBLIC_CONTACT_WEBHOOK_URL dans .env.';
+          statusEl.classList.add('contact-status--err');
+          return;
+        }
+
+        const hp = /** @type {HTMLInputElement | null} */ (form.querySelector('[name="website"]'));
+        if (hp && hp.value.trim() !== '') {
+          statusEl.textContent = '';
+          return;
+        }
+
+        const name = /** @type {HTMLInputElement} */ (form.querySelector('[name="name"]')).value.trim();
+        const email = /** @type {HTMLInputElement} */ (form.querySelector('[name="email"]')).value.trim();
+        const company =
+          /** @type {HTMLInputElement} */ (form.querySelector('[name="company"]')).value.trim();
+        const objet = /** @type {HTMLInputElement} */ (form.querySelector('[name="objet"]')).value.trim();
+        const message = /** @type {HTMLTextAreaElement} */ (form.querySelector('[name="message"]')).value.trim();
+
+        const privacy = /** @type {HTMLInputElement | null} */ (form.querySelector('[name="privacy"]'));
+        if (!privacy || !privacy.checked) {
+          statusEl.textContent = 'Veuillez accepter la politique de confidentialité pour envoyer le message.';
+          statusEl.classList.add('contact-status--err');
+          return;
+        }
+
+        const consentAt = new Date().toISOString();
+
+        /** Clés alignées sur le template Mailjet ({{var:…}} dans contact-notification-mailjet.mjml). */
+        const payload = {
+          source: 'webhooky.fr-contact',
+          name,
+          email,
+          company,
+          objet,
+          message,
+          submitted_at: consentAt,
+          page: window.location.href,
+          privacy_policy_accepted: true,
+          privacy_policy_accepted_at: consentAt,
+        };
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+        }
+
+        try {
+          const res = await fetch(submitUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            statusEl.textContent = 'Message envoyé. Nous vous répondrons si nécessaire.';
+            statusEl.classList.add('contact-status--ok');
+            form.reset();
+          } else {
+            statusEl.textContent =
+              "Envoi impossible pour le moment (réponse " + res.status + "). Réessayez plus tard ou écrivez-nous par e-mail.";
+            statusEl.classList.add('contact-status--err');
+          }
+        } catch {
+          statusEl.textContent =
+            'Erreur réseau ou accès bloqué (CORS). Vérifiez l’URL du webhook et la configuration du serveur.';
+          statusEl.classList.add('contact-status--err');
+        } finally {
+          if (submitBtn && submitUrl) {
+            submitBtn.disabled = false;
+          }
+        }
+      });
+    }
+  </script>
+</SiteLayout>

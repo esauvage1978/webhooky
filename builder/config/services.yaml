@@ -7,8 +7,25 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    app.webhooky.contact_from: 'contact@Webhooky.fr'
-    app.webhooky.public_url: 'https://Webhooky.fr'
+    app.webhooky.contact_from: 'contact@webhooky.builders'
+    # Expéditeur des alertes d’erreur (repli SMTP) et workflows internes.
+    app.webhooky.error_notify_from: 'notification@webhooky.builders'
+    # Alerte erreur d’exécution : POST JSON vers ce webhook formulaire (champs email + name + variables métier).
+    # Surcharge : WEBHOOKY_ERROR_NOTIFY_WEBHOOK_URL
+    app.webhooky.error_notify_webhook_url: 'https://webhooky.builders/webhook/form/ed1f0664-9437-489d-9579-31bda85b8d92'
+    # Confirmation d’inscription : POST JSON vers ce webhook formulaire (actions Mailjet côté Builder).
+    # Surcharge : WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL (vide dans .env = utiliser cette URL).
+    app.webhooky.register_verify_webhook_url: 'https://webhooky.builders/webhook/form/c6b74536-bac5-4442-b250-a9d3b1085002'
+    # Invitation utilisateur (organisation) : POST JSON vers ce webhook formulaire (Mailjet).
+    # Surcharge : WEBHOOKY_USER_INVITE_WEBHOOK_URL
+    app.webhooky.user_invite_webhook_url: 'https://webhooky.builders/webhook/form/8a5aed88-22ac-4c00-955f-357410595f1b'
+    app.webhooky.public_url: 'https://webhooky.builders'
+    # Origines autorisées pour les requêtes cross-origin vers /webhook/form/{token} (préflight + POST JSON).
+    app.webhooky.form_webhook_cors_origins:
+        - 'https://webhooky.fr'
+        - 'https://www.webhooky.fr'
+        - 'http://localhost:4321'
+        - 'http://127.0.0.1:4321'
 
 services:
     # default configuration for services in *this* file

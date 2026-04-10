@@ -77,14 +77,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $displayName = null;
 
-    #[ORM\Column(length: 32, nullable: true)]
-    private ?string $avatarKey = null;
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $profileCompletedAt = null;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $planOnboardingCompleted = false;
+
+    /**
+     * Compte plateforme : pas de plafonds métier à l’édition des webhooks (comme un administrateur pour les quotas UI).
+     * Les réceptions HTTP restent régies par l’organisation du webhook (voir {@see Organization::isSubscriptionExempt}).
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $subscriptionExempt = false;
 
     public function __construct()
     {
@@ -216,6 +220,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function hasAnyOrganizationMembership(): bool
     {
+        return !$this->organizationMemberships->isEmpty();
+    }
+
+    /**
+     * Contexte organisationnel présent : membreships persistés et/ou organisation active.
+     * L’organisation active peut être renseignée sans que la collection lazy ait encore été chargée.
+     */
+    public function isAttachedToAnOrganization(): bool
+    {
+        if ($this->organization !== null) {
+            return true;
+        }
+
         return !$this->organizationMemberships->isEmpty();
     }
 
@@ -390,18 +407,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getAvatarKey(): ?string
-    {
-        return $this->avatarKey;
-    }
-
-    public function setAvatarKey(?string $avatarKey): static
-    {
-        $this->avatarKey = $avatarKey !== null && $avatarKey !== '' ? $avatarKey : null;
-
-        return $this;
-    }
-
     public function getProfileCompletedAt(): ?\DateTimeImmutable
     {
         return $this->profileCompletedAt;
@@ -429,5 +434,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->planOnboardingCompleted = $planOnboardingCompleted;
 
         return $this;
+    }
+
+    public function isSubscriptionExempt(): bool
+    {
+        return $this->subscriptionExempt;
+    }
+
+    public function setSubscriptionExempt(bool $subscriptionExempt): static
+    {
+        $this->subscriptionExempt = $subscriptionExempt;
+
+        return $this;
+    }
+
+    /**
+     * Contournement des quotas à la création / modification de webhooks (interface authentifiée).
+     */
+    public function ignoresPlatformSubscriptionLimits(): bool
+    {
+        return $this->subscriptionExempt || $this->isAppAdmin();
     }
 }

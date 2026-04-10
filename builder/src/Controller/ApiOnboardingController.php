@@ -6,9 +6,10 @@ namespace App\Controller;
 
 use App\Entity\Organization;
 use App\Entity\User;
-use App\Onboarding\ProfileAvatarCatalog;
 use App\Onboarding\UserOnboardingEvaluator;
 use App\Subscription\SubscriptionPlan;
+use App\WebhookProject\DefaultWebhookProjectService;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,7 +28,69 @@ final class ApiOnboardingController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly UserOnboardingEvaluator $onboardingEvaluator,
         private readonly ValidatorInterface $validator,
+        private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
     ) {
+    }
+
+    /** Création de la première organisation pour un administrateur (les gestionnaires utilisent /api/organizations/bootstrap). */
+    #[Route('/organization', name: 'api_onboarding_organization', methods: ['POST'])]
+    public function createFirstOrganization(Request $request): JsonResponse
+    {
+        $user = $this->requireUser();
+        if (!$user->isAppAdmin()) {
+            return new JsonResponse(
+                ['error' => 'Les gestionnaires créent leur organisation via le formulaire standard.'],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
+        $steps = $this->onboardingEvaluator->pendingSteps($user);
+        if (!\in_array('create_organization', $steps, true)) {
+            return new JsonResponse(['error' => 'Cette étape n’est plus nécessaire.'], Response::HTTP_CONFLICT);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!\is_array($data)) {
+            return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $name = trim((string) ($data['name'] ?? ''));
+        $organization = (new Organization())->setName($name);
+
+        $errors = $this->validator->validate($organization);
+        if (\count($errors) > 0) {
+            $messages = [];
+            foreach ($errors as $error) {
+                $messages[$error->getPropertyPath()] = $error->getMessage();
+            }
+
+            return new JsonResponse(['error' => 'Validation', 'fields' => $messages], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $this->entityManager->persist($organization);
+        $user->addOrganizationMembership($organization);
+        $user->setOrganization($organization);
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            return new JsonResponse(
+                [
+                    'error' => 'Une organisation porte déjà ce nom.',
+                    'code' => 'organization_name_taken',
+                ],
+                Response::HTTP_CONFLICT,
+            );
+        }
+
+        $this->defaultWebhookProjectService->ensureDefaultForOrganization($organization);
+        $this->entityManager->flush();
+        $this->entityManager->refresh($user);
+
+        return new JsonResponse([
+            'id' => $organization->getId(),
+            'name' => $organization->getName(),
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/profile', name: 'api_onboarding_profile', methods: ['POST'])]
@@ -45,7 +108,6 @@ final class ApiOnboardingController extends AbstractController
         }
 
         $displayName = isset($data['displayName']) ? trim((string) $data['displayName']) : '';
-        $avatarKey = isset($data['avatarKey']) ? trim((string) $data['avatarKey']) : '';
 
         $fields = [];
         foreach ($this->validator->validate($displayName, [
@@ -55,15 +117,11 @@ final class ApiOnboardingController extends AbstractController
             $fields['displayName'] = $v->getMessage();
             break;
         }
-        if ($avatarKey === '' || !ProfileAvatarCatalog::isAllowed($avatarKey)) {
-            $fields['avatarKey'] = 'Choisissez un avatar dans la liste proposée.';
-        }
         if ($fields !== []) {
             return new JsonResponse(['error' => 'Validation', 'fields' => $fields], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $user->setDisplayName($displayName);
-        $user->setAvatarKey($avatarKey);
         $user->setProfileCompletedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
 
@@ -74,8 +132,8 @@ final class ApiOnboardingController extends AbstractController
     public function choosePlan(Request $request): JsonResponse
     {
         $user = $this->requireUser();
-        if (!$user->isAppManager()) {
-            return new JsonResponse(['error' => 'Réservé aux gestionnaires.'], Response::HTTP_FORBIDDEN);
+        if (!$user->isAppManager() && !$user->isAppAdmin()) {
+            return new JsonResponse(['error' => 'Réservé aux gestionnaires et administrateurs.'], Response::HTTP_FORBIDDEN);
         }
 
         $steps = $this->onboardingEvaluator->pendingSteps($user);

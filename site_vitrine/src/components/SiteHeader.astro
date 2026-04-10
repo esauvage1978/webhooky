@@ -1,0 +1,21 @@
+---
+import { BUILDER_URL } from '../site.ts';
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="Webhooky — accueil">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Webhooky</span>
+    </a>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <a href="/#fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/documentation">Documentation</a>
+      <a href="/documentation-technique">Documentation technique</a>
+      <a href="/contact">Contact</a>
+      <a class="btn btn--ghost" href={BUILDER_URL}>Accéder à l’app</a>
+    </nav>
+  </div>
+</header>

@@ -83,6 +83,12 @@ class Organization
     #[ORM\Column(options: ['default' => 0])]
     private int $eventsExtraQuota = 0;
 
+    /**
+     * Structure interne : pas de blocage ingress ni de plafonds sur cette organisation (forfaits Stripe / simulation ignorés).
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $subscriptionExempt = false;
+
     /** @var Collection<int, OrganizationMembership> */
     #[ORM\OneToMany(targetEntity: OrganizationMembership::class, mappedBy: 'organization', orphanRemoval: true, cascade: ['persist'])]
     private Collection $memberships;
@@ -317,6 +323,18 @@ class Organization
     public function setEventsExtraQuota(int $eventsExtraQuota): static
     {
         $this->eventsExtraQuota = max(0, $eventsExtraQuota);
+
+        return $this;
+    }
+
+    public function isSubscriptionExempt(): bool
+    {
+        return $this->subscriptionExempt;
+    }
+
+    public function setSubscriptionExempt(bool $subscriptionExempt): static
+    {
+        $this->subscriptionExempt = $subscriptionExempt;
 
         return $this;
     }

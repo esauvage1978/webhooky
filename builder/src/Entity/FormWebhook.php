@@ -37,6 +37,14 @@ class FormWebhook
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Organization $organization = null;
 
+    #[ORM\ManyToOne(targetEntity: WebhookProject::class, inversedBy: 'webhooks')]
+    #[ORM\JoinColumn(name: 'project_id', nullable: false, onDelete: 'RESTRICT')]
+    private ?WebhookProject $project = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'created_by_id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $createdBy = null;
+
     #[Assert\NotBlank]
     #[Assert\Length(max: 180)]
     #[ORM\Column(length: 180)]
@@ -53,8 +61,24 @@ class FormWebhook
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $metadata = null;
 
+    #[ORM\Column(length: 16, options: ['default' => self::NOTIFICATION_EMAIL_CREATOR])]
+    private string $notificationEmailSource = self::NOTIFICATION_EMAIL_CREATOR;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $notificationCustomEmail = null;
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $notifyOnError = true;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $notifyOnSuccess = false;
+
     #[ORM\Column(options: ['default' => true])]
     private bool $active = true;
+
+    /** Incrémenté à chaque modification réelle du workflow (hors journaux d’exécution). */
+    #[ORM\Column(options: ['default' => 1])]
+    private int $version = 1;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
@@ -154,6 +178,18 @@ class FormWebhook
     public function setOrganization(?Organization $organization): static
     {
         $this->organization = $organization;
+
+        return $this;
+    }
+
+    public function getProject(): ?WebhookProject
+    {
+        return $this->project;
+    }
+
+    public function setProject(?WebhookProject $project): static
+    {
+        $this->project = $project;
 
         return $this;
     }
@@ -268,6 +304,18 @@ class FormWebhook
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function getVersion(): int
+    {
+        return $this->version;
+    }
+
+    public function setVersion(int $version): static
+    {
+        $this->version = max(1, $version);
 
         return $this;
     }

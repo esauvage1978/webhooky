@@ -6,7 +6,6 @@ namespace App\Controller;
 
 use App\Entity\Organization;
 use App\Entity\User;
-use App\Onboarding\ProfileAvatarCatalog;
 use App\Onboarding\UserOnboardingEvaluator;
 use App\Repository\OrganizationRepository;
 use App\Subscription\SubscriptionEntitlementService;
@@ -15,8 +14,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class ApiMeController extends AbstractController
 {
@@ -25,6 +27,8 @@ final class ApiMeController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly OrganizationRepository $organizationRepository,
         private readonly UserOnboardingEvaluator $onboardingEvaluator,
+        private readonly ValidatorInterface $validator,
+        private readonly UserPasswordHasherInterface $passwordHasher,
     ) {
     }
 
@@ -67,6 +71,82 @@ final class ApiMeController extends AbstractController
         return new JsonResponse($this->buildMePayload($user));
     }
 
+    #[Route('/api/me/profile', name: 'api_me_profile', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $this->requireUser();
+        $data = json_decode($request->getContent(), true);
+        if (!\is_array($data)) {
+            return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $displayName = isset($data['displayName']) ? trim((string) $data['displayName']) : '';
+
+        $fields = [];
+        foreach ($this->validator->validate($displayName, [
+            new Assert\NotBlank(message: 'Nom d’affichage requis'),
+            new Assert\Length(max: 120, maxMessage: 'Trop long'),
+        ]) as $v) {
+            $fields['displayName'] = $v->getMessage();
+            break;
+        }
+        if ($fields !== []) {
+            return new JsonResponse(['error' => 'Validation', 'fields' => $fields], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $user->setDisplayName($displayName);
+        $this->entityManager->flush();
+
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route('/api/me/change-password', name: 'api_me_change_password', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $this->requireUser();
+        $data = json_decode($request->getContent(), true);
+        if (!\is_array($data)) {
+            return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $current = isset($data['currentPassword']) ? (string) $data['currentPassword'] : '';
+        $newPassword = isset($data['newPassword']) ? (string) $data['newPassword'] : '';
+
+        $fields = [];
+
+        if ($current === '') {
+            $fields['currentPassword'] = 'Mot de passe actuel requis';
+        } elseif (!$this->passwordHasher->isPasswordValid($user, $current)) {
+            $fields['currentPassword'] = 'Mot de passe actuel incorrect';
+        }
+
+        foreach ($this->validator->validate($newPassword, [
+            new Assert\NotBlank(message: 'Nouveau mot de passe requis'),
+            new Assert\Length(min: 8, minMessage: 'Le mot de passe doit contenir au moins 8 caractères'),
+        ]) as $v) {
+            $fields['newPassword'] = $v->getMessage();
+            break;
+        }
+
+        if ($fields !== []) {
+            return new JsonResponse(['error' => 'Validation', 'fields' => $fields], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($current === $newPassword) {
+            return new JsonResponse([
+                'error' => 'Validation',
+                'fields' => ['newPassword' => 'Le nouveau mot de passe doit être différent de l’actuel'],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $user->setPassword($this->passwordHasher->hashPassword($user, $newPassword));
+        $this->entityManager->flush();
+
+        return new JsonResponse(['ok' => true]);
+    }
+
     private function requireUser(): User
     {
         $user = $this->getUser();
@@ -93,7 +173,6 @@ final class ApiMeController extends AbstractController
         $row = [
             'email' => $user->getUserIdentifier(),
             'displayName' => $user->getDisplayName(),
-            'avatarKey' => $user->getAvatarKey(),
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),
             'invitePending' => $user->hasPendingInvite(),
@@ -105,7 +184,6 @@ final class ApiMeController extends AbstractController
                 'required' => $pending !== [],
                 'steps' => $pending,
                 'currentStep' => $pending[0] ?? null,
-                'avatarOptions' => ProfileAvatarCatalog::all(),
             ],
         ];
 

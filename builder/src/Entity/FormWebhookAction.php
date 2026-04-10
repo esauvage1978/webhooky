@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Action exécutée après réception sur un webhook formulaire (ex. envoi Mailjet).
+ * Action exécutée après réception sur un déclencheur (Mailjet ou connecteur tiers).
  */
 #[ORM\Entity(repositoryClass: FormWebhookActionRepository::class)]
 #[ORM\Table(name: 'form_webhook_action')]
@@ -32,12 +32,19 @@ class FormWebhookAction
     #[ORM\Column(options: ['default' => true])]
     private bool $active = true;
 
+    /** @see \App\ServiceIntegration\ServiceIntegrationType */
+    #[ORM\Column(length: 32, options: ['default' => 'mailjet'])]
+    private string $actionType = 'mailjet';
+
     #[ORM\ManyToOne(targetEntity: Mailjet::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?Mailjet $mailjet = null;
 
-    #[Assert\Positive]
-    #[ORM\Column]
+    #[ORM\ManyToOne(targetEntity: ServiceConnection::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?ServiceConnection $serviceConnection = null;
+
+    #[ORM\Column(options: ['default' => 0])]
     private int $mailjetTemplateId = 0;
 
     #[ORM\Column(options: ['default' => true])]
@@ -57,6 +64,20 @@ class FormWebhookAction
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $defaultRecipientEmail = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $payloadTemplate = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $smsToPostKey = null;
+
+    #[ORM\Column(length: 48, nullable: true)]
+    private ?string $smsToDefault = null;
+
+    /** Note interne (équipe), non utilisée à l’exécution. */
+    #[Assert\Length(max: 4000)]
+    #[ORM\Column(name: 'action_comment', type: Types::TEXT, nullable: true)]
+    private ?string $comment = null;
 
     public function getId(): ?int
     {
@@ -95,6 +116,30 @@ class FormWebhookAction
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function getActionType(): string
+    {
+        return $this->actionType;
+    }
+
+    public function setActionType(string $actionType): static
+    {
+        $this->actionType = $actionType;
+
+        return $this;
+    }
+
+    public function getServiceConnection(): ?ServiceConnection
+    {
+        return $this->serviceConnection;
+    }
+
+    public function setServiceConnection(?ServiceConnection $serviceConnection): static
+    {
+        $this->serviceConnection = $serviceConnection;
 
         return $this;
     }
@@ -185,6 +230,54 @@ class FormWebhookAction
     public function setDefaultRecipientEmail(?string $defaultRecipientEmail): static
     {
         $this->defaultRecipientEmail = $defaultRecipientEmail;
+
+        return $this;
+    }
+
+    public function getPayloadTemplate(): ?string
+    {
+        return $this->payloadTemplate;
+    }
+
+    public function setPayloadTemplate(?string $payloadTemplate): static
+    {
+        $this->payloadTemplate = $payloadTemplate;
+
+        return $this;
+    }
+
+    public function getSmsToPostKey(): ?string
+    {
+        return $this->smsToPostKey;
+    }
+
+    public function setSmsToPostKey(?string $smsToPostKey): static
+    {
+        $this->smsToPostKey = $smsToPostKey;
+
+        return $this;
+    }
+
+    public function getSmsToDefault(): ?string
+    {
+        return $this->smsToDefault;
+    }
+
+    public function setSmsToDefault(?string $smsToDefault): static
+    {
+        $this->smsToDefault = $smsToDefault;
+
+        return $this;
+    }
+
+    public function getComment(): ?string
+    {
+        return $this->comment;
+    }
+
+    public function setComment(?string $comment): static
+    {
+        $this->comment = $comment;
 
         return $this;
     }

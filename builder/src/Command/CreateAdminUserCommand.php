@@ -49,6 +49,7 @@ final class CreateAdminUserCommand extends Command
         }
 
         $user->setRoles(['ROLE_ADMIN']);
+        $user->setSubscriptionExempt(true);
         $user->setPassword($this->passwordHasher->hashPassword($user, $plainPassword));
         $this->markAccountAsValidatedAndReady($user);
 

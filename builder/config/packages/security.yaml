@@ -36,13 +36,15 @@ security:
         - { path: ^/api/accept-invitation, roles: PUBLIC_ACCESS }
         - { path: ^/verify-email, roles: PUBLIC_ACCESS }
         - { path: ^/webhook, roles: PUBLIC_ACCESS }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
         - { path: ^/api/organizations/.+/subscription, roles: ROLE_USER }
         - { path: ^/api/onboarding, roles: ROLE_USER }
         - { path: ^/api/me, roles: ROLE_USER }
         - { path: ^/api/users, roles: ROLE_USER }
         - { path: ^/api/organizations, roles: ROLE_USER }
-        - { path: ^/api/mailjets, roles: ROLE_USER }
+        - { path: ^/api/service-connections, roles: ROLE_USER }
         - { path: ^/api/form-webhooks, roles: ROLE_USER }
+        - { path: ^/api/webhook-projects, roles: ROLE_USER }
 
 when@test:
     security:

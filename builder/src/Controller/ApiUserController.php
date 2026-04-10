@@ -7,8 +7,8 @@ namespace App\Controller;
 use App\Entity\Organization;
 use App\Entity\User;
 use App\Entity\UserAccountAuditLog;
-use App\Repository\MailjetRepository;
 use App\Repository\OrganizationRepository;
+use App\Repository\ServiceConnectionRepository;
 use App\Repository\UserAccountAuditLogRepository;
 use App\Repository\UserRepository;
 use App\Service\AuthMailer;
@@ -36,7 +36,7 @@ final class ApiUserController extends AbstractController
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly AuthMailer $authMailer,
         private readonly UserManagementAuditLogger $auditLogger,
-        private readonly MailjetRepository $mailjetRepository,
+        private readonly ServiceConnectionRepository $serviceConnectionRepository,
         private readonly UserAccountAuditLogRepository $auditLogRepository,
         private readonly ValidatorInterface $validator,
     ) {
@@ -48,6 +48,17 @@ final class ApiUserController extends AbstractController
         $actor = $this->currentUser();
         $this->ensureManagerOrAdmin($actor);
 
+        $page = max(1, (int) $request->query->get('page', 1));
+        $perPage = min(100, max(1, (int) $request->query->get('perPage', 20)));
+        $search = trim((string) $request->query->get('search', ''));
+        $roleFilter = mb_strtolower(trim((string) $request->query->get('role', '')));
+        if ($roleFilter !== '' && !\in_array($roleFilter, ['admin', 'manager', 'member'], true)) {
+            return new JsonResponse(['error' => 'Paramètre role invalide.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        /** @var Organization|null $scopeOrg */
+        $scopeOrg = null;
+
         if ($this->isAdmin($actor)) {
             $orgId = $request->query->get('organizationId');
             if ($orgId !== null && $orgId !== '') {
@@ -55,19 +66,27 @@ final class ApiUserController extends AbstractController
                 if (!$org instanceof Organization) {
                     return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_BAD_REQUEST);
                 }
-                $users = $this->userRepository->findByOrganizationOrderedByEmail($org);
-            } else {
-                $users = $this->userRepository->findAllOrderedByEmail();
+                $scopeOrg = $org;
             }
         } else {
             $org = $actor->getOrganization();
             if ($org === null) {
                 return new JsonResponse(['error' => 'Organisation requise'], Response::HTTP_FORBIDDEN);
             }
-            $users = $this->userRepository->findByOrganizationOrderedByEmail($org);
+            $scopeOrg = $org;
         }
 
-        return new JsonResponse(array_map(fn (User $u) => $this->serializeUser($u), $users));
+        $result = $this->userRepository->findForListingPaginated($scopeOrg, $search, $roleFilter, $page, $perPage);
+        $total = $result['total'];
+        $totalPages = $total > 0 ? (int) ceil($total / $perPage) : 1;
+
+        return new JsonResponse([
+            'items' => array_map(fn (User $u) => $this->serializeUser($u), $result['items']),
+            'total' => $total,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalPages' => $totalPages,
+        ]);
     }
 
     #[Route('/audit-logs', name: 'api_users_audit_logs', methods: ['GET'])]
@@ -319,9 +338,9 @@ final class ApiUserController extends AbstractController
             return new JsonResponse(['error' => 'Vous ne pouvez pas supprimer votre propre compte ainsi.'], Response::HTTP_FORBIDDEN);
         }
 
-        if ($this->mailjetRepository->countCreatedBy($target) > 0) {
+        if ($this->serviceConnectionRepository->countCreatedBy($target) > 0) {
             return new JsonResponse([
-                'error' => 'Impossible de supprimer cet utilisateur : des configurations Mailjet lui sont rattachées.',
+                'error' => 'Impossible de supprimer cet utilisateur : des connecteurs d’intégration lui sont rattachés.',
             ], Response::HTTP_CONFLICT);
         }
 
@@ -393,7 +412,6 @@ final class ApiUserController extends AbstractController
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'displayName' => $user->getDisplayName(),
-            'avatarKey' => $user->getAvatarKey(),
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),
             'invitePending' => $user->hasPendingInvite(),

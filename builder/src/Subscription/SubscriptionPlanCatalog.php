@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Subscription;
 
 /**
- * Grille commerciale + packs d’événements (montants indicatifs — facturation réelle via Stripe).
+ * Grille commerciale + packs d’événements (montants indicatifs HT — TVA en sus ; facturation réelle via Stripe).
  */
 final class SubscriptionPlanCatalog
 {
+    /** Texte d’information affiché côté UI (forfaits et packs). */
+    public const PRICING_NOTE_FR = 'Montants hors taxes (HT). La TVA applicable sera ajoutée à la facturation.';
     public const FREE_INCLUDED_EVENTS = 100;
 
     public const STARTER_INCLUDED_EVENTS = 5000;
@@ -76,7 +78,7 @@ final class SubscriptionPlanCatalog
                 'includedEvents' => self::PRO_INCLUDED_EVENTS,
                 'allowEventOverage' => true,
                 'priceMonthlyEur' => self::PRICE_PRO_EUR,
-                'description' => '50 000 événements inclus (~0,00058 €/év.) — packs dégressifs au-delà.',
+                'description' => '50 000 événements inclus (~0,00058 € HT/év.) — packs dégressifs au-delà.',
             ],
         ];
     }

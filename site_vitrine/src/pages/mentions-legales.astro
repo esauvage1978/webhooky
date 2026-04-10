@@ -1,0 +1,61 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL, CONTACT_EMAIL, SITE_URL } from '../site.ts';
+
+const title = 'Mentions légales — Webhooky';
+const description = 'Informations réglementaires relatives au site webhooky.fr et à l’application webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container legal-page">
+    <div class="page-hero">
+      <h1>Mentions légales</h1>
+      <p>Conformément aux obligations applicables en France.</p>
+    </div>
+
+    <h2>Éditeur du site</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> raison sociale, forme juridique, capital social, siège social, numéro SIREN/SIRET,
+      RCS et ville d’immatriculation, TVA intracommunautaire le cas échéant.
+    </div>
+    <p>
+      <strong>Contact :</strong>
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </p>
+    <p>
+      <strong>Site vitrine :</strong>
+      <a href={SITE_URL}>{SITE_URL.replace('https://', '')}</a>
+    </p>
+    <p>
+      <strong>Application :</strong>
+      <a href={BUILDER_URL}>{BUILDER_URL.replace('https://', '')}</a>
+    </p>
+
+    <h2>Directeur de la publication</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> nom et qualité du directeur de publication.
+    </div>
+
+    <h2>Hébergeur</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> dénomination, adresse et contact de l’hébergeur du site et de l’application.
+    </div>
+
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Les éléments du site (textes, visuels, structure) sont la propriété de l’éditeur ou de ses partenaires, sauf
+      mention contraire. Toute reproduction non autorisée est interdite.
+    </p>
+
+    <h2>Limitation de responsabilité</h2>
+    <p>
+      L’éditeur s’efforce d’assurer l’exactitude des informations publiées sur la vitrine. Toutefois, il ne peut être
+      tenu responsable des erreurs, omissions ou indisponibilités temporaires du site ou de l’application.
+    </p>
+    <p class="legal-strong">
+      L’éditeur n’est pas responsable des actions effectuées par les utilisateurs sur ou via la plateforme (configuration
+      des webhooks, données transmises, envois d’e-mails, choix d’intégrations, etc.). Les utilisateurs demeurent seuls
+      responsables de leur usage des services et du respect des lois et réglementations.
+    </p>
+  </main>
+</SiteLayout>

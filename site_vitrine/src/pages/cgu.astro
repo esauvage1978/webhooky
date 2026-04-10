@@ -1,0 +1,89 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL, CONTACT_EMAIL } from '../site.ts';
+
+const title = 'Conditions générales d’utilisation — Webhooky';
+const description =
+  'CGU applicables à l’utilisation du site webhooky.fr et des services accessibles via webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container legal-page">
+    <div class="page-hero">
+      <h1>Conditions générales d’utilisation (CGU)</h1>
+      <p>Dernière mise à jour : document type à adapter par votre conseil avant mise en production.</p>
+    </div>
+
+    <h2>Objet</h2>
+    <p>
+      Les présentes CGU régissent l’accès au site vitrine ainsi que l’utilisation des services logiciels proposés via
+      l’application publiée sous le domaine <a href={BUILDER_URL}>webhooky.builders</a> (ci-après, le « Service »).
+    </p>
+
+    <h2>Acceptation</h2>
+    <p>
+      En créant un compte ou en utilisant le Service, vous acceptez sans réserve les présentes conditions. Si vous n’y
+      consentez pas, vous ne devez pas utiliser le Service.
+    </p>
+
+    <h2>Description synthétique du Service</h2>
+    <p>
+      Le Service permet notamment de recevoir des requêtes HTTP (webhooks), d’exécuter des actions configurées par
+      l’utilisateur (dont des envois d’e-mails via des prestataires tels que Mailjet) et d’accéder à des journaux.
+    </p>
+
+    <h2>Compte et sécurité</h2>
+    <p>
+      Vous êtes responsable de la confidentialité de vos identifiants et de l’activité réalisée sous votre compte. Vous
+      devez notifier sans délai toute utilisation non autorisée.
+    </p>
+
+    <h2>Usage acceptable</h2>
+    <p>Il est interdit notamment de :</p>
+    <ul>
+      <li>contourner les limitations techniques ou de sécurité ;</li>
+      <li>utiliser le Service à des fins illicites, frauduleuses ou portant atteinte aux droits de tiers ;</li>
+      <li>envoyer des communications non sollicitées ou non conformes aux lois applicables ;</li>
+      <li>surcharger délibérément les infrastructures sans accord préalable.</li>
+    </ul>
+
+    <h2>Disponibilité et évolution</h2>
+    <p>
+      Le Service est fourni « en l’état ». Des interruptions (maintenance, incident, évolution) peuvent survenir sans
+      garantie de délai de rétablissement, sous réserve des droits impératives applicables aux consommateurs le cas
+      échéant.
+    </p>
+
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Les éléments du Service et de la vitrine restent la propriété de l’éditeur ou de ses concédants. Aucune licence
+      autre que celle nécessaire à l’usage du Service n’est accordée.
+    </p>
+
+    <h2>Limitation de responsabilité</h2>
+    <p class="legal-strong">
+      Dans toute la mesure permise par la loi, l’éditeur décline toute responsabilité quant aux dommages indirects ou aux
+      pertes de données, chiffre d’affaires ou opportunités liés à l’usage du Service.
+    </p>
+    <p class="legal-strong">
+      <strong>Clause importante :</strong> l’éditeur n’est pas responsable des actions que vous ou vos utilisateurs
+      effectuez via le Service — y compris la configuration des webhooks, le contenu des messages envoyés, le choix des
+      destinataires et le respect des obligations légales (RGPD, ePrivacy, etc.). Vous garantissez disposer des droits et
+      autorisations nécessaires pour tout contenu et traitement que vous mettez en œuvre.
+    </p>
+
+    <h2>Résiliation</h2>
+    <p>
+      Vous pouvez cesser d’utiliser le Service à tout moment. L’éditeur peut suspendre ou clôturer un compte en cas de
+      manquement grave aux présentes CGU, sous réserve des obligations légales.
+    </p>
+
+    <h2>Droit applicable et litiges</h2>
+    <div class="legal-placeholder">
+      <strong>À compléter :</strong> tribunal compétent et droit applicable (ex. droit français, tribunaux de …).
+    </div>
+
+    <h2>Contact</h2>
+    <p><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+  </main>
+</SiteLayout>

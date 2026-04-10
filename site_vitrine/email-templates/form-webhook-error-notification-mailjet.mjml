@@ -1,0 +1,239 @@
+<!--
+  Template MJML — Alerte d’erreur d’exécution d’un webhook formulaire (Webhooky Builders)
+
+  Expéditeur prévu : notification@webhooky.builders (domaine vérifié dans Mailjet).
+  Déclenchement : le backend envoie d’abord un POST JSON vers le webhook formulaire plateforme
+  (URL configurable WEBHOOKY_ERROR_NOTIFY_WEBHOOK_URL) ; le workflow Mailjet lit les champs
+  « email » (destinataire) et « name » (nom affiché) plus les variables ci-dessous. Repli SMTP
+  texte/HTML si l’ingress échoue.
+
+  Compiler : npx mjml form-webhook-error-notification-mailjet.mjml -o form-webhook-error-notification-mailjet.html
+
+  Charte : bandeau #0c1929, accent #ff5a36 (alignée contact-notification-mailjet.mjml).
+
+  Champs formulaire / variables Mailjet — fournis en cas d’erreur (FormWebhookRunNotifier) :
+
+    email                         — Destinataire de l’alerte (mapping Mailjet)
+    name                          — Nom affiché du destinataire (mapping Mailjet)
+    {{var:workflow_name}}           — Nom du workflow (FormWebhook)
+    {{var:workflow_id}}             — Identifiant interne du workflow (nombre, texte)
+    {{var:organization_name}}     — Nom de l’organisation (vide si inconnu)
+    {{var:log_id}}                — Identifiant du journal d’exécution (nombre, texte)
+    {{var:ingress_url}}           — URL POST complète du webhook formulaire
+    {{var:failure_stage}}         — « parse » | « actions » (phase probable de l’échec)
+    {{var:failure_stage_label}}   — Libellé lisible de la phase (FR)
+    {{var:global_error_detail}}   — Message d’erreur global (log), peut être vide
+    {{var:log_status}}            — Statut brut du log (ex. error, parsed…)
+    {{var:received_at}}           — Horodatage ISO de réception (UTC)
+    {{var:duration_ms}}           — Durée totale traitée (ms), texte
+    {{var:client_ip}}             — IP client (si connue)
+    {{var:user_agent}}            — User-Agent (tronqué côté serveur si très long)
+    {{var:content_type}}          — Content-Type de la requête d’ingress
+    {{var:raw_body_preview}}      — Extrait du corps brut (tronqué)
+    {{var:parsed_input_json}}     — Représentation JSON des champs parsés (tronquée ; vide si parse échoué)
+    {{var:actions_detail}}        — Synthèse des actions (une ligne courte par action, séparateur « · »)
+    {{var:notify_recipient}}      — Doublon informatif de l’adresse alertée (voir aussi champ « email »)
+    {{var:public_app_url}}        — URL de l’app (ex. https://webhooky.builders)
+
+  Sujet recommandé dans Mailjet : [Webhooky] Erreur — {{var:workflow_name}} (#{{var:log_id}})
+-->
+<mjml>
+  <mj-head>
+    <mj-title>Erreur webhook — {{var:workflow_name}}</mj-title>
+    <mj-preview>Une exécution de workflow a échoué sur Webhooky Builders. Détails techniques ci-dessous.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="'Segoe UI', system-ui, Helvetica, Arial, sans-serif" />
+      <mj-text color="#0f172a" font-size="16px" line-height="24px" />
+      <mj-button
+        background-color="#ff5a36"
+        color="#ffffff"
+        font-size="16px"
+        font-weight="600"
+        border-radius="10px"
+        inner-padding="14px 28px"
+      />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f0f4f8" width="600px">
+    <mj-section background-color="#0c1929" padding="24px 40px 20px">
+      <mj-column width="100%">
+        <mj-image
+          src="https://webhooky.fr/favicon.png"
+          alt="Webhooky"
+          width="72px"
+          padding-bottom="8px"
+          href="https://webhooky.builders/"
+        />
+        <mj-text
+          align="center"
+          font-size="13px"
+          font-weight="700"
+          letter-spacing="0.06em"
+          text-transform="uppercase"
+          color="#ffffff"
+          padding="0"
+          line-height="20px"
+        >
+          webhooky.builders — alerte technique
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0" background-color="#0c1929">
+      <mj-column width="100%">
+        <mj-divider border-width="3px" border-color="#ff5a36" padding="0" />
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="28px 40px 12px">
+      <mj-column width="100%">
+        <mj-text font-size="20px" font-weight="700" color="#b91c1c" padding-bottom="8px">
+          Échec d’exécution du workflow
+        </mj-text>
+        <mj-text font-size="15px" color="#64748b" padding-bottom="0">
+          Bonjour, une tentative d’envoi sur le workflow
+          <strong style="color: #152a44">{{var:workflow_name}}</strong> s’est terminée par une erreur.
+          Cette notification est envoyée automatiquement depuis
+          <strong style="color: #152a44">notification@webhooky.builders</strong> pour vous permettre de diagnostiquer le problème.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff1f2" padding="16px 40px">
+      <mj-column width="100%">
+        <mj-text font-size="14px" font-weight="700" color="#991b1b" padding-bottom="4px">
+          Phase concernée : {{var:failure_stage_label}}
+        </mj-text>
+        <mj-text font-size="14px" color="#7f1d1d" padding="0">
+          <strong>Résumé :</strong> {{var:global_error_detail}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="8px 40px 8px">
+      <mj-column width="100%">
+        <mj-text font-size="15px" font-weight="700" color="#152a44" padding-bottom="12px">
+          Contexte du workflow
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 40px 12px">
+      <mj-column width="100%">
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">Organisation</strong><br />
+          {{var:organization_name}}
+        </mj-text>
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">ID workflow</strong><br />
+          {{var:workflow_id}}
+        </mj-text>
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">ID journal</strong><br />
+          {{var:log_id}}
+        </mj-text>
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">Statut du log</strong><br />
+          {{var:log_status}} <span style="color: #64748b;">({{var:failure_stage}})</span>
+        </mj-text>
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">URL d’ingress (POST)</strong><br />
+          <a href="{{var:ingress_url}}" style="color: #3d5a80; font-weight: 600; word-break: break-all;">{{var:ingress_url}}</a>
+        </mj-text>
+        <mj-text padding-bottom="10px">
+          <strong style="color: #152a44">Destinataire de cette alerte</strong><br />
+          <a href="mailto:{{var:notify_recipient}}" style="color: #ff5a36; font-weight: 600;">{{var:notify_recipient}}</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 40px 12px">
+      <mj-column width="100%">
+        <mj-text font-size="15px" font-weight="700" color="#152a44" padding-bottom="12px">
+          Requête &amp; technique
+        </mj-text>
+        <mj-text padding-bottom="10px" font-size="14px">
+          <strong style="color: #152a44">Reçu le</strong> {{var:received_at}}
+          · <strong style="color: #152a44">Durée</strong> {{var:duration_ms}} ms<br />
+          <strong style="color: #152a44">IP</strong> {{var:client_ip}}
+          · <strong style="color: #152a44">Content-Type</strong> {{var:content_type}}
+        </mj-text>
+        <mj-text padding-bottom="8px" font-size="13px" color="#64748b" line-height="20px">
+          <strong style="color: #152a44">User-Agent</strong><br />
+          {{var:user_agent}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 40px 8px">
+      <mj-column width="100%">
+        <mj-text font-size="15px" font-weight="700" color="#152a44" padding-bottom="8px">
+          Actions (synthèse)
+        </mj-text>
+        <mj-text
+          padding="12px 16px"
+          font-size="13px"
+          line-height="22px"
+          container-background-color="#f0f4f8"
+          color="#0f172a"
+        >
+          {{var:actions_detail}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="12px 40px 8px">
+      <mj-column width="100%">
+        <mj-text font-size="15px" font-weight="700" color="#152a44" padding-bottom="8px">
+          Données parsées (JSON, extrait)
+        </mj-text>
+        <mj-text
+          padding="12px 16px"
+          font-size="12px"
+          line-height="18px"
+          container-background-color="#f8fafc"
+          color="#334155"
+          font-family="ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, monospace"
+        >
+          {{var:parsed_input_json}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="12px 40px 20px">
+      <mj-column width="100%">
+        <mj-text font-size="15px" font-weight="700" color="#152a44" padding-bottom="8px">
+          Corps brut (extrait)
+        </mj-text>
+        <mj-text
+          padding="12px 16px"
+          font-size="12px"
+          line-height="18px"
+          container-background-color="#f8fafc"
+          color="#334155"
+          font-family="ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, monospace"
+        >
+          {{var:raw_body_preview}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 40px 28px">
+      <mj-column width="100%">
+        <mj-button href="{{var:public_app_url}}/webhooks" align="left">Ouvrir Webhooky Builders</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#e8eef4" padding="22px 40px">
+      <mj-column width="100%">
+        <mj-text font-size="12px" color="#64748b" align="center" padding="0">
+          <a href="https://webhooky.fr/" style="color: #ff5a36; font-weight: 600;">webhooky.fr</a>
+          ·
+          <a href="https://webhooky.builders/" style="color: #3d5a80; font-weight: 600;">webhooky.builders</a><br /><br />
+          <strong style="color: #152a44">Webhooky</strong> — notification automatique d’erreur · ne transmettez pas de secrets par e-mail.<br />
+          <span style="color: #64748b;">Si vous n’attendiez pas ce message, vérifiez la configuration des alertes sur votre workflow.</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

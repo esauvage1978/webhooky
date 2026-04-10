@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Webhooky">
+  <defs>
+    <linearGradient id="wh-coral" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff5a36"/>
+      <stop offset="100%" stop-color="#ff7a5c"/>
+    </linearGradient>
+  </defs>
+  <!-- Fond charte Webhooky (--ink) -->
+  <rect width="128" height="128" rx="28" fill="#0c1929"/>
+  <!-- Hub webhook : nœuds + losange de liaison -->
+  <g fill="none" stroke="url(#wh-coral)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 36 L92 64 L64 92 L36 64 Z"/>
+  </g>
+  <circle cx="64" cy="64" r="14" fill="url(#wh-coral)"/>
+  <circle cx="64" cy="36" r="8" fill="url(#wh-coral)"/>
+  <circle cx="92" cy="64" r="8" fill="url(#wh-coral)"/>
+  <circle cx="64" cy="92" r="8" fill="url(#wh-coral)"/>
+  <circle cx="36" cy="64" r="8" fill="url(#wh-coral)"/>
+</svg>

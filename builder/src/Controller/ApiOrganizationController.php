@@ -12,6 +12,7 @@ use App\Repository\OrganizationInvoiceRepository;
 use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use App\Subscription\SubscriptionEntitlementService;
+use App\WebhookProject\DefaultWebhookProjectService;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -34,6 +35,7 @@ final class ApiOrganizationController extends AbstractController
         private readonly SubscriptionEntitlementService $subscriptionEntitlement,
         private readonly FormWebhookLogRepository $formWebhookLogRepository,
         private readonly OrganizationInvoiceRepository $organizationInvoiceRepository,
+        private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
     ) {
     }
 
@@ -92,22 +94,58 @@ final class ApiOrganizationController extends AbstractController
         $ingressThis = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startThis, $startNext);
         $ingressPrev = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startPrev, $startThis);
 
+        $byProjectThis = $this->formWebhookLogRepository->aggregateIngressByProjectForOrganizationBetween($organization, $startThis, $startNext);
+        $byWebhookThis = $this->formWebhookLogRepository->aggregateIngressByWebhookForOrganizationBetween($organization, $startThis, $startNext);
+        $byProjectPrev = $this->formWebhookLogRepository->aggregateIngressByProjectForOrganizationBetween($organization, $startPrev, $startThis);
+        $byWebhookPrev = $this->formWebhookLogRepository->aggregateIngressByWebhookForOrganizationBetween($organization, $startPrev, $startThis);
+
+        $snap = $this->subscriptionEntitlement->buildSnapshot($organization);
+
+        $monthlyHistory = [];
+        for ($i = 0; $i < 12; ++$i) {
+            $anchor = $startThis->modify(\sprintf('-%d months', $i));
+            $mStart = $anchor->modify('first day of this month')->setTime(0, 0, 0);
+            $mEnd = $mStart->modify('+1 month');
+            $monthlyHistory[] = [
+                'periodStart' => $mStart->format(\DateTimeInterface::ATOM),
+                'periodEndExclusive' => $mEnd->format(\DateTimeInterface::ATOM),
+                'label' => $mStart->format('Y-m'),
+                'ingressCount' => $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $mStart, $mEnd),
+                'byProject' => $this->formWebhookLogRepository->aggregateIngressByProjectForOrganizationBetween($organization, $mStart, $mEnd),
+                'byWebhook' => $this->formWebhookLogRepository->aggregateIngressByWebhookForOrganizationBetween($organization, $mStart, $mEnd),
+            ];
+        }
+
         return new JsonResponse([
+            'currentIndicators' => [
+                'planLabel' => $snap['planLabel'] ?? null,
+                'webhookCount' => $snap['webhookCount'] ?? null,
+                'maxWebhooks' => $snap['maxWebhooks'] ?? null,
+                'eventsConsumedTotal' => $organization->getEventsConsumed(),
+                'eventsAllowance' => $this->subscriptionEntitlement->getTotalEventsAllowance($organization),
+                'eventsRemaining' => $snap['eventsRemaining'] ?? null,
+            ],
             'currentMonth' => [
                 'periodStart' => $startThis->format(\DateTimeInterface::ATOM),
                 'periodEndExclusive' => $startNext->format(\DateTimeInterface::ATOM),
                 /** Réceptions enregistrées sur vos webhooks (journaux d’ingress), sur la période. */
                 'ingressCount' => $ingressThis,
+                'byProject' => $byProjectThis,
+                'byWebhook' => $byWebhookThis,
             ],
             'previousMonth' => [
                 'periodStart' => $startPrev->format(\DateTimeInterface::ATOM),
                 'periodEndExclusive' => $startThis->format(\DateTimeInterface::ATOM),
                 'ingressCount' => $ingressPrev,
+                'byProject' => $byProjectPrev,
+                'byWebhook' => $byWebhookPrev,
             ],
             'quota' => [
                 'eventsConsumedTotal' => $organization->getEventsConsumed(),
                 'eventsAllowance' => $this->subscriptionEntitlement->getTotalEventsAllowance($organization),
             ],
+            /** Du mois courant jusqu’à 11 mois en arrière (ordre : courant d’abord). */
+            'monthlyHistory' => $monthlyHistory,
         ]);
     }
 
@@ -151,7 +189,7 @@ final class ApiOrganizationController extends AbstractController
             );
         }
 
-        if ($user->hasAnyOrganizationMembership()) {
+        if ($user->isAttachedToAnOrganization()) {
             return new JsonResponse(
                 ['error' => 'Votre compte est déjà rattaché à au moins une organisation.'],
                 Response::HTTP_CONFLICT,
@@ -185,6 +223,10 @@ final class ApiOrganizationController extends AbstractController
                 Response::HTTP_CONFLICT,
             );
         }
+
+        $this->defaultWebhookProjectService->ensureDefaultForOrganization($organization);
+        $this->entityManager->flush();
+        $this->entityManager->refresh($user);
 
         return new JsonResponse(
             $this->serializeOrganization($organization, true),
@@ -230,6 +272,9 @@ final class ApiOrganizationController extends AbstractController
                 Response::HTTP_CONFLICT,
             );
         }
+
+        $this->defaultWebhookProjectService->ensureDefaultForOrganization($organization);
+        $this->entityManager->flush();
 
         return new JsonResponse(
             $this->serializeOrganization($organization, true),

@@ -6,7 +6,9 @@ namespace App\Repository;
 
 use App\Entity\FormWebhook;
 use App\Entity\FormWebhookLog;
+use App\Entity\Organization;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -101,5 +103,161 @@ class FormWebhookLogRepository extends ServiceEntityRepository
         }
 
         return $map;
+    }
+
+    /**
+     * Dernier journal par workflow (ligne au plus grand id), pour affichage liste.
+     *
+     * @param list<int> $webhookIds
+     *
+     * @return array<int, array{status: string, receivedAt: string|null, errorDetail: string|null}>
+     */
+    public function lastLogSummaryByWebhookIds(array $webhookIds): array
+    {
+        $webhookIds = array_values(array_unique(array_filter(
+            $webhookIds,
+            static fn ($id) => \is_int($id) || (\is_string($id) && ctype_digit($id)),
+        )));
+        $webhookIds = array_map(static fn ($id) => (int) $id, $webhookIds);
+        if ($webhookIds === []) {
+            return [];
+        }
+
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = <<<'SQL'
+            SELECT l.form_webhook_id AS webhookId, l.status, l.error_detail AS errorDetail, l.received_at AS receivedAt
+            FROM form_webhook_log l
+            INNER JOIN (
+                SELECT form_webhook_id, MAX(id) AS max_id
+                FROM form_webhook_log
+                WHERE form_webhook_id IN (:ids)
+                GROUP BY form_webhook_id
+            ) t ON l.id = t.max_id
+            SQL;
+
+        $result = $conn->executeQuery(
+            $sql,
+            ['ids' => $webhookIds],
+            ['ids' => ArrayParameterType::INTEGER],
+        );
+
+        $out = [];
+        foreach ($result->fetchAllAssociative() as $row) {
+            $wid = (int) $row['webhookId'];
+            $receivedRaw = $row['receivedAt'] ?? null;
+            $receivedAt = null;
+            if ($receivedRaw instanceof \DateTimeInterface) {
+                $receivedAt = $receivedRaw->format(\DateTimeInterface::ATOM);
+            } elseif (\is_string($receivedRaw) && $receivedRaw !== '') {
+                try {
+                    $receivedAt = (new \DateTimeImmutable($receivedRaw))->format(\DateTimeInterface::ATOM);
+                } catch (\Exception) {
+                    $receivedAt = null;
+                }
+            }
+            $err = $row['errorDetail'] ?? null;
+            $out[$wid] = [
+                'status' => (string) ($row['status'] ?? ''),
+                'receivedAt' => $receivedAt,
+                'errorDetail' => $err !== null && $err !== '' ? (string) $err : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Nombre d’ingress (lignes de journal) pour une organisation sur une période semi-ouverte [from, to).
+     */
+    public function countIngressForOrganizationBetween(Organization $organization, \DateTimeImmutable $fromInclusive, \DateTimeImmutable $toExclusive): int
+    {
+        return (int) $this->createQueryBuilder('l')
+            ->select('COUNT(l.id)')
+            ->join('l.formWebhook', 'w')
+            ->andWhere('w.organization = :org')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->setParameter('org', $organization)
+            ->setParameter('from', $fromInclusive)
+            ->setParameter('to', $toExclusive)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Réceptions agrégées par projet (lignes de journal d’ingress) sur [from, to).
+     *
+     * @return list<array{projectId: int, projectName: string, ingressCount: int}>
+     */
+    public function aggregateIngressByProjectForOrganizationBetween(
+        Organization $organization,
+        \DateTimeImmutable $fromInclusive,
+        \DateTimeImmutable $toExclusive,
+    ): array {
+        $rows = $this->createQueryBuilder('l')
+            ->select('p.id AS projectId', 'p.name AS projectName', 'COUNT(l.id) AS cnt')
+            ->join('l.formWebhook', 'w')
+            ->join('w.project', 'p')
+            ->andWhere('w.organization = :org')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->setParameter('org', $organization)
+            ->setParameter('from', $fromInclusive)
+            ->setParameter('to', $toExclusive)
+            ->groupBy('p.id')
+            ->addGroupBy('p.name')
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $r) => [
+            'projectId' => (int) $r['projectId'],
+            'projectName' => (string) $r['projectName'],
+            'ingressCount' => (int) $r['cnt'],
+        ], $rows);
+    }
+
+    /**
+     * Réceptions agrégées par workflow sur [from, to).
+     *
+     * @return list<array{webhookId: int, webhookName: string, projectId: int, projectName: string, ingressCount: int}>
+     */
+    public function aggregateIngressByWebhookForOrganizationBetween(
+        Organization $organization,
+        \DateTimeImmutable $fromInclusive,
+        \DateTimeImmutable $toExclusive,
+    ): array {
+        $rows = $this->createQueryBuilder('l')
+            ->select(
+                'w.id AS webhookId',
+                'w.name AS webhookName',
+                'p.id AS projectId',
+                'p.name AS projectName',
+                'COUNT(l.id) AS cnt',
+            )
+            ->join('l.formWebhook', 'w')
+            ->join('w.project', 'p')
+            ->andWhere('w.organization = :org')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->setParameter('org', $organization)
+            ->setParameter('from', $fromInclusive)
+            ->setParameter('to', $toExclusive)
+            ->groupBy('w.id')
+            ->addGroupBy('w.name')
+            ->addGroupBy('p.id')
+            ->addGroupBy('p.name')
+            ->orderBy('p.name', 'ASC')
+            ->addOrderBy('w.name', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $r) => [
+            'webhookId' => (int) $r['webhookId'],
+            'webhookName' => (string) $r['webhookName'],
+            'projectId' => (int) $r['projectId'],
+            'projectName' => (string) $r['projectName'],
+            'ingressCount' => (int) $r['cnt'],
+        ], $rows);
     }
 }

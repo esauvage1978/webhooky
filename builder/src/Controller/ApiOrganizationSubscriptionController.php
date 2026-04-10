@@ -43,6 +43,16 @@ final class ApiOrganizationSubscriptionController extends AbstractController
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
 
+        if ($organization->isSubscriptionExempt()) {
+            return new JsonResponse(
+                [
+                    'error' => 'Cette organisation est interne et hors forfait : les changements de plan ou de packs ne s’appliquent pas.',
+                    'code' => 'organization_subscription_exempt',
+                ],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
         $payload = json_decode($request->getContent(), true);
         if (!\is_array($payload)) {
             return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);

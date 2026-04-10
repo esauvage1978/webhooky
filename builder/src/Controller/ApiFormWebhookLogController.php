@@ -88,6 +88,7 @@ final class ApiFormWebhookLogController extends AbstractController
         return \in_array('ROLE_ADMIN', $user->getRoles(), true);
     }
 
+    /** Admin : tous les webhooks ; sinon uniquement ceux de l’organisation de l’utilisateur. */
     private function canAccessWebhook(User $user, FormWebhook $webhook): bool
     {
         if ($this->isAdmin($user)) {
@@ -95,8 +96,9 @@ final class ApiFormWebhookLogController extends AbstractController
         }
 
         $org = $user->getOrganization();
+        $webhookOrgId = $webhook->getOrganization()?->getId();
 
-        return $org !== null && $org->getId() === $webhook->getOrganization()?->getId();
+        return $org !== null && $webhookOrgId !== null && $org->getId() === $webhookOrgId;
     }
 
     /**
@@ -152,10 +154,13 @@ final class ApiFormWebhookLogController extends AbstractController
      */
     private function serializeActionLog(FormWebhookActionLog $al): array
     {
+        $act = $al->getFormWebhookAction();
+
         return [
             'id' => $al->getId(),
             'sortOrder' => $al->getSortOrder(),
-            'formWebhookActionId' => $al->getFormWebhookAction()?->getId(),
+            'formWebhookActionId' => $act?->getId(),
+            'actionType' => $act?->getActionType(),
             'variablesSent' => $al->getVariablesSent(),
             'toEmail' => $al->getToEmail(),
             'status' => $al->getStatus(),

@@ -41,10 +41,6 @@ final class RequireCompleteOnboardingSubscriber implements EventSubscriberInterf
             return;
         }
 
-        if ($this->security->isGranted('ROLE_ADMIN')) {
-            return;
-        }
-
         $user = $this->security->getUser();
         if (!$user instanceof User) {
             return;
@@ -86,7 +82,15 @@ final class RequireCompleteOnboardingSubscriber implements EventSubscriberInterf
             return true;
         }
 
+        if ($method === 'POST' && preg_match('#^/api/me/(profile|change-password)$#', $path) === 1) {
+            return true;
+        }
+
         if ($method === 'POST' && $path === '/api/organizations/bootstrap') {
+            return true;
+        }
+
+        if ($method === 'POST' && $path === '/api/onboarding/organization') {
             return true;
         }
 
@@ -103,6 +107,10 @@ final class RequireCompleteOnboardingSubscriber implements EventSubscriberInterf
         }
 
         if ($method === 'GET' && $path === '/api/subscription/plans') {
+            return true;
+        }
+
+        if (str_starts_with($path, '/api/admin') && $this->security->isGranted('ROLE_ADMIN')) {
             return true;
         }
 

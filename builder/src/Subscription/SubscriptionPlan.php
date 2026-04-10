@@ -8,17 +8,17 @@ enum SubscriptionPlan: string
 {
     /** 0 € — 100 événements inclus, aucun dépassement. */
     case Free = 'free';
-    /** 9 €/mois — 5 000 événements + packs extension. */
+    /** 9 € HT/mois — 5 000 événements + packs extension. */
     case Starter = 'starter';
-    /** 29 €/mois — 50 000 événements + packs extension (prix dégressifs). */
+    /** 29 € HT/mois — 50 000 événements + packs extension (prix dégressifs). */
     case Pro = 'pro';
 
     public function label(): string
     {
         return match ($this) {
             self::Free => 'Free (0 €)',
-            self::Starter => 'Starter (9 €/mois)',
-            self::Pro => 'Pro (29 €/mois)',
+            self::Starter => 'Starter (9 € HT/mois)',
+            self::Pro => 'Pro (29 € HT/mois)',
         };
     }
 

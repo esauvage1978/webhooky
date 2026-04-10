@@ -1,0 +1,122 @@
+---
+import CookieConsent from '../components/CookieConsent.astro';
+import GoogleAnalytics from '../components/GoogleAnalytics.astro';
+import { SITE_NAME, SITE_URL } from '../site.ts';
+
+interface Props {
+  title: string;
+  description: string;
+  /**
+   * Image partage réseaux sociaux : chemin absolu du site (ex. /favicon.svg) ou URL complète.
+   * Idéal : PNG/JPG 1200×630 px à la racine (ex. /og-default.png) — remplacer /favicon.svg en prod si besoin.
+   */
+  image?: string;
+  /** Mots-clés (poids SEO faible ; utiles pour certains annuaires). */
+  keywords?: string;
+  /** Surcharge robots (ex. noindex, nofollow pour brouillon). */
+  robots?: string;
+}
+
+const {
+  title,
+  description,
+  image = '/favicon.svg',
+  keywords,
+  robots,
+} = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const canonicalHref = canonicalUrl.href;
+
+const absoluteImage = (() => {
+  const raw = image?.trim();
+  if (!raw) return null;
+  try {
+    return raw.startsWith('http://') || raw.startsWith('https://')
+      ? raw
+      : new URL(raw.startsWith('/') ? raw : `/${raw}`, Astro.site).href;
+  } catch {
+    return null;
+  }
+})();
+
+const defaultRobots =
+  'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+const robotsContent = (robots ?? defaultRobots).trim();
+
+const jsonLdWebsite = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_NAME,
+  url: `${SITE_URL}/`,
+  inLanguage: 'fr-FR',
+  publisher: {
+    '@type': 'Organization',
+    name: SITE_NAME,
+    url: SITE_URL,
+  },
+};
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#0c1929" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="512x512" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {keywords ? <meta name="keywords" content={keywords} /> : null}
+
+    <link rel="canonical" href={canonicalHref} />
+    <link rel="alternate" hreflang="fr" href={canonicalHref} />
+    <link rel="alternate" hreflang="x-default" href={canonicalHref} />
+
+    <meta name="robots" content={robotsContent} />
+    <meta name="googlebot" content={robotsContent} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalHref} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:locale" content="fr_FR" />
+    {
+      absoluteImage ? (
+        <>
+          <meta property="og:image" content={absoluteImage} />
+          <meta property="og:image:alt" content={SITE_NAME} />
+        </>
+      ) : null
+    }
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content={absoluteImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {absoluteImage ? <meta name="twitter:image" content={absoluteImage} /> : null}
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLdWebsite)} />
+
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+    <CookieConsent />
+    <GoogleAnalytics />
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+  @import '../styles/site-chrome.css';
+</style>

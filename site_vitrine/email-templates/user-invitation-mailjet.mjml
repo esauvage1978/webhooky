@@ -1,0 +1,115 @@
+<!--
+  Template MJML — Invitation d’un utilisateur dans une organisation (Webhooky Builders)
+
+  Expéditeur prévu : celui validé dans Mailjet (ex. notification@webhooky.builders).
+
+  Compiler : npx mjml user-invitation-mailjet.mjml -o user-invitation-mailjet.html
+  Puis copier le HTML dans un template Mailjet (mode éditeur code ou import) avec TemplateLanguage activé.
+
+  Variables Mailjet — alignées sur un envoi API / workflow (champ « email » = destinataire) :
+
+    {{var:source}}             — webhooky.builders-user-invite (optionnel, traçabilité)
+    {{var:email}}              — destinataire (alias courant Mailjet)
+    {{var:user_email}}         — même adresse que l’invité
+    {{var:organization_name}} — nom de l’organisation
+    {{var:invite_url}}          — https://webhooky.builders/invitation?token=…
+    {{var:app_url}}             — https://webhooky.builders (sans slash final)
+    {{var:expires_note}}       — ex. « Ce lien expire dans 14 jours. »
+    {{var:submitted_at}}       — ISO 8601 (optionnel)
+
+  Sujet recommandé dans Mailjet :
+    Webhooky — invitation à rejoindre {{var:organization_name}}
+
+  Builder : AuthMailer::sendUserInvitation fait d’abord un POST JSON interne vers le webhook défini dans
+  app.webhooky.user_invite_webhook_url (surcharge WEBHOOKY_USER_INVITE_WEBHOOK_URL), puis repli SMTP / Twig
+  si la réponse n’est pas ok.
+-->
+<mjml>
+  <mj-head>
+    <mj-title>Invitation Webhooky — {{var:organization_name}}</mj-title>
+    <mj-preview>Vous avez été invité à rejoindre une organisation sur Webhooky. Définissez votre mot de passe pour activer l’accès.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="'Segoe UI', system-ui, Helvetica, Arial, sans-serif" />
+      <mj-text color="#0f172a" font-size="16px" line-height="24px" />
+      <mj-button
+        background-color="#ff5a36"
+        color="#ffffff"
+        font-size="16px"
+        font-weight="600"
+        border-radius="10px"
+        inner-padding="14px 28px"
+      />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f0f4f8" width="600px">
+    <mj-section background-color="#0c1929" padding="24px 40px 20px">
+      <mj-column width="100%">
+        <mj-image
+          src="https://webhooky.fr/favicon.png"
+          alt="Webhooky"
+          width="72px"
+          padding-bottom="8px"
+          href="{{var:app_url}}/"
+        />
+        <mj-text
+          align="center"
+          font-size="13px"
+          font-weight="700"
+          letter-spacing="0.06em"
+          text-transform="uppercase"
+          color="#ffffff"
+          padding="0"
+          line-height="20px"
+        >
+          webhooky.builders — invitation
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0" background-color="#0c1929">
+      <mj-column width="100%">
+        <mj-divider border-width="3px" border-color="#ff5a36" padding="0" />
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="28px 40px 12px">
+      <mj-column width="100%">
+        <mj-text font-size="20px" font-weight="700" color="#0c1929" padding-bottom="8px">
+          Vous êtes invité sur Webhooky
+        </mj-text>
+        <mj-text font-size="14px" color="#64748b" padding-bottom="0">
+          Un gestionnaire vous a ajouté à l’organisation
+          <strong style="color: #152a44">{{var:organization_name}}</strong>
+          sur <strong style="color: #152a44">Webhooky</strong>. Créez votre mot de passe pour activer votre compte et accéder à l’espace d’automatisation (webhooks, e-mails, etc.).
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a" padding-top="12px" padding-bottom="0">
+          Compte concerné&nbsp;: <strong style="color: #152a44">{{var:user_email}}</strong>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 40px 24px">
+      <mj-column width="100%">
+        <mj-button href="{{var:invite_url}}" align="left">Choisir mon mot de passe</mj-button>
+        <mj-text font-size="13px" color="#64748b" padding-top="16px" padding-bottom="0">
+          Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur&nbsp;:<br />
+          <span style="word-break: break-all; color: #3d5a80; font-weight: 600;">{{var:invite_url}}</span>
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b" padding-top="12px" padding-bottom="0">
+          {{var:expires_note}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#e8eef4" padding="22px 40px">
+      <mj-column width="100%">
+        <mj-text font-size="12px" color="#64748b" align="center" padding="0">
+          E-mail automatique — ne pas répondre.<br />
+          <a href="{{var:app_url}}/" style="color: #ff5a36; font-weight: 600;">Ouvrir Webhooky</a>
+          ·
+          <a href="https://webhooky.fr/" style="color: #3d5a80;">webhooky.fr</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

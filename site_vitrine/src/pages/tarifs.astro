@@ -1,0 +1,116 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL } from '../site.ts';
+
+const title = 'Tarifs — Webhooky';
+const description =
+  'Offres Free, Starter et Pro : webhooks, quota d’événements et packs d’extension (prix HT, TVA en sus). Grille alignée sur webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container">
+    <div class="page-hero">
+      <h1>Tarifs</h1>
+      <p>
+        Grille commerciale correspondant à l’application hébergée sur <a href={BUILDER_URL}>webhooky.builders</a>. Les
+        montants et quotas peuvent évoluer ; la facturation effective est celle affichée lors de votre souscription
+        (ex. Stripe).
+        <strong>
+          Tous les prix ci-dessous sont indiqués hors taxes (HT) : la TVA applicable sera ajoutée au moment de la
+          facturation.
+        </strong>
+      </p>
+    </div>
+
+    <div class="pricing-grid">
+      <article class="plan-card plan-card--accent">
+        <h2>Free</h2>
+        <p class="plan-price">0 €<small> / mois</small></p>
+        <ul>
+          <li><strong>100</strong> événements inclus par période</li>
+          <li><strong>1</strong> webhook formulaire maximum</li>
+          <li>Pas de dépassement de quota — passage à une offre payante requis au-delà</li>
+          <li>Actions multiples (ex. Mailjet) selon les limites du plan</li>
+        </ul>
+        <a class="btn btn--secondary" href={BUILDER_URL}>Commencer</a>
+      </article>
+
+      <article class="plan-card plan-card--accent">
+        <h2>Starter</h2>
+        <p class="plan-price">9 € HT<small> / mois (indicatif)</small></p>
+        <ul>
+          <li><strong>5 000</strong> événements inclus (~0,0018 € HT par événement)</li>
+          <li>Webhooks <strong>illimités</strong></li>
+          <li>Dépassement possible via <strong>packs d’événements</strong></li>
+          <li>Envois Mailjet et journalisation selon le produit</li>
+        </ul>
+        <a class="btn btn--primary" href={BUILDER_URL}>Choisir Starter</a>
+      </article>
+
+      <article class="plan-card plan-card--accent">
+        <h2>Pro</h2>
+        <p class="plan-price">29 € HT<small> / mois (indicatif)</small></p>
+        <ul>
+          <li><strong>50 000</strong> événements inclus (~0,00058 € HT par événement)</li>
+          <li>Webhooks <strong>illimités</strong></li>
+          <li>Packs d’extension à tarifs dégressifs</li>
+          <li>Adapté aux volumes plus importants</li>
+        </ul>
+        <a class="btn btn--primary" href={BUILDER_URL}>Choisir Pro</a>
+      </article>
+    </div>
+
+    <div class="packs-table-wrap">
+      <h2 class="section-title" style="margin-top: 0; font-size: 1.25rem;">Packs d’événements supplémentaires</h2>
+      <p style="color: var(--text-muted); margin: 0 0 1rem; max-width: 65ch; font-size: 0.98rem;">
+        Achats optionnels une fois l’offre Starter ou Pro souscrite (disponibilité selon l’implémentation côté
+        application).
+      </p>
+      <table class="packs-table">
+        <thead>
+          <tr>
+            <th>Offre</th>
+            <th>Volume ajouté</th>
+            <th>Prix HT (indicatif)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Starter</td>
+            <td>+1 000 événements</td>
+            <td>2 € HT</td>
+          </tr>
+          <tr>
+            <td>Starter</td>
+            <td>+5 000 événements</td>
+            <td>8 € HT</td>
+          </tr>
+          <tr>
+            <td>Pro</td>
+            <td>+10 000 événements</td>
+            <td>5 € HT</td>
+          </tr>
+          <tr>
+            <td>Pro</td>
+            <td>+50 000 événements</td>
+            <td>20 € HT</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="footer-disclaimer" style="margin-top: 2rem; border: none; padding-top: 0;">
+      Les prix et libellés sont donnés à titre indicatif et reproduisent la logique métier du code applicatif (montants
+      HT, TVA en sus selon le taux en vigueur au moment de la facturation). L’éditeur n’est pas responsable des choix
+      d’abonnement ou de consommation que vous effectuez sur la plateforme.
+    </p>
+  </main>
+</SiteLayout>
+
+<style>
+  .section-title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+</style>

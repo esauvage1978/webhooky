@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build && php bin/console doctrine:schema:update --force && php bin/console app:ensure-default-webhook-projects"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

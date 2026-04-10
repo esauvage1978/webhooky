@@ -19,32 +19,56 @@ class FormWebhookRepository extends ServiceEntityRepository
         parent::__construct($registry, FormWebhook::class);
     }
 
+    /**
+     * Détail workflow : charge le webhook puis les actions par lazy-load.
+     * Ne pas joindre `w.actions` sur la même requête que l’entité racine : avec plusieurs actions,
+     * certaines configs Doctrine/SQL produisent une collection incomplète ou des erreurs silencieuses.
+     */
     public function findOneWithActionsById(int $id): ?FormWebhook
     {
-        return $this->createQueryBuilder('w')
+        $w = $this->createQueryBuilder('w')
             ->leftJoin('w.createdBy', 'cb')->addSelect('cb')
-            ->leftJoin('w.actions', 'a')->addSelect('a')
-            ->leftJoin('a.mailjet', 'mj')->addSelect('mj')
+            ->leftJoin('w.project', 'pr')->addSelect('pr')
             ->andWhere('w.id = :id')
             ->setParameter('id', $id)
-            ->orderBy('a.sortOrder', 'ASC')
             ->getQuery()
             ->getOneOrNullResult();
+
+        if (!$w instanceof FormWebhook) {
+            return null;
+        }
+
+        foreach ($w->getActions()->toArray() as $action) {
+            $action->getMailjet();
+            $action->getServiceConnection();
+        }
+
+        return $w;
     }
 
     public function findActiveByPublicToken(string $token): ?FormWebhook
     {
+        $w = $this->findOneByPublicTokenForIngress($token);
+
+        return ($w !== null && $w->isActive()) ? $w : null;
+    }
+
+    /**
+     * Charge le workflow par jeton public (actif ou non), avec actions Mailjet actives — pour l’ingress.
+     */
+    public function findOneByPublicTokenForIngress(string $token): ?FormWebhook
+    {
         return $this->createQueryBuilder('w')
             ->distinct()
             ->leftJoin('w.createdBy', 'cb')->addSelect('cb')
+            ->leftJoin('w.project', 'pr')->addSelect('pr')
             ->leftJoin('w.actions', 'a', 'WITH', 'a.active = true')
             ->addSelect('a')
             ->leftJoin('a.mailjet', 'mj')->addSelect('mj')
+            ->leftJoin('a.serviceConnection', 'sc')->addSelect('sc')
             ->andWhere('w.publicToken = :t')
-            ->andWhere('w.active = :a')
             ->orderBy('a.sortOrder', 'ASC')
             ->setParameter('t', $token)
-            ->setParameter('a', true)
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -64,11 +88,14 @@ class FormWebhookRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('w')
             ->distinct()
+            ->leftJoin('w.project', 'pr')->addSelect('pr')
             ->leftJoin('w.actions', 'a')->addSelect('a')
             ->leftJoin('a.mailjet', 'mj')->addSelect('mj')
+            ->leftJoin('a.serviceConnection', 'sc')->addSelect('sc')
             ->andWhere('w.organization = :o')
             ->setParameter('o', $organization)
-            ->orderBy('w.name', 'ASC')
+            ->orderBy('pr.name', 'ASC')
+            ->addOrderBy('w.name', 'ASC')
             ->addOrderBy('w.id', 'ASC')
             ->addOrderBy('a.sortOrder', 'ASC')
             ->getQuery()
@@ -83,9 +110,14 @@ class FormWebhookRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('w')
             ->distinct()
             ->leftJoin('w.createdBy', 'cb')->addSelect('cb')
+            ->leftJoin('w.organization', 'org')->addSelect('org')
+            ->leftJoin('w.project', 'pr')->addSelect('pr')
             ->leftJoin('w.actions', 'a')->addSelect('a')
             ->leftJoin('a.mailjet', 'mj')->addSelect('mj')
-            ->orderBy('w.name', 'ASC')
+            ->leftJoin('a.serviceConnection', 'sc')->addSelect('sc')
+            ->orderBy('org.name', 'ASC')
+            ->addOrderBy('pr.name', 'ASC')
+            ->addOrderBy('w.name', 'ASC')
             ->addOrderBy('w.id', 'ASC')
             ->addOrderBy('a.sortOrder', 'ASC')
             ->getQuery()

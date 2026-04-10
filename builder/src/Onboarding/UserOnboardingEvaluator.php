@@ -7,7 +7,7 @@ namespace App\Onboarding;
 use App\Entity\User;
 
 /**
- * Étapes obligatoires avant l’accès au reste de l’application (hors admin).
+ * Étapes obligatoires avant l’accès au reste de l’application (y compris administrateurs : même parcours que gestionnaire).
  */
 final class UserOnboardingEvaluator
 {
@@ -16,12 +16,8 @@ final class UserOnboardingEvaluator
      */
     public function pendingSteps(User $user): array
     {
-        if ($user->isAppAdmin()) {
-            return [];
-        }
-
-        if ($user->isAppManager()) {
-            if (!$user->hasAnyOrganizationMembership()) {
+        if ($user->isAppAdmin() || $user->isAppManager()) {
+            if (!$user->isAttachedToAnOrganization()) {
                 return ['create_organization'];
             }
             if (!$user->isProfileOnboardingComplete()) {
@@ -34,7 +30,7 @@ final class UserOnboardingEvaluator
             return [];
         }
 
-        if (!$user->hasAnyOrganizationMembership()) {
+        if (!$user->isAttachedToAnOrganization()) {
             return [];
         }
 

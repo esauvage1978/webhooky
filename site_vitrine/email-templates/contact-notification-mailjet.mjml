@@ -1,0 +1,123 @@
+<!--
+  Template MJML — Notification formulaire contact Webhooky (webhooky.fr)
+
+  À compiler avec https://mjml.io (CLI : npx mjml contact-notification-mailjet.mjml -o contact-notification-mailjet.html)
+  puis coller le HTML dans Mailjet (Transactional templates) ou utiliser l’API avec le HTML compilé.
+
+  Couleurs alignées sur src/styles/global.css :
+    bandeau / titres forts : --ink #0c1929, accent titres : --ink-soft #152a44,
+    bouton & liens d’action : --coral #ff5a36, fond page : --surface #f0f4f8,
+    texte : --text #0f172a, secondaire : --text-muted #64748b, pied : #e8eef4
+
+  Variables Mailjet (déclarer dans le template / passer via API) :
+    {{var:source}}       — ex. webhooky.fr-contact
+    {{var:objet}}        — Objet (optionnel, formulaire)
+    {{var:name}}         — Nom
+    {{var:company}}      — Entreprise (optionnel)
+    {{var:email}}        — E-mail
+    {{var:page}}         — URL de la page (optionnel)
+    {{var:message}}      — Message
+    {{var:submitted_at}} — Date/heure (ISO 8601 depuis le formulaire)
+
+  Logo : https://webhooky.fr/favicon.png (remplacez par une URL PNG plus large en prod si besoin).
+-->
+<mjml>
+  <mj-head>
+    <mj-title>Nouveau message — Contact Webhooky (webhooky.fr)</mj-title>
+    <mj-preview>Un visiteur a envoyé un message depuis le formulaire de contact du site vitrine.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="'Segoe UI', system-ui, Helvetica, Arial, sans-serif" />
+      <mj-text color="#0f172a" font-size="16px" line-height="24px" />
+      <mj-button
+        background-color="#ff5a36"
+        color="#ffffff"
+        font-size="16px"
+        font-weight="600"
+        border-radius="10px"
+        inner-padding="14px 28px"
+      />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f0f4f8" width="600px">
+    <!-- Bandeau -->
+    <mj-section background-color="#0c1929" padding="24px 40px">
+      <mj-column width="100%">
+        <mj-image
+          src="https://webhooky.fr/favicon.png"
+          alt="Webhooky"
+          width="120px"
+          href="https://webhooky.fr/"
+        />
+      </mj-column>
+    </mj-section>
+
+    <!-- Titre -->
+    <mj-section background-color="#ffffff" padding="32px 40px 16px">
+      <mj-column width="100%">
+        <mj-text font-size="20px" font-weight="700" color="#0c1929" padding-bottom="8px">
+          Nouveau message depuis le site
+        </mj-text>
+        <mj-text font-size="14px" color="#64748b" padding-bottom="0">
+          Formulaire de contact webhooky.fr — réponse attendue à l’adresse indiquée ci-dessous.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Données du formulaire -->
+    <mj-section background-color="#ffffff" padding="0 40px 24px">
+      <mj-column width="100%">
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">Source</strong><br />
+          {{var:source}}
+        </mj-text>
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">Objet</strong><br />
+          {{var:objet}}
+        </mj-text>
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">Nom</strong><br />
+          {{var:name}}
+        </mj-text>
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">Entreprise</strong><br />
+          {{var:company}}
+        </mj-text>
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">E-mail</strong><br />
+          <a href="mailto:{{var:email}}" style="color: #ff5a36; font-weight: 600;">{{var:email}}</a>
+        </mj-text>
+        <mj-text padding-bottom="12px">
+          <strong style="color: #152a44">Page</strong><br />
+          <a href="{{var:page}}" style="color: #3d5a80; font-weight: 600;">{{var:page}}</a>
+        </mj-text>
+        <mj-text padding-bottom="8px">
+          <strong style="color: #152a44">Message</strong>
+        </mj-text>
+        <mj-text padding="12px 16px" container-background-color="#f0f4f8" color="#0f172a" border-radius="8px">
+          {{var:message}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- CTA répondre -->
+    <mj-section background-color="#ffffff" padding="0 40px 32px">
+      <mj-column width="100%">
+        <mj-button href="mailto:{{var:email}}" align="left">
+          Répondre par e-mail
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Pied -->
+    <mj-section background-color="#e8eef4" padding="24px 40px">
+      <mj-column width="100%">
+        <mj-text font-size="12px" color="#64748b" align="center" padding="0">
+          E-mail automatique — site vitrine
+          <a href="https://webhooky.fr/" style="color: #ff5a36; font-weight: 600;">webhooky.fr</a>
+          · <a href="https://webhooky.builders/" style="color: #3d5a80;">webhooky.builders</a><br />
+          <span style="color: #64748b;">Reçu le : {{var:submitted_at}}</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

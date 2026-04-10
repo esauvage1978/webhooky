@@ -1,0 +1,93 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { BUILDER_URL } from '../site.ts';
+
+const title = 'Documentation technique — Webhooky';
+const description =
+  'Points d’entrée HTTP, webhook formulaire, API souscription et bonnes pratiques pour intégrer webhooky.builders.';
+---
+
+<SiteLayout {title} {description}>
+  <main class="page-main container">
+    <div class="page-hero">
+      <h1>Documentation technique</h1>
+      <p>
+        Vue d’ensemble des mécanismes exposés par l’application sur <a href={BUILDER_URL}>webhooky.builders</a>. Les
+        chemins exacts peuvent dépendre de votre déploiement ; remplacez l’hôte par celui de votre instance si besoin.
+      </p>
+    </div>
+
+    <section class="doc-section" aria-labelledby="ingress">
+      <h2 id="ingress">Réception des webhooks (ingress formulaire)</h2>
+      <p>
+        Chaque webhook formulaire possède un jeton unique. Les soumissions HTTP suivantes déclenchent le traitement
+        côté serveur (parsing du corps, exécution des actions configurées, journaux).
+      </p>
+      <pre><code>POST {BUILDER_URL}/webhook/form/&lt;token&gt;
+GET  {BUILDER_URL}/webhook/form/&lt;token&gt;</code></pre>
+      <p>
+        Remplacez <code>&lt;token&gt;</code> par le secret fourni dans l’interface. Le détail des en-têtes et du format
+        accepté (JSON, formulaire HTML, etc.) est documenté dans l’application.
+      </p>
+    </section>
+
+    <section class="doc-section" aria-labelledby="notification-webhook">
+      <h2 id="notification-webhook">Webhook notification (e-mail simple)</h2>
+      <p>
+        Point d’entrée optionnel : envoi d’un message à partir d’un corps JSON (<code>to</code> ou
+        <code>email</code>, <code>subject</code>, <code>text</code> / <code>body</code> / <code>message</code>,
+        <code>html</code> facultatif). Nécessite une configuration d’expéditeur valide côté serveur.
+      </p>
+      <pre><code>POST {BUILDER_URL}/webhook/notification</code></pre>
+    </section>
+
+    <section class="doc-section" aria-labelledby="api">
+      <h2 id="api">API REST (extrait)</h2>
+      <p>L’interface tableau de bord consomme une API JSON. Exemples utiles pour l’alignement produit / tarifs :</p>
+      <ul>
+        <li>
+          <code>GET /api/subscription/plans</code> — liste des offres et caractéristiques (pour affichage ou outils
+          internes).
+        </li>
+        <li>
+          <code>/api/form-webhooks</code> — gestion CRUD des webhooks (authentification requise).
+        </li>
+        <li>
+          <code>/api/webhook-projects</code> — projets de classement (GET liste, POST création, PUT / DELETE par id) ;
+          les workflows référencent un <code>projectId</code> optionnel.
+        </li>
+        <li>
+          <code>/api/login</code>, <code>/api/me</code> — authentification et profil session.
+        </li>
+      </ul>
+      <p>
+        Toutes les routes API nécessitent en général une session ou des mécanismes d’auth applicables ; ne publiez pas
+        de secrets dans le navigateur public.
+      </p>
+    </section>
+
+    <section class="doc-section" aria-labelledby="mailjet">
+      <h2 id="mailjet">Mailjet</h2>
+      <p>
+        Les envois transactionnels s’appuient sur vos clés API Mailjet et sur les modèles que vous configurez dans
+        l’application. Vous restez responsable du contenu des messages, du consentement des destinataires et du respect
+        des politiques Mailjet.
+      </p>
+      <p>
+        Lors d’un envoi par ID de template, la charge inclut le booléen <code>TemplateLanguage</code> (voir
+        <a href="https://dev.mailjet.com/email/guides/send-api-v31/#send-with-template" rel="noopener noreferrer"
+          >Send API v3.1</a
+        >), aligné sur l’option «&nbsp;Template language&nbsp;» de l’éditeur. Renseignements destinés aux utilisateurs&nbsp;:
+        <a href="/documentation#mailjet-template-language">Guide — section Mailjet (Template language)</a>.
+      </p>
+    </section>
+
+    <section class="doc-section" aria-labelledby="disclaimer">
+      <h2 id="disclaimer">Responsabilité</h2>
+      <p>
+        L’éditeur ne garantit pas l’absence d’erreurs dans cette documentation ni le comportement d’une instance
+        personnalisée. Vous êtes responsable des intégrations que vous déployez et des données que vous traitez.
+      </p>
+    </section>
+  </main>
+</SiteLayout>

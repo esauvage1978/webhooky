@@ -1,0 +1,163 @@
+---
+import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
+---
+
+<div id="cookie-consent-banner" class="cookie-banner" role="region" aria-label="Préférences de cookies" hidden>
+  <div class="cookie-banner__box container">
+    <h2 class="cookie-banner__title">Cookies et données</h2>
+    <p class="cookie-banner__lead">
+      Nous utilisons des cookies nécessaires au fonctionnement du site et, avec votre accord, des cookies de mesure
+      d’audience pour améliorer le service. Consultez la
+      <a href="/politique-confidentialite/">politique de confidentialité</a> pour en savoir plus.
+    </p>
+    <div class="cookie-banner__row cookie-banner__row--actions">
+      <button type="button" class="cookie-banner__btn cookie-banner__btn--primary" data-cookie-action="accept-all">
+        Tout accepter
+      </button>
+      <button type="button" class="cookie-banner__btn cookie-banner__btn--ghost" data-cookie-action="reject-optional">
+        Nécessaires uniquement
+      </button>
+      <button type="button" class="cookie-banner__btn cookie-banner__btn--ghost" data-cookie-action="toggle-custom">
+        Personnaliser
+      </button>
+    </div>
+    <div id="cookie-consent-custom" class="cookie-banner__custom" hidden>
+      <p class="cookie-banner__custom-intro">Choisissez les catégories que vous autorisez :</p>
+      <ul class="cookie-banner__choices">
+        <li>
+          <label class="cookie-banner__choice">
+            <input type="checkbox" checked disabled />
+            <span>
+              <strong>Cookies nécessaires</strong>
+              <span class="cookie-banner__choice-desc">Mémorisation de vos préférences (dont ce bandeau), sécurité de base.</span>
+            </span>
+          </label>
+        </li>
+        <li>
+          <label class="cookie-banner__choice">
+            <input type="checkbox" id="cookie-consent-analytics" />
+            <span>
+              <strong>Mesure d’audience</strong>
+              <span class="cookie-banner__choice-desc">Statistiques anonymisées sur la fréquentation (ex. outils d’analyse), si activés sur le site.</span>
+            </span>
+          </label>
+        </li>
+      </ul>
+      <div class="cookie-banner__row">
+        <button type="button" class="cookie-banner__btn cookie-banner__btn--primary" data-cookie-action="save-custom">
+          Enregistrer mes choix
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION }}>
+  (function () {
+    const KEY = COOKIE_CONSENT_STORAGE_KEY;
+    const VER = COOKIE_CONSENT_VERSION;
+
+    /** @returns {{ v: number, necessary: boolean, analytics: boolean, at: string } | null} */
+    function readStored() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data.v !== VER) return null;
+        if (typeof data.necessary !== 'boolean' || typeof data.analytics !== 'boolean') return null;
+        return data;
+      } catch {
+        return null;
+      }
+    }
+
+    function persist(necessary, analytics) {
+      const payload = {
+        v: VER,
+        necessary: !!necessary,
+        analytics: !!analytics,
+        at: new Date().toISOString(),
+      };
+      localStorage.setItem(KEY, JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent('webhooky:cookie-consent', { detail: payload }));
+    }
+
+    const banner = document.getElementById('cookie-consent-banner');
+    const custom = document.getElementById('cookie-consent-custom');
+    const analyticsEl = document.getElementById('cookie-consent-analytics');
+
+    function showBanner() {
+      if (!banner) return;
+      banner.hidden = false;
+      document.body.classList.add('cookie-banner-visible');
+    }
+
+    function hideBanner() {
+      if (!banner) return;
+      banner.hidden = true;
+      if (custom) custom.hidden = true;
+      document.body.classList.remove('cookie-banner-visible');
+    }
+
+    function openPreferences() {
+      showBanner();
+      if (custom) {
+        custom.hidden = false;
+        const s = readStored();
+        if (analyticsEl && analyticsEl instanceof HTMLInputElement) {
+          analyticsEl.checked = s ? s.analytics : false;
+        }
+        custom.querySelector('input:not([disabled])')?.focus();
+      }
+    }
+
+    function initVisibility() {
+      if (readStored()) {
+        hideBanner();
+        return;
+      }
+      showBanner();
+    }
+
+    window.webhookyGetCookieConsent = function () {
+      return readStored();
+    };
+    window.webhookyOpenCookieSettings = openPreferences;
+
+    banner?.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const action = t.closest('[data-cookie-action]')?.getAttribute('data-cookie-action');
+      if (!action) return;
+
+      if (action === 'accept-all') {
+        persist(true, true);
+        hideBanner();
+      } else if (action === 'reject-optional') {
+        persist(true, false);
+        hideBanner();
+      } else if (action === 'toggle-custom') {
+        if (!custom) return;
+        const show = custom.hidden;
+        custom.hidden = !show;
+        if (show && analyticsEl instanceof HTMLInputElement) {
+          const s = readStored();
+          analyticsEl.checked = s ? s.analytics : false;
+        }
+      } else if (action === 'save-custom') {
+        const analytics = analyticsEl instanceof HTMLInputElement ? analyticsEl.checked : false;
+        persist(true, analytics);
+        hideBanner();
+      }
+    });
+
+    document.querySelectorAll('[data-cookie-settings]').forEach((el) => {
+      el.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        openPreferences();
+      });
+    });
+
+    initVisibility();
+  })();
+</script>

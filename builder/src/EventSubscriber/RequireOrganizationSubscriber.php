@@ -69,6 +69,10 @@ final class RequireOrganizationSubscriber implements EventSubscriberInterface
             return true;
         }
 
+        if ($method === 'POST' && preg_match('#^/api/me/(profile|change-password)$#', $path) === 1) {
+            return true;
+        }
+
         if (preg_match('#^/api/logout$#', $path) === 1) {
             return true;
         }
