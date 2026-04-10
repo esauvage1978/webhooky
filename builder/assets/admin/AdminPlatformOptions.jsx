@@ -1,6 +1,14 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import ErrorAlert from '../components/ui/ErrorAlert.jsx';
 import { apiJsonInit, parseJson } from '../lib/http.js';
+
+/** Si la valeur en base n’est pas dans la liste méta, on l’affiche quand même dans le select. */
+function orderedChoicesWithOrphan(choices, current) {
+  const c = typeof current === 'string' ? current.trim() : '';
+  if (!c) return choices;
+  if (choices.includes(c)) return choices;
+  return [...choices, c];
+}
 
 const emptyPlatformOptionForm = () => ({
   id: null,
@@ -33,6 +41,29 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     error: '',
     form: emptyPlatformOptionForm(),
   });
+  const [optionMeta, setOptionMeta] = useState({ categories: [], domains: [], error: '' });
+
+  const loadOptionMeta = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/options/meta/choices', apiJsonInit());
+      const data = await parseJson(res);
+      if (!res.ok) {
+        setOptionMeta({ categories: [], domains: [], error: data?.error ?? 'Listes indisponibles' });
+        return;
+      }
+      setOptionMeta({
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        domains: Array.isArray(data.domains) ? data.domains : [],
+        error: '',
+      });
+    } catch {
+      setOptionMeta({ categories: [], domains: [], error: 'Erreur réseau (listes)' });
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOptionMeta();
+  }, [loadOptionMeta]);
 
   const loadPlatformOptions = useCallback(
     async (page = 1, filterOverride = null) => {
@@ -73,23 +104,28 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
 
   const openCreateOption = useCallback(() => {
     setOptModal({ open: true, saving: false, error: '', form: emptyPlatformOptionForm() });
-  }, []);
+    void loadOptionMeta();
+  }, [loadOptionMeta]);
 
-  const openEditOption = useCallback((row) => {
-    setOptModal({
-      open: true,
-      saving: false,
-      error: '',
-      form: {
-        id: row.id,
-        optionName: row.optionName ?? '',
-        optionValue: row.optionValue ?? '',
-        domain: row.domain ?? '',
-        category: row.category ?? '',
-        comment: row.comment ?? '',
-      },
-    });
-  }, []);
+  const openEditOption = useCallback(
+    (row) => {
+      setOptModal({
+        open: true,
+        saving: false,
+        error: '',
+        form: {
+          id: row.id,
+          optionName: row.optionName ?? '',
+          optionValue: row.optionValue ?? '',
+          domain: row.domain ?? '',
+          category: row.category ?? '',
+          comment: row.comment ?? '',
+        },
+      });
+      void loadOptionMeta();
+    },
+    [loadOptionMeta],
+  );
 
   const savePlatformOption = useCallback(async () => {
     const { form } = optModal;
@@ -117,11 +153,12 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
         return;
       }
       setOptModal({ open: false, saving: false, error: '', form: emptyPlatformOptionForm() });
+      void loadOptionMeta();
       void loadPlatformOptions(opts.page);
     } catch {
       setOptModal((m) => ({ ...m, saving: false, error: 'Erreur réseau' }));
     }
-  }, [optModal, loadPlatformOptions, opts.page]);
+  }, [optModal, loadOptionMeta, loadPlatformOptions, opts.page]);
 
   const deletePlatformOption = useCallback(
     async (id) => {
@@ -154,27 +191,52 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     .join(' ');
   const { className: _omit, ...restCardProps } = contentCardProps;
 
+  const categoryFilterChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.categories, optFilters.category),
+    [optionMeta.categories, optFilters.category],
+  );
+  const domainFilterChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.domains, optFilters.domain),
+    [optionMeta.domains, optFilters.domain],
+  );
+  const modalCategoryChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.categories, optModal.form.category),
+    [optionMeta.categories, optModal.form.category],
+  );
+  const modalDomainChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.domains, optModal.form.domain),
+    [optionMeta.domains, optModal.form.domain],
+  );
+
   const filterFields = (
     <>
       <label className="users-filter-min">
         <span className="users-filter-min-label muted">Catégorie</span>
-        <input
-          type="search"
+        <select
           value={optFilters.category}
           onChange={(e) => setOptFilters((f) => ({ ...f, category: e.target.value }))}
-          placeholder="Exact…"
-          autoComplete="off"
-        />
+        >
+          <option value="">Toutes</option>
+          {categoryFilterChoices.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="users-filter-min">
         <span className="users-filter-min-label muted">Domaine</span>
-        <input
-          type="search"
+        <select
           value={optFilters.domain}
           onChange={(e) => setOptFilters((f) => ({ ...f, domain: e.target.value }))}
-          placeholder="Exact…"
-          autoComplete="off"
-        />
+        >
+          <option value="">Tous</option>
+          {domainFilterChoices.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="users-filter-min">
         <span className="users-filter-min-label muted">Nom d’option</span>
@@ -238,6 +300,7 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
 
       <div className={cardClassName} {...restCardProps}>
         <ErrorAlert>{opts.error}</ErrorAlert>
+        {optionMeta.error ? <p className="muted small">{optionMeta.error}</p> : null}
         {!showHubLayout ? (
           <p className="muted small" style={{ marginTop: 0 }}>
             Paramètres clé/valeur (réservés aux administrateurs). Table SQL <span className="mono">app_option</span>.
@@ -382,20 +445,37 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
               </button>
             </div>
             <ErrorAlert>{optModal.error}</ErrorAlert>
+            {optionMeta.error ? <p className="muted small">{optionMeta.error}</p> : null}
             <label className="field">
               <span>Catégorie</span>
-              <input
+              <select
                 value={optModal.form.category}
                 onChange={(e) => setOptModal((m) => ({ ...m, form: { ...m.form, category: e.target.value } }))}
                 required
-              />
+              >
+                <option value="" disabled={modalCategoryChoices.length > 0}>
+                  Choisir…
+                </option>
+                {modalCategoryChoices.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Domaine (optionnel)</span>
-              <input
-                value={optModal.form.domain}
+              <select
+                value={optModal.form.domain ?? ''}
                 onChange={(e) => setOptModal((m) => ({ ...m, form: { ...m.form, domain: e.target.value } }))}
-              />
+              >
+                <option value="">Aucun</option>
+                {modalDomainChoices.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Nom d’option</span>

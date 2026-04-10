@@ -18,6 +18,18 @@ class OptionRepository extends ServiceEntityRepository
         parent::__construct($registry, Option::class);
     }
 
+    public function findOneByCategoryOptionNameNullDomain(string $category, string $optionName): ?Option
+    {
+        return $this->createQueryBuilder('o')
+            ->where('o.category = :cat')
+            ->andWhere('o.optionName = :name')
+            ->andWhere('o.domain IS NULL')
+            ->setParameter('cat', $category)
+            ->setParameter('name', $optionName)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return array{items: list<Option>, total: int}
      */

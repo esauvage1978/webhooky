@@ -19,11 +19,38 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[IsGranted('ROLE_ADMIN')]
 final class ApiAdminOptionController extends AbstractController
 {
+    private const META_CATEGORY = 'Options';
+
+    private const META_OPTION_CATEGORY_LIST = 'option_category';
+
+    private const META_OPTION_DOMAIN_LIST = 'option_domaine';
+
     public function __construct(
         private readonly OptionRepository $optionRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
     ) {
+    }
+
+    /**
+     * Valeurs des listes CRUD : contenu des options option_category et option_domaine (séparateur « ; »).
+     */
+    #[Route('/meta/choices', name: 'api_admin_options_meta_choices', methods: ['GET'])]
+    public function metaChoices(): JsonResponse
+    {
+        $catRow = $this->optionRepository->findOneByCategoryOptionNameNullDomain(
+            self::META_CATEGORY,
+            self::META_OPTION_CATEGORY_LIST,
+        );
+        $domRow = $this->optionRepository->findOneByCategoryOptionNameNullDomain(
+            self::META_CATEGORY,
+            self::META_OPTION_DOMAIN_LIST,
+        );
+
+        return new JsonResponse([
+            'categories' => $this->splitChoiceList($catRow),
+            'domains' => $this->splitChoiceList($domRow),
+        ]);
     }
 
     #[Route('', name: 'api_admin_options_list', methods: ['GET'])]
@@ -214,5 +241,23 @@ final class ApiAdminOptionController extends AbstractController
             'category' => $o->getCategory(),
             'comment' => $o->getComment(),
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function splitChoiceList(?Option $o): array
+    {
+        if (!$o instanceof Option) {
+            return [];
+        }
+        $raw = trim($o->getOptionValue());
+        if ('' === $raw) {
+            return [];
+        }
+
+        $parts = array_map(trim(...), explode(';', $raw));
+
+        return array_values(array_unique(array_filter($parts, static fn (string $s): bool => '' !== $s)));
     }
 }
