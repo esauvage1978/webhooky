@@ -37,6 +37,16 @@ import {
   userCanAccessNav,
 } from './routing.js';
 
+/** Garantit roles / organizations tableaux (évite page blanche si l’API omet ces champs). */
+function normalizeMePayload(data) {
+  if (!data || typeof data !== 'object') return data;
+  return {
+    ...data,
+    roles: Array.isArray(data.roles) ? data.roles : [],
+    organizations: Array.isArray(data.organizations) ? data.organizations : [],
+  };
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -153,8 +163,9 @@ export default function App() {
           setUser(null);
           return;
         }
-        const isAdm = data.roles?.includes('ROLE_ADMIN');
-        const orgs = data.organizations ?? [];
+        data = normalizeMePayload(data);
+        const isAdm = data.roles.includes('ROLE_ADMIN');
+        const orgs = data.organizations;
         if (!isAdm && orgs.length === 1 && !data.organization) {
           const r2 = await fetch(
             '/api/me/active-organization',
@@ -167,11 +178,11 @@ export default function App() {
           if (r2.ok) {
             const again = await parseJson(r2);
             if (again && typeof again === 'object') {
-              data = again;
+              data = normalizeMePayload(again);
             }
           }
         }
-        setUser(data);
+        setUser(normalizeMePayload(data));
       } else {
         setUser(null);
       }

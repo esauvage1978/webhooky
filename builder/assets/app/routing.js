@@ -151,8 +151,9 @@ export function navIdToPath(navId) {
 
 /** @param {object} user @param {string} navId */
 export function userCanAccessNav(user, navId) {
-  const isAdmin = user.roles.includes('ROLE_ADMIN');
-  const isManager = user.roles.includes('ROLE_MANAGER');
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const isAdmin = roles.includes('ROLE_ADMIN');
+  const isManager = roles.includes('ROLE_MANAGER');
   const orgCount = user.organizations?.length ?? 0;
   const onboardingRequired = user.onboarding?.required;
   if (onboardingRequired) return false;

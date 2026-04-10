@@ -19,10 +19,11 @@ function normalizeMetaChoicesList(value) {
 
 /** Si la valeur en base n’est pas dans la liste méta, on l’affiche quand même dans le select. */
 function orderedChoicesWithOrphan(choices, current) {
+  const list = Array.isArray(choices) ? choices : [];
   const c = typeof current === 'string' ? current.trim() : '';
-  if (!c) return choices;
-  if (choices.includes(c)) return choices;
-  return [...choices, c];
+  if (!c) return list;
+  if (list.includes(c)) return list;
+  return [...list, c];
 }
 
 const emptyPlatformOptionForm = () => ({
