@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { parseJson } from '../lib/http.js';
 
 /** Jauge semi-circulaire : événements consommés / enveloppe totale (forfait). */
@@ -42,8 +42,7 @@ function MgrEventQuotaGauge({ consumed, allowance, planLabel }) {
         </div>
       </div>
       <p className="dash-mgr-gauge-legend">
-        Utilisation du quota sur la période en cours. Une exécution en échec peut tout de même consommer un
-        événement selon votre règlement.
+        Utilisation du quota — une exécution en échec peut tout de même consommer un événement.
       </p>
     </div>
   );
@@ -187,19 +186,12 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
     }
   };
 
-  const upgradePlan = async (plan) => {
-    await patchSubscription({ plan });
-  };
-
   const buyPack = async (packId) => {
     await patchSubscription({ purchaseEventPack: packId });
   };
 
   const relevantPacks =
     sub?.plan != null ? packDefs.filter((p) => p.forPlan === sub.plan && sub.allowEventOverage) : [];
-
-  const eventsPct =
-    sub?.eventsAllowance > 0 ? Math.min(100, ((sub.eventsConsumed ?? 0) / sub.eventsAllowance) * 100) : 0;
 
   const webhookTableRows = useMemo(() => {
     if (!Array.isArray(webhooks) || webhooks.length === 0) return [];
@@ -222,18 +214,17 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
             <i className="fa-solid fa-gauge-high" aria-hidden />
             <span>Bonjour</span>
           </h1>
-          {!isManagerOnly ? (
-            <p className="users-hero-sub muted dashboard-home-intro">
-              Voici l’essentiel : quotas, webhooks et accès rapide à vos outils depuis les cartes ci-dessous.
-            </p>
-          ) : null}
+          <p className="users-hero-sub muted dashboard-home-intro">
+            {isManagerOnly
+              ? 'Vue synthétique : quota, activité du mois et accès rapides.'
+              : 'Indicateurs clés, workflows et raccourcis vers vos outils.'}
+          </p>
         </div>
       </header>
 
       <div className="content-card dashboard-home-card">
-        <div className="dashboard-cards">
         {!isManagerOnly ? (
-          <Fragment>
+          <div className="dashboard-cards">
             <article className="dash-card dash-card-accent">
               <h2 className="dash-card-title">Organisations</h2>
               <p className="dash-card-stat">{loading ? '…' : orgCount}</p>
@@ -257,146 +248,42 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
                 Gérer les intégrations
               </button>
             </article>
-          </Fragment>
+          </div>
         ) : null}
 
         {sub && user.organization ? (
-          <article
-            className={`dash-card dash-card-plan-fullwidth ${
-              sub.blockReason || !sub.webhooksOperational ? 'dash-card-warn' : 'dash-card-muted'
+          <div
+            className={`dashboard-visual-band ${
+              sub.blockReason || !sub.webhooksOperational ? 'dashboard-visual-band--warn' : ''
             }`}
           >
-            <div className="dash-card-plan-compact">
-              <div className="dash-card-plan-top">
-                <h2 className="dash-card-title dash-card-plan-title">Forfait &amp; événements</h2>
-                <div className="dash-card-plan-top-meta">
-                  <p className="dash-card-desc dash-card-plan-planline">
-                    <strong>{sub.planLabel}</strong>
-                  </p>
-                  <p className="dash-card-stat subtle dash-card-plan-webhooks">
-                    {sub.webhookCount ?? 0}
-                    {sub.maxWebhooks != null ? ` / ${sub.maxWebhooks}` : ''} webhook(s)
-                  </p>
-                </div>
-              </div>
-
-              <div className="dash-card-plan-meter-row">
-                <div className="dash-events-meter dash-events-meter--compact" aria-label="Utilisation du quota d’événements">
-                  <div className="dash-events-meter-label">
-                    <span>
-                      Événements : <strong>{sub.eventsConsumed ?? 0}</strong> / {sub.eventsAllowance ?? 0}
-                    </span>
-                    {sub.eventsExtraQuota > 0 ? (
-                      <span className="muted small">
-                        (dont {sub.eventsIncluded ?? 0} inclus + {sub.eventsExtraQuota} pack)
-                      </span>
-                    ) : null}
-                    <span className="muted small dash-events-meter-remain">
-                      {sub.eventsRemaining ?? 0} restant(s)
-                      {sub.plan === 'free' ? ' — pas de dépassement : upgrade obligatoire au-delà.' : null}
-                    </span>
-                  </div>
-                  <div className="dash-events-bar">
-                    <div className="dash-events-bar-fill" style={{ width: `${eventsPct}%` }} />
-                  </div>
-                </div>
-              </div>
-
-              {sub.blockReason ? <p className="error small dash-card-plan-alert">{sub.blockReason}</p> : null}
-              {!sub.webhooksOperational ? (
-                <p className="error small dash-card-plan-alert">
-                  Les réceptions sur vos webhooks sont refusées (abonnement ou quota).
-                </p>
-              ) : null}
-
-              <div className="dash-card-plan-foot">
-                {canManageBilling && (sub.plan === 'free' || sub.blockReason || relevantPacks.length > 0) ? (
-                  <p className="muted small dash-card-plan-foot-note">
-                    Tarifs upgrades et packs affichés hors taxes (HT) ; TVA en sus à la facturation.
-                  </p>
+            <div className="dashboard-visual-band-head">
+              <h2 className="dashboard-visual-band-title">Indicateurs clés</h2>
+              <p className="muted small dashboard-visual-band-meta">
+                <strong>{sub.planLabel}</strong>
+                {' · '}
+                {sub.webhookCount ?? 0}
+                {sub.maxWebhooks != null ? ` / ${sub.maxWebhooks}` : ''} webhook(s)
+                {' · '}
+                <span>
+                  {sub.eventsConsumed ?? 0} / {sub.eventsAllowance ?? 0} événements
+                  {sub.eventsRemaining != null && sub.eventsRemaining >= 0 ? ` (${sub.eventsRemaining} restants)` : null}
+                </span>
+                {sub.eventsExtraQuota > 0 ? (
+                  <span>
+                    {' '}
+                    — pack +{sub.eventsExtraQuota}
+                  </span>
                 ) : null}
-
-                {canManageBilling && (sub.plan === 'free' || sub.blockReason) ? (
-                  <div className="dash-upgrade-row">
-                    <button
-                      type="button"
-                      className="btn secondary small"
-                      disabled={upgradeBusy}
-                      onClick={() => void upgradePlan('starter')}
-                    >
-                      Starter — 9 € HT/mois (5 000 év.)
-                    </button>
-                    <button
-                      type="button"
-                      className="btn small"
-                      disabled={upgradeBusy}
-                      onClick={() => void upgradePlan('pro')}
-                    >
-                      Pro — 29 € HT/mois (50 000 év.)
-                    </button>
-                  </div>
-                ) : null}
-
-                {canManageBilling && relevantPacks.length > 0 ? (
-                  <div className="dash-pack-row dash-pack-row--inline">
-                    <span className="muted small">Packs (simulation) :</span>
-                    <div className="dash-upgrade-row">
-                      {relevantPacks.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          className="btn secondary small"
-                          disabled={upgradeBusy}
-                          title={p.label}
-                          onClick={() => void buyPack(p.id)}
-                        >
-                          +{p.eventsAdded.toLocaleString()} — {p.priceEur} € HT
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {upgradeMsg ? <p className="muted small dash-card-plan-msg">{upgradeMsg}</p> : null}
-              <p className="muted small dash-card-plan-stripe">
-                Paiement réel : <code className="mono">docs/PAIEMENT_STRIPE.md</code>
               </p>
             </div>
-          </article>
-        ) : null}
-      </div>
 
-      {(isAdmin || user.organization) &&
-        (isManagerOnly ? (
-          <section className="dashboard-webhooks-section dash-mgr-visual" aria-labelledby="dash-manager-visual-heading">
-            <div className="dashboard-webhooks-head">
-              <h2 id="dash-manager-visual-heading" className="dashboard-section-title">
-                Tableau de bord
-              </h2>
-              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button type="button" className="btn secondary small" onClick={() => onNavigate('organizationBilling')}>
-                  Organisation &amp; facturation
-                </button>
-                <button type="button" className="btn small" onClick={() => onNavigate('formWebhooks')}>
-                  Tous les workflows
-                </button>
-              </div>
-            </div>
-
-            <div className="dash-mgr-top">
-              {sub && user.organization ? (
-                <MgrEventQuotaGauge
-                  consumed={sub.eventsConsumed ?? 0}
-                  allowance={sub.eventsAllowance ?? 0}
-                  planLabel={sub.planLabel}
-                />
-              ) : (
-                <div className="dash-mgr-gauge-card">
-                  <h2>Quota événements</h2>
-                  <p className="muted small">Abonnement ou organisation non chargé.</p>
-                </div>
-              )}
+            <div className="dash-mgr-top dashboard-visual-kpis-row">
+              <MgrEventQuotaGauge
+                consumed={sub.eventsConsumed ?? 0}
+                allowance={sub.eventsAllowance ?? 0}
+                planLabel=""
+              />
               <div className="dash-mgr-kpis" role="list">
                 <article className="dash-mgr-kpi" role="listitem">
                   <div className="dash-mgr-kpi-icon" aria-hidden>
@@ -418,7 +305,9 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
                   <div className="dash-mgr-kpi-icon" aria-hidden>
                     ✓
                   </div>
-                  <p className="dash-mgr-kpi-value">{sub?.eventsRemaining != null ? sub.eventsRemaining.toLocaleString('fr-FR') : '—'}</p>
+                  <p className="dash-mgr-kpi-value">
+                    {sub?.eventsRemaining != null ? sub.eventsRemaining.toLocaleString('fr-FR') : '—'}
+                  </p>
                   <p className="dash-mgr-kpi-label">Événements restants</p>
                 </article>
                 <article className="dash-mgr-kpi" role="listitem">
@@ -428,6 +317,59 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
                   <p className="dash-mgr-kpi-value">{sub?.webhooksOperational === false ? 'Suspendu' : 'OK'}</p>
                   <p className="dash-mgr-kpi-label">Réception webhooks</p>
                 </article>
+              </div>
+            </div>
+
+            {sub.blockReason ? <p className="error small dashboard-visual-alert">{sub.blockReason}</p> : null}
+            {!sub.webhooksOperational ? (
+              <p className="error small dashboard-visual-alert">
+                Les réceptions sur vos webhooks sont refusées (abonnement ou quota).
+              </p>
+            ) : null}
+
+            {canManageBilling && relevantPacks.length > 0 ? (
+              <div className="dashboard-visual-packs">
+                <p className="muted small dashboard-visual-packs-intro">
+                  Packs d’événements supplémentaires (simulation, prix HT — TVA en sus à la facturation).
+                </p>
+                <div className="dash-upgrade-row">
+                  {relevantPacks.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="btn secondary small"
+                      disabled={upgradeBusy}
+                      title={p.label}
+                      onClick={() => void buyPack(p.id)}
+                    >
+                      +{p.eventsAdded.toLocaleString('fr-FR')} — {p.priceEur} € HT
+                    </button>
+                  ))}
+                </div>
+                <p className="muted small dashboard-visual-packs-foot">
+                  Paiement réel : <code className="mono">docs/PAIEMENT_STRIPE.md</code>
+                </p>
+              </div>
+            ) : null}
+
+            {upgradeMsg ? <p className="muted small dashboard-visual-upgrade-msg">{upgradeMsg}</p> : null}
+          </div>
+        ) : null}
+
+        {(isAdmin || user.organization) &&
+          (isManagerOnly ? (
+          <section className="dashboard-webhooks-section dash-mgr-visual" aria-labelledby="dash-manager-visual-heading">
+            <div className="dashboard-webhooks-head">
+              <h2 id="dash-manager-visual-heading" className="dashboard-section-title">
+                Tableau de bord
+              </h2>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" className="btn secondary small" onClick={() => onNavigate('organizationBilling')}>
+                  Organisation &amp; facturation
+                </button>
+                <button type="button" className="btn small" onClick={() => onNavigate('formWebhooks')}>
+                  Tous les workflows
+                </button>
               </div>
             </div>
 
@@ -543,8 +485,9 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
               </div>
             )}
           </section>
-        ))}
+          ))}
       </div>
     </div>
   );
 }
+
