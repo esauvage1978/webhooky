@@ -12,10 +12,6 @@ export default function AdminOptions() {
             <i className="fa-solid fa-sliders" aria-hidden />
             <span>Options plateforme</span>
           </h1>
-          <p className="users-hero-sub muted">
-            Entrées <span className="mono">app_option</span> : catégorie, domaine, nom, valeur et commentaire. Accès strict{' '}
-            <strong>administrateur</strong>.
-          </p>
         </div>
       </header>
       <AdminPlatformOptions />
