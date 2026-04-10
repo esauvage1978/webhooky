@@ -50,8 +50,9 @@ function MgrEventQuotaGauge({ consumed, allowance, planLabel }) {
 }
 
 export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOpenWorkflow }) {
-  const isAdmin = user.roles.includes('ROLE_ADMIN');
-  const isManager = user.roles.includes('ROLE_MANAGER');
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const isAdmin = roles.includes('ROLE_ADMIN');
+  const isManager = roles.includes('ROLE_MANAGER');
   /** Gestionnaire d’organisation hors rôle admin : tableau de bord allégé (compteurs projet / mois). */
   const isManagerOnly = isManager && !isAdmin && !!user.organization;
   const orgId = user.organization?.id ?? null;

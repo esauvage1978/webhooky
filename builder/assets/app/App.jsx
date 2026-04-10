@@ -37,11 +37,27 @@ import {
   userCanAccessNav,
 } from './routing.js';
 
-/** Garantit roles / organizations tableaux (évite page blanche si l’API omet ces champs). */
+/** Garantit champs attendus par l’UI (évite page blanche si l’API omet des clés ou renvoie null). */
 function normalizeMePayload(data) {
   if (!data || typeof data !== 'object') return data;
+  const emailRaw = data.email;
+  const email =
+    typeof emailRaw === 'string'
+      ? emailRaw.trim()
+      : emailRaw != null && String(emailRaw).trim() !== ''
+        ? String(emailRaw).trim()
+        : '';
+  const dnRaw = data.displayName;
+  const displayName =
+    typeof dnRaw === 'string'
+      ? dnRaw.trim()
+      : dnRaw != null && String(dnRaw).trim() !== ''
+        ? String(dnRaw).trim()
+        : '';
   return {
     ...data,
+    email,
+    displayName: displayName || email || 'Compte',
     roles: Array.isArray(data.roles) ? data.roles : [],
     organizations: Array.isArray(data.organizations) ? data.organizations : [],
   };

@@ -36,8 +36,9 @@ const SECTION_WEBHOOK = 'Workflows';
  * @returns {{ sectionLabel: string | null; items: typeof NAV_WEBHOOK_STACK }[]}
  */
 function navSectionsForUser(user) {
-  const isAdmin = user.roles.includes('ROLE_ADMIN');
-  const isManager = user.roles.includes('ROLE_MANAGER');
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const isAdmin = roles.includes('ROLE_ADMIN');
+  const isManager = roles.includes('ROLE_MANAGER');
   const orgCount = user.organizations?.length ?? 0;
   if (!isAdmin && orgCount === 0) {
     return [{ sectionLabel: null, items: NAV_SETUP_ONLY }];
@@ -197,7 +198,11 @@ export default function DashboardLayout({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  const isAdmin = user.roles.includes('ROLE_ADMIN');
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const accountLabel =
+    [user.displayName, user.email].find((x) => typeof x === 'string' && x.trim() !== '')?.trim() ?? '?';
+
+  const isAdmin = roles.includes('ROLE_ADMIN');
   const navSections = useMemo(() => navSectionsForUser(user), [user]);
   const flatNavItems = useMemo(() => flatNavItemsFromSections(navSections), [navSections]);
   const multiOrg = !isAdmin && (user.organizations?.length ?? 0) > 1;
@@ -356,14 +361,14 @@ export default function DashboardLayout({
                 onClick={() => setUserMenuOpen((o) => !o)}
               >
                 <span className="admin-user-avatar" aria-hidden>
-                  {(user.displayName || user.email).slice(0, 1).toUpperCase()}
+                  {accountLabel.slice(0, 1).toUpperCase()}
                 </span>
                 <div className="admin-user-meta">
-                  <span className="admin-user-email">{user.displayName || user.email}</span>
+                  <span className="admin-user-email">{accountLabel}</span>
                   <span className="admin-user-role">
                     {isAdmin
                       ? 'Administrateur'
-                      : user.roles.includes('ROLE_MANAGER')
+                      : roles.includes('ROLE_MANAGER')
                         ? 'Gestionnaire'
                         : 'Utilisateur'}
                   </span>
