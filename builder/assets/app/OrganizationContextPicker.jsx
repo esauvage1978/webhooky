@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModalPortal from '../components/ModalPortal.jsx';
 import { apiJsonInit, parseJson } from '../lib/http.js';
 import { ORG_SESSION_KEY } from './routing.js';
 
@@ -38,6 +39,7 @@ export default function OrganizationContextPicker({ user, onComplete }) {
   };
 
   return (
+    <ModalPortal>
     <div className="admin-org-context-overlay" role="dialog" aria-modal="true" aria-labelledby="org-context-title">
       <div className="admin-org-context-card">
         <h2 id="org-context-title">Organisation de travail</h2>
@@ -70,5 +72,6 @@ export default function OrganizationContextPicker({ user, onComplete }) {
         </button>
       </div>
     </div>
+    </ModalPortal>
   );
 }

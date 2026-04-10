@@ -229,7 +229,7 @@ body {
 .admin-org-context-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 5000;
   background: rgba(6, 13, 22, 0.72);
   display: flex;
   align-items: center;
@@ -1824,7 +1824,7 @@ h1 {
 .sc-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 5000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -2455,7 +2455,7 @@ h1 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 5000;
   display: flex;
   align-items: center;
   justify-content: center;

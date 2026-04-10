@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ModalPortal from '../components/ModalPortal.jsx';
 import { parseJson } from '../lib/http.js';
 
 /**
@@ -342,6 +343,7 @@ export default function WebhookProjects({ user, onNavigate }) {
       </div>
 
       {modal === 'create' ? (
+        <ModalPortal>
         <div
           className="sc-modal-backdrop"
           role="presentation"
@@ -418,9 +420,11 @@ export default function WebhookProjects({ user, onNavigate }) {
             </form>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
 
       {modal === 'edit' && editingProject ? (
+        <ModalPortal>
         <div
           className="sc-modal-backdrop"
           role="presentation"
@@ -495,6 +499,7 @@ export default function WebhookProjects({ user, onNavigate }) {
             </form>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </div>
   );

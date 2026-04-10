@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ModalPortal from '../components/ModalPortal.jsx';
 import { parseJson } from '../lib/http.js';
 import { absoluteAppPath } from '../lib/paths.js';
 
@@ -458,6 +459,7 @@ export default function Users({ user }) {
       </div>
 
       {inviteOpen ? (
+        <ModalPortal>
         <div
           className="modal-backdrop"
           role="presentation"
@@ -526,6 +528,7 @@ export default function Users({ user }) {
             </form>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </div>
   );

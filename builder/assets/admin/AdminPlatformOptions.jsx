@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import ModalPortal from '../components/ModalPortal.jsx';
 import ErrorAlert from '../components/ui/ErrorAlert.jsx';
 import { apiJsonInit, parseJson } from '../lib/http.js';
 
@@ -437,6 +438,7 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     </div>
 
       {optModal.open ? (
+        <ModalPortal>
         <div
           className="modal-backdrop"
           role="dialog"
@@ -534,6 +536,7 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
             </div>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </Fragment>
   );

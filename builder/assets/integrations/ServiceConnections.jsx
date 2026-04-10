@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ModalPortal from '../components/ModalPortal.jsx';
 import { parseJson } from '../lib/http.js';
 
 const TYPE_LABELS = {
@@ -471,6 +472,7 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
       )}
 
       {modalOpen ? (
+        <ModalPortal>
         <div
           className="sc-modal-backdrop"
           role="presentation"
@@ -586,9 +588,11 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
             </form>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
 
       {auditModalId != null ? (
+        <ModalPortal>
         <div
           className="sc-modal-backdrop"
           role="presentation"
@@ -647,6 +651,7 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
             </div>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </>
   );
