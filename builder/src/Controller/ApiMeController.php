@@ -172,8 +172,13 @@ final class ApiMeController extends AbstractController
 
         $org = $user->getOrganization();
         $pending = $this->onboardingEvaluator->pendingSteps($user);
+        $email = $user->getEmail();
+        if ('' === $email) {
+            $email = $user->getUserIdentifier();
+        }
         $row = [
-            'email' => $user->getUserIdentifier(),
+            'id' => $user->getId(),
+            'email' => $email,
             'displayName' => $user->getDisplayName(),
             'roles' => $user->getRoles(),
             'accountEnabled' => $user->isAccountEnabled(),

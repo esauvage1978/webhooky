@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { parseJson } from '../lib/http.js';
 
+function userEmailForDisplay(user) {
+  if (!user || typeof user !== 'object') return '';
+  const v = user.email ?? user.userIdentifier ?? user.username;
+  return typeof v === 'string' ? v.trim() : '';
+}
+
 export default function AccountProfile({ user, onSessionRefresh }) {
   const [displayName, setDisplayName] = useState(() => user.displayName ?? '');
   const [error, setError] = useState('');
@@ -11,6 +17,8 @@ export default function AccountProfile({ user, onSessionRefresh }) {
   useEffect(() => {
     setDisplayName(user.displayName ?? '');
   }, [user.displayName]);
+
+  const emailShown = userEmailForDisplay(user);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -58,11 +66,15 @@ export default function AccountProfile({ user, onSessionRefresh }) {
         <label className="field">
           <span>E-mail</span>
           <input
-            value={typeof user.email === 'string' ? user.email : ''}
+            value={emailShown}
             readOnly
             className="input-readonly"
             autoComplete="username"
-            placeholder={user.email ? undefined : 'Non communiqué par la session — reconnectez-vous ou contactez le support'}
+            placeholder={
+              emailShown
+                ? undefined
+                : 'Non communiqué par la session — vérifiez /api/me (JSON) ou la colonne e-mail en base.'
+            }
           />
         </label>
         <label className="field">

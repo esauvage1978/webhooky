@@ -53,18 +53,29 @@ function normalizeRoles(raw) {
   return [];
 }
 
+/** Extrait l’e-mail quel que soit le nom de clé (proxies, réponses enveloppées, variantes). */
+function pickEmailFromMePayload(obj) {
+  if (!obj || typeof obj !== 'object') return '';
+  const keys = ['email', 'Email', 'userIdentifier', 'username', 'user_identifier', 'mail'];
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === 'string' && v.trim() !== '') return v.trim();
+  }
+  return '';
+}
+
 /** Garantit champs attendus par l’UI (évite page blanche si l’API omet des clés ou renvoie null). */
 function normalizeMePayload(data) {
   if (!data || typeof data !== 'object') return data;
   const nestedUser = data.user != null && typeof data.user === 'object' ? data.user : null;
-  const emailRaw = data.email ?? data.userIdentifier ?? data.username ?? nestedUser?.email ?? nestedUser?.userIdentifier;
+  const wrapped =
+    data.data != null && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : null;
   const email =
-    typeof emailRaw === 'string'
-      ? emailRaw.trim()
-      : emailRaw != null && String(emailRaw).trim() !== ''
-        ? String(emailRaw).trim()
-        : '';
-  const dnRaw = data.displayName ?? nestedUser?.displayName;
+    pickEmailFromMePayload(data) ||
+    pickEmailFromMePayload(nestedUser) ||
+    pickEmailFromMePayload(wrapped) ||
+    '';
+  const dnRaw = data.displayName ?? nestedUser?.displayName ?? wrapped?.displayName;
   const displayName =
     typeof dnRaw === 'string'
       ? dnRaw.trim()
