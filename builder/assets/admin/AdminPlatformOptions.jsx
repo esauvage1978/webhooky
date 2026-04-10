@@ -444,7 +444,6 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
           role="dialog"
           aria-modal="true"
           aria-labelledby="admin-option-modal-title"
-          onClick={(e) => e.target === e.currentTarget && !optModal.saving && setOptModal((m) => ({ ...m, open: false }))}
           onKeyDown={(e) => e.key === 'Escape' && !optModal.saving && setOptModal((m) => ({ ...m, open: false }))}
         >
           <div className="modal-panel admin-option-modal-panel">

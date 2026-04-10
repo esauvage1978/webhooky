@@ -473,19 +473,12 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
 
       {modalOpen ? (
         <ModalPortal>
-        <div
-          className="sc-modal-backdrop"
-          role="presentation"
-          onClick={() => {
-            if (!saving) cancelEdit();
-          }}
-        >
+        <div className="sc-modal-backdrop" role="presentation">
           <div
             className="sc-modal"
             role="dialog"
             aria-labelledby="sc-modal-title"
             aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="sc-modal-head">
               <h4 id="sc-modal-title">{editingId === 'new' ? 'Nouveau connecteur' : `Modifier #${editingId}`}</h4>
@@ -593,19 +586,12 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
 
       {auditModalId != null ? (
         <ModalPortal>
-        <div
-          className="sc-modal-backdrop"
-          role="presentation"
-          onClick={() => {
-            setAuditModalId(null);
-          }}
-        >
+        <div className="sc-modal-backdrop" role="presentation">
           <div
             className="sc-modal"
             role="dialog"
             aria-labelledby="sc-audit-title"
             aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="sc-modal-head">
               <h4 id="sc-audit-title">Historique · connecteur #{auditModalId}</h4>

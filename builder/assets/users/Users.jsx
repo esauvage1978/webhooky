@@ -463,7 +463,6 @@ export default function Users({ user }) {
         <div
           className="modal-backdrop"
           role="presentation"
-          onClick={closeInviteModal}
           onKeyDown={(e) => e.key === 'Escape' && closeInviteModal()}
         >
           <div
@@ -471,7 +470,6 @@ export default function Users({ user }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="users-invite-title"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-panel-header">
               <h3 id="users-invite-title" className="users-invite-modal-title">

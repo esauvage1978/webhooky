@@ -344,19 +344,12 @@ export default function WebhookProjects({ user, onNavigate }) {
 
       {modal === 'create' ? (
         <ModalPortal>
-        <div
-          className="sc-modal-backdrop"
-          role="presentation"
-          onClick={() => {
-            if (!saving) closeModal();
-          }}
-        >
+        <div className="sc-modal-backdrop" role="presentation">
           <div
             className="sc-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="wh-proj-create-title"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="sc-modal-head">
               <h4 id="wh-proj-create-title" className="wp-proj-modal-title">
@@ -425,19 +418,12 @@ export default function WebhookProjects({ user, onNavigate }) {
 
       {modal === 'edit' && editingProject ? (
         <ModalPortal>
-        <div
-          className="sc-modal-backdrop"
-          role="presentation"
-          onClick={() => {
-            if (!saving) closeModal();
-          }}
-        >
+        <div className="sc-modal-backdrop" role="presentation">
           <div
             className="sc-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="wh-proj-edit-title"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="sc-modal-head">
               <h4 id="wh-proj-edit-title" className="wp-proj-modal-title">
