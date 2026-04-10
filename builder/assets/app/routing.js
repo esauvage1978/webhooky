@@ -149,12 +149,26 @@ export function navIdToPath(navId) {
   return absoluteAppPath(rel);
 }
 
+/** Contexte org présent : liste membres et/ou organisation active (aligné sur /api/me). */
+export function userHasOrganizationContext(user) {
+  if (!user || typeof user !== 'object') return false;
+  const orgCount = user.organizations?.length ?? 0;
+  if (orgCount > 0) return true;
+  return user.organization != null && typeof user.organization === 'object' && user.organization.id != null;
+}
+
+/** Compte gestionnaire sans org rattachée : écran « Mon organisation » uniquement. */
+export function userNeedsOrganizationSetup(user) {
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  if (roles.includes('ROLE_ADMIN')) return false;
+  return !userHasOrganizationContext(user);
+}
+
 /** @param {object} user @param {string} navId */
 export function userCanAccessNav(user, navId) {
   const roles = Array.isArray(user.roles) ? user.roles : [];
   const isAdmin = roles.includes('ROLE_ADMIN');
   const isManager = roles.includes('ROLE_MANAGER');
-  const orgCount = user.organizations?.length ?? 0;
   const onboardingRequired = user.onboarding?.required;
   if (onboardingRequired) return false;
   if (navId === 'accountProfile' || navId === 'changePassword') {
@@ -163,7 +177,7 @@ export function userCanAccessNav(user, navId) {
   if (navId === 'adminSupervision' || navId === 'adminOptions') {
     return isAdmin;
   }
-  const needsOrg = !isAdmin && orgCount === 0;
+  const needsOrg = userNeedsOrganizationSetup(user);
   if (needsOrg) return navId === 'setupOrganization';
   if (navId === 'setupOrganization') return false;
   if (navId === 'organizations' && !isAdmin) return false;

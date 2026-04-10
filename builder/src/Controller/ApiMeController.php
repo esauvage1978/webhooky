@@ -171,6 +171,16 @@ final class ApiMeController extends AbstractController
         ], $memberOrgs);
 
         $org = $user->getOrganization();
+        if ($org instanceof Organization && $org->getId() !== null) {
+            $ids = array_column($organizations, 'id');
+            if (!\in_array($org->getId(), $ids, true)) {
+                $organizations[] = [
+                    'id' => $org->getId(),
+                    'name' => $org->getName(),
+                ];
+                usort($organizations, static fn (array $a, array $b) => strcasecmp((string) $a['name'], (string) $b['name']));
+            }
+        }
         $pending = $this->onboardingEvaluator->pendingSteps($user);
         $email = $user->getEmail();
         if ('' === $email) {

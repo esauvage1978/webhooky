@@ -35,6 +35,7 @@ import {
   pathToNavId,
   replaceLegacyWebhooksUrlIfNeeded,
   userCanAccessNav,
+  userNeedsOrganizationSetup,
 } from './routing.js';
 
 /**
@@ -64,6 +65,27 @@ function pickEmailFromMePayload(obj) {
   return '';
 }
 
+/** Préfère le premier tableau `organizations` non vide (réponses enveloppées type { data: { … } }). */
+function pickOrganizationsFromPayload(data, nestedUser, wrapped) {
+  const objs = [data, nestedUser, wrapped].filter((o) => o != null && typeof o === 'object');
+  for (const o of objs) {
+    if (Array.isArray(o.organizations) && o.organizations.length > 0) return o.organizations;
+  }
+  for (const o of objs) {
+    if (Array.isArray(o.organizations)) return o.organizations;
+  }
+  return [];
+}
+
+function pickOrganizationRef(data, nestedUser, wrapped) {
+  const objs = [data, nestedUser, wrapped].filter((o) => o != null && typeof o === 'object');
+  for (const o of objs) {
+    const r = o.organization;
+    if (r != null && typeof r === 'object' && r.id != null) return r;
+  }
+  return null;
+}
+
 /** Garantit champs attendus par l’UI (évite page blanche si l’API omet des clés ou renvoie null). */
 function normalizeMePayload(data) {
   if (!data || typeof data !== 'object') return data;
@@ -82,12 +104,24 @@ function normalizeMePayload(data) {
       : dnRaw != null && String(dnRaw).trim() !== ''
         ? String(dnRaw).trim()
         : '';
+  const rolesRaw = data.roles ?? nestedUser?.roles ?? wrapped?.roles;
+  let organizations = pickOrganizationsFromPayload(data, nestedUser, wrapped);
+  const orgRef = pickOrganizationRef(data, nestedUser, wrapped);
+  const organization = orgRef;
+  if (organizations.length === 0 && orgRef != null && orgRef.id != null) {
+    organizations = [{ id: orgRef.id, name: typeof orgRef.name === 'string' ? orgRef.name : '' }];
+  }
+  const onboarding = data.onboarding ?? nestedUser?.onboarding ?? wrapped?.onboarding;
+  const subscription = data.subscription ?? nestedUser?.subscription ?? wrapped?.subscription;
   return {
     ...data,
     email,
     displayName: displayName || email || 'Compte',
-    roles: normalizeRoles(data.roles),
-    organizations: Array.isArray(data.organizations) ? data.organizations : [],
+    roles: normalizeRoles(rolesRaw),
+    organization,
+    organizations,
+    ...(onboarding !== undefined ? { onboarding } : {}),
+    ...(subscription !== undefined ? { subscription } : {}),
   };
 }
 
@@ -279,7 +313,7 @@ export default function App() {
       if (user.onboarding?.required) {
         return;
       }
-      const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
+      const needsOrgSetupOnly = userNeedsOrganizationSetup(user);
       if (needsOrgSetupOnly) {
         const navSetup = pathToNavId(popPath);
         if (navSetup === 'accountProfile' || navSetup === 'changePassword') {
@@ -318,7 +352,7 @@ export default function App() {
       return;
     }
 
-    const needsOrgSetupOnly = !user.roles.includes('ROLE_ADMIN') && (user.organizations ?? []).length === 0;
+    const needsOrgSetupOnly = userNeedsOrganizationSetup(user);
     if (needsOrgSetupOnly) {
       const navSetup = pathToNavId(window.location.pathname);
       if (navSetup === 'accountProfile' || navSetup === 'changePassword') {
@@ -483,7 +517,7 @@ export default function App() {
     const isAdmin = user.roles.includes('ROLE_ADMIN');
     const orgs = user.organizations ?? [];
     const onboardingRequired = user.onboarding?.required;
-    const needsOrgSetup = !isAdmin && !onboardingRequired && orgs.length === 0;
+    const needsOrgSetup = !onboardingRequired && userNeedsOrganizationSetup(user);
     const showOrgPicker =
       !isAdmin && !onboardingRequired && orgs.length > 1 && !sessionStorage.getItem(ORG_SESSION_KEY);
 

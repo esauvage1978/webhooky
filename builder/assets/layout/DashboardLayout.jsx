@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { userNeedsOrganizationSetup } from '../app/routing.js';
 
 const TOPBAR_SECTION_LABELS = {
   accountProfile: 'Mon profil',
@@ -40,7 +41,7 @@ function navSectionsForUser(user) {
   const isAdmin = roles.includes('ROLE_ADMIN');
   const isManager = roles.includes('ROLE_MANAGER');
   const orgCount = user.organizations?.length ?? 0;
-  if (!isAdmin && orgCount === 0) {
+  if (userNeedsOrganizationSetup(user)) {
     return [{ sectionLabel: null, items: NAV_SETUP_ONLY }];
   }
 
