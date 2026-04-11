@@ -18,7 +18,7 @@ final class FormWebhookIngressTokenParser
      */
     public static function extractTokenSegmentFromUrl(string $webhookUrl): ?string
     {
-        if (preg_match('#/webhook/form/([^/?#]+)#i', $webhookUrl, $m) !== 1) {
+        if (preg_match('~/webhook/form/([^/?#]+)~i', $webhookUrl, $m) !== 1) {
             return null;
         }
 
