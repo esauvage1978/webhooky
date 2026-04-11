@@ -208,8 +208,9 @@ export default function Organizations({ user, onOrganizationChanged }) {
             <tr>
               <th>ID</th>
               <th>Nom</th>
-              {isAdmin ? <th>Utilisateur</th> : <th />}
-              {isAdmin ? <th /> : null}
+              <th title="Préfixe des jetons d’ingress (/webhook/form/…)">Préfixe webhook</th>
+              {isAdmin ? <th>Utilisateur</th> : null}
+              <th className="org-table-th-actions" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -218,8 +219,14 @@ export default function Organizations({ user, onOrganizationChanged }) {
                 {editingId === row.id ? (
                   <>
                     <td>{row.id}</td>
-                    <td colSpan={isAdmin ? 3 : 2}>
+                    <td colSpan={isAdmin ? 4 : 3}>
                       <form className="inline-form" onSubmit={(e) => void submitUpdate(e)}>
+                        {row.webhookPublicPrefix ? (
+                          <span className="muted small" style={{ marginRight: '0.75rem' }} title="Non modifiable">
+                            Préfixe :{' '}
+                            <code className="mono">{row.webhookPublicPrefix}</code>
+                          </span>
+                        ) : null}
                         <input
                           value={formName}
                           onChange={(e) => setFormName(e.target.value)}
@@ -250,6 +257,13 @@ export default function Organizations({ user, onOrganizationChanged }) {
                   <>
                     <td>{row.id}</td>
                     <td>{row.name}</td>
+                    <td>
+                      <code className="mono small" title="Token d’organisation (début des URL de workflows)">
+                        {row.webhookPublicPrefix && row.webhookPublicPrefix !== ''
+                          ? row.webhookPublicPrefix
+                          : '—'}
+                      </code>
+                    </td>
                     {isAdmin ? (
                       <td>
                         <span className="badge-count" title={row.members?.map((m) => m.email).join(', ') ?? ''}>
