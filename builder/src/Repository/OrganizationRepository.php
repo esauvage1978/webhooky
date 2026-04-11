@@ -14,8 +14,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class OrganizationRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly OrganizationMonthlyEventUsageRepository $organizationMonthlyEventUsageRepository,
+    ) {
         parent::__construct($registry, Organization::class);
     }
 
@@ -48,6 +50,13 @@ class OrganizationRepository extends ServiceEntityRepository
                 return false;
             }
             $organization->setEventsConsumed($organization->getEventsConsumed() + $delta);
+            $now = new \DateTimeImmutable('now');
+            $this->organizationMonthlyEventUsageRepository->incrementForOrganization(
+                $organization,
+                (int) $now->format('Y'),
+                (int) $now->format('n'),
+                $delta,
+            );
 
             return true;
         });

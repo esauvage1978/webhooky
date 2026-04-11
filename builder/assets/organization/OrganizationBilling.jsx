@@ -409,9 +409,11 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                 Indicateurs courants
               </h4>
               <p className="muted small org-billing-tab-intro">
-                Quota global = unités consommées côté abonnement (chaque action exécutée d’un workflow). Les tableaux
-                ci-dessous comptent les <strong>réceptions</strong> (lignes de journal : un envoi sur un workflow = une
-                ligne, quelle que soit le nombre d’actions).
+                Quota global = unités consommées côté abonnement (chaque action exécutée d’un workflow). Les totaux par
+                mois (cartes « mois en cours », « mois précédent » et ligne repliée « Détail par mois ») viennent du{' '}
+                <strong>compteur mensuel d’événements quota</strong> (aligné sur la consommation du forfait). Les tableaux
+                par projet / par workflow comptent les <strong>réceptions</strong> (lignes de journal : un envoi = une
+                ligne).
               </p>
               <div className="org-billing-usage">
                 <div className="org-billing-usage-card">
@@ -452,14 +454,14 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                   <p className="org-billing-usage-stat">
                     {usage.currentMonth.ingressCount?.toLocaleString('fr-FR') ?? '0'}
                   </p>
-                  <p className="muted small">réceptions enregistrées</p>
+                  <p className="muted small">événements quota (compteur mensuel)</p>
                 </div>
                 <div className="org-billing-usage-card">
                   <span className="muted small">Mois précédent</span>
                   <p className="org-billing-usage-stat">
                     {usage.previousMonth.ingressCount?.toLocaleString('fr-FR') ?? '0'}
                   </p>
-                  <p className="muted small">réceptions</p>
+                  <p className="muted small">événements quota (compteur mensuel)</p>
                 </div>
               </div>
 
@@ -531,7 +533,7 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                       <span className="org-billing-month-label">{formatMonthLabel(m.periodStart)}</span>
                       <span className="org-billing-month-total">
                         <strong>{m.ingressCount?.toLocaleString('fr-FR') ?? '0'}</strong>
-                        <span className="muted small"> réceptions</span>
+                        <span className="muted small"> événements quota</span>
                       </span>
                     </summary>
                     <div className="org-billing-month-body">

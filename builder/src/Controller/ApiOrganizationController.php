@@ -9,6 +9,7 @@ use App\Entity\OrganizationInvoice;
 use App\Entity\User;
 use App\Repository\FormWebhookLogRepository;
 use App\Repository\OrganizationInvoiceRepository;
+use App\Repository\OrganizationMonthlyEventUsageRepository;
 use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use App\Repository\WebhookProjectRepository;
@@ -34,6 +35,7 @@ final class ApiOrganizationController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly SubscriptionEntitlementService $subscriptionEntitlement,
+        private readonly OrganizationMonthlyEventUsageRepository $organizationMonthlyEventUsageRepository,
         private readonly FormWebhookLogRepository $formWebhookLogRepository,
         private readonly OrganizationInvoiceRepository $organizationInvoiceRepository,
         private readonly WebhookProjectRepository $webhookProjectRepository,
@@ -50,8 +52,9 @@ final class ApiOrganizationController extends AbstractController
             $orgs = $this->organizationRepository->findByNameAsc();
             $ids = array_values(array_filter(array_map(static fn (Organization $o) => $o->getId(), $orgs)));
             $startThis = (new \DateTimeImmutable('first day of this month'))->setTime(0, 0, 0);
-            $startNext = (new \DateTimeImmutable('first day of next month'))->setTime(0, 0, 0);
-            $ingressByOrg = $this->formWebhookLogRepository->countIngressForOrganizationIdsBetween($ids, $startThis, $startNext);
+            $y = (int) $startThis->format('Y');
+            $m = (int) $startThis->format('n');
+            $ingressByOrg = $this->organizationMonthlyEventUsageRepository->countsByOrganizationIdsForYearMonth($ids, $y, $m);
             $projectsByOrg = $this->webhookProjectRepository->countByOrganizationIds($ids);
             $payload = array_map(function (Organization $o) use ($ingressByOrg, $projectsByOrg) {
                 $row = $this->serializeOrganization($o, true);
@@ -109,8 +112,13 @@ final class ApiOrganizationController extends AbstractController
         $startNext = (new \DateTimeImmutable('first day of next month'))->setTime(0, 0, 0);
         $startPrev = (new \DateTimeImmutable('first day of last month'))->setTime(0, 0, 0);
 
-        $ingressThis = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startThis, $startNext);
-        $ingressPrev = $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $startPrev, $startThis);
+        $yThis = (int) $startThis->format('Y');
+        $mThis = (int) $startThis->format('n');
+        $yPrev = (int) $startPrev->format('Y');
+        $mPrev = (int) $startPrev->format('n');
+
+        $ingressThis = $this->organizationMonthlyEventUsageRepository->getCountForOrganizationYearMonth($organization, $yThis, $mThis);
+        $ingressPrev = $this->organizationMonthlyEventUsageRepository->getCountForOrganizationYearMonth($organization, $yPrev, $mPrev);
 
         $byProjectThis = $this->formWebhookLogRepository->aggregateIngressByProjectForOrganizationBetween($organization, $startThis, $startNext);
         $byWebhookThis = $this->formWebhookLogRepository->aggregateIngressByWebhookForOrganizationBetween($organization, $startThis, $startNext);
@@ -119,21 +127,38 @@ final class ApiOrganizationController extends AbstractController
 
         $snap = $this->subscriptionEntitlement->buildSnapshot($organization);
 
-        $monthlyHistory = [];
+        $monthTuples = [];
         for ($i = 0; $i < 12; ++$i) {
             $anchor = $startThis->modify(\sprintf('-%d months', $i));
             $mStart = $anchor->modify('first day of this month')->setTime(0, 0, 0);
+            $monthTuples[] = [
+                'start' => $mStart,
+                'year' => (int) $mStart->format('Y'),
+                'month' => (int) $mStart->format('n'),
+            ];
+        }
+        $billableMap = $this->organizationMonthlyEventUsageRepository->countsByYearMonthKeysForOrganization(
+            $organization,
+            array_map(static fn (array $t) => ['year' => $t['year'], 'month' => $t['month']], $monthTuples),
+        );
+
+        $monthlyHistory = [];
+        foreach ($monthTuples as $mt) {
+            $mStart = $mt['start'];
             $mEnd = $mStart->modify('+1 month');
+            $label = $mStart->format('Y-m');
             $monthlyHistory[] = [
                 'periodStart' => $mStart->format(\DateTimeInterface::ATOM),
                 'periodEndExclusive' => $mEnd->format(\DateTimeInterface::ATOM),
-                'label' => $mStart->format('Y-m'),
-                'ingressCount' => $this->formWebhookLogRepository->countIngressForOrganizationBetween($organization, $mStart, $mEnd),
+                'label' => $label,
+                /** Événements quota (compteur mensuel fiable, aligné sur la consommation du forfait). */
+                'ingressCount' => $billableMap[$label] ?? 0,
                 'byProject' => $this->formWebhookLogRepository->aggregateIngressByProjectForOrganizationBetween($organization, $mStart, $mEnd),
                 'byWebhook' => $this->formWebhookLogRepository->aggregateIngressByWebhookForOrganizationBetween($organization, $mStart, $mEnd),
             ];
         }
 
+        /** @see OrganizationMonthlyEventUsage — totaux mensuels « ingressCount » = événements quota (pas les lignes journal). */
         return new JsonResponse([
             'currentIndicators' => [
                 'planLabel' => $snap['planLabel'] ?? null,

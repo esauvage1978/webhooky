@@ -222,7 +222,7 @@ export default function Organizations({ user, onOrganizationChanged }) {
               {isAdmin ? (
                 <>
                   <th>Forfait</th>
-                  <th title="Réceptions (lignes journal) ce mois civil">Ingress mois</th>
+                  <th title="Événements quota consommés ce mois civil (compteur mensuel)">Évén. mois</th>
                   <th title="Événements consommés (total) / plafond forfait">Quota évén.</th>
                   <th>Membres</th>
                   <th>Projets</th>
@@ -286,7 +286,7 @@ export default function Organizations({ user, onOrganizationChanged }) {
                     {isAdmin ? (
                       <>
                         <td className="small">{row.subscription?.planLabel ?? '—'}</td>
-                        <td className="numeric small" title="Ingress enregistrés ce mois (journaux)">
+                        <td className="numeric small" title="Événements quota ce mois (compteur mensuel)">
                           {(row.adminListStats?.ingressCountCurrentMonth ?? 0).toLocaleString('fr-FR')}
                         </td>
                         <td className="numeric small" title="Consommé / plafond (forfait)">

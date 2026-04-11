@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Organization;
 use App\Entity\User;
+use App\Repository\OrganizationMonthlyEventUsageRepository;
 use App\Repository\OrganizationRepository;
 use App\Subscription\BillingStatus;
 use App\Subscription\SubscriptionEntitlementService;
@@ -25,6 +26,7 @@ final class ApiOrganizationSubscriptionController extends AbstractController
 {
     public function __construct(
         private readonly OrganizationRepository $organizationRepository,
+        private readonly OrganizationMonthlyEventUsageRepository $organizationMonthlyEventUsageRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly SubscriptionEntitlementService $entitlementService,
     ) {
@@ -78,6 +80,9 @@ final class ApiOrganizationSubscriptionController extends AbstractController
                 }
                 $clearUsage = filter_var($payload['clearEventUsage'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 $organization->applyAdminResetToFree($clearUsage);
+                if ($clearUsage) {
+                    $this->organizationMonthlyEventUsageRepository->deleteAllForOrganization($organization);
+                }
                 $this->syncStripeIdsFromPayload($organization, $payload, true);
             } else {
                 $count = $this->entitlementService->countWebhooks($organization);

@@ -299,7 +299,7 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
                   <p className="dash-mgr-kpi-value">
                     {loading || usage === null ? '…' : currentMonthIngress.toLocaleString('fr-FR')}
                   </p>
-                  <p className="dash-mgr-kpi-label">Réceptions (mois)</p>
+                  <p className="dash-mgr-kpi-label">Événements quota (mois)</p>
                 </article>
                 <article className="dash-mgr-kpi" role="listitem">
                   <div className="dash-mgr-kpi-icon" aria-hidden>
@@ -414,6 +414,9 @@ export default function DashboardHome({ user, onNavigate, onSessionRefresh, onOp
 
             <div className="dash-mgr-projects-block">
               <h3>Réceptions par projet — mois en cours</h3>
+              <p className="muted small" style={{ margin: '0.25rem 0 0.75rem' }}>
+                Compte les lignes de journal (un envoi = une ligne), distinct du total « événements quota » ci-dessus.
+              </p>
               {loading ? (
                 <p className="muted">Chargement des statistiques…</p>
               ) : usage === null ? (
