@@ -359,6 +359,7 @@ final class ApiFormWebhookController extends AbstractController
         $copy->setDescription($source->getDescription());
         $copy->setMetadata($source->getMetadata());
         $copy->setActive($source->isActive());
+        $copy->setLifecycle($source->getLifecycle());
         $srcProj = $source->getProject();
         if (
             !$srcProj instanceof WebhookProject
@@ -512,6 +513,31 @@ final class ApiFormWebhookController extends AbstractController
 
         if (\array_key_exists('active', $data)) {
             $webhook->setActive((bool) $data['active']);
+        }
+
+        if (!$allowPartial) {
+            if (\array_key_exists('lifecycle', $data)) {
+                $lc = trim((string) $data['lifecycle']);
+                if (!\in_array($lc, [FormWebhook::LIFECYCLE_DRAFT, FormWebhook::LIFECYCLE_PRODUCTION], true)) {
+                    return new JsonResponse(
+                        ['error' => 'lifecycle doit être « draft » ou « production ».'],
+                        Response::HTTP_BAD_REQUEST,
+                    );
+                }
+                $webhook->setLifecycle($lc);
+            }
+        } elseif (\array_key_exists('lifecycle', $data)) {
+            $lc = trim((string) $data['lifecycle']);
+            if ($lc === '') {
+                return new JsonResponse(['error' => 'lifecycle ne peut pas être vide.'], Response::HTTP_BAD_REQUEST);
+            }
+            if (!\in_array($lc, [FormWebhook::LIFECYCLE_DRAFT, FormWebhook::LIFECYCLE_PRODUCTION], true)) {
+                return new JsonResponse(
+                    ['error' => 'lifecycle doit être « draft » ou « production ».'],
+                    Response::HTTP_BAD_REQUEST,
+                );
+            }
+            $webhook->setLifecycle($lc);
         }
 
         $projErr = $this->applyProjectFromPayload($webhook, $data, $allowPartial);
@@ -923,6 +949,7 @@ final class ApiFormWebhookController extends AbstractController
             'actions' => array_map(fn (FormWebhookAction $a) => $this->serializeFormWebhookAction($a), $w->getActions()->toArray()),
             'metadata' => $w->getMetadata(),
             'active' => $w->isActive(),
+            'lifecycle' => $w->getLifecycle(),
             'createdAt' => $w->getCreatedAt()?->format(\DateTimeInterface::ATOM),
             'updatedAt' => $w->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
             'organizationId' => $w->getOrganization()?->getId(),

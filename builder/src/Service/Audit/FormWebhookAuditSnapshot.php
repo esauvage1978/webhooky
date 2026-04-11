@@ -27,6 +27,7 @@ final class FormWebhookAuditSnapshot
             'name' => $webhook->getName(),
             'description' => $webhook->getDescription(),
             'active' => $webhook->isActive(),
+            'lifecycle' => $webhook->getLifecycle(),
             'organizationId' => $webhook->getOrganization()?->getId(),
             'projectId' => $webhook->getProject()?->getId(),
             'notificationEmailSource' => $webhook->getNotificationEmailSource(),

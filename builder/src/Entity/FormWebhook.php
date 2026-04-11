@@ -24,6 +24,12 @@ class FormWebhook
 
     public const NOTIFICATION_EMAIL_CUSTOM = 'custom';
 
+    /** Réception tracée, aucune action exécutée (Mailjet, intégrations…). */
+    public const LIFECYCLE_DRAFT = 'draft';
+
+    /** Exécution normale des actions. */
+    public const LIFECYCLE_PRODUCTION = 'production';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -75,6 +81,13 @@ class FormWebhook
 
     #[ORM\Column(options: ['default' => true])]
     private bool $active = true;
+
+    /**
+     * Brouillon : ingress journalisé sans exécuter les actions. Production : comportement nominal.
+     */
+    #[Assert\Choice(choices: [self::LIFECYCLE_DRAFT, self::LIFECYCLE_PRODUCTION])]
+    #[ORM\Column(length: 16, options: ['default' => 'production'])]
+    private string $lifecycle = self::LIFECYCLE_PRODUCTION;
 
     /** Incrémenté à chaque modification réelle du workflow (hors journaux d’exécution). */
     #[ORM\Column(options: ['default' => 1])]
@@ -319,6 +332,28 @@ class FormWebhook
         $this->active = $active;
 
         return $this;
+    }
+
+    public function getLifecycle(): string
+    {
+        return $this->lifecycle;
+    }
+
+    public function setLifecycle(string $lifecycle): static
+    {
+        $this->lifecycle = $lifecycle;
+
+        return $this;
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->lifecycle === self::LIFECYCLE_DRAFT;
+    }
+
+    public function isProduction(): bool
+    {
+        return $this->lifecycle === self::LIFECYCLE_PRODUCTION;
     }
 
     public function getVersion(): int

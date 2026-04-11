@@ -3266,6 +3266,16 @@ h1 {
   color: var(--text-muted);
 }
 
+.fw-workflow-card__status.is-draft {
+  background: rgba(180, 140, 60, 0.16);
+  color: #7a5f1e;
+}
+
+.fw-workflow-card__status.is-production {
+  background: rgba(55, 105, 180, 0.12);
+  color: #2d5599;
+}
+
 .fw-workflow-card__project {
   max-width: 100%;
   padding: 0.18rem 0.5rem;
@@ -4209,6 +4219,12 @@ h1 {
   background: rgba(255, 90, 54, 0.1);
   border-color: rgba(255, 90, 54, 0.25);
   color: var(--coral);
+}
+
+.fw-detail-chip--draft {
+  background: rgba(180, 140, 60, 0.12);
+  border-color: rgba(140, 110, 40, 0.22);
+  color: #7a5f1e;
 }
 
 .fw-detail-desc {

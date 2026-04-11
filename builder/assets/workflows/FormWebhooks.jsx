@@ -71,6 +71,7 @@ const FORM_WEBHOOK_AUDIT_KEY_LABELS = {
   name: 'Nom',
   description: 'Description',
   active: 'État actif / inactif',
+  lifecycle: 'Brouillon / production',
   organizationId: 'Organisation',
   projectId: 'Projet',
   notificationEmailSource: 'Source de l’e-mail de notification',
@@ -929,6 +930,7 @@ const emptyForm = {
   organizationId: '',
   projectId: '',
   active: true,
+  lifecycle: 'draft',
   notificationEmailSource: 'creator',
   notificationCustomEmail: '',
   notifyOnError: true,
@@ -1358,6 +1360,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
         description: row.description ?? '',
         ...(isAdmin ? { organizationId: row.organizationId != null ? String(row.organizationId) : '' } : {}),
         active: !!row.active,
+        lifecycle: row.lifecycle === 'draft' ? 'draft' : 'production',
         notificationEmailSource: row.notificationEmailSource === 'custom' ? 'custom' : 'creator',
         notificationCustomEmail: row.notificationCustomEmail ?? '',
         notifyOnError: row.notifyOnError !== false,
@@ -1661,6 +1664,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
           ? String(form.notificationCustomEmail).trim()
           : null,
       notifyOnError: !!form.notifyOnError,
+      lifecycle: form.lifecycle === 'production' ? 'production' : 'draft',
       actions,
     };
     if (isAdmin) body.organizationId = Number(form.organizationId);
@@ -1707,6 +1711,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
           ? String(form.notificationCustomEmail).trim()
           : null,
       notifyOnError: !!form.notifyOnError,
+      lifecycle: form.lifecycle === 'production' ? 'production' : 'draft',
       actions: actionsPayload,
     };
     if (isAdmin) body.organizationId = Number(form.organizationId);
@@ -1835,6 +1840,12 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
             ? { organizationId: rowMeta.organizationId != null ? String(rowMeta.organizationId) : f.organizationId }
             : {}),
           active: rowMeta.active !== undefined ? !!rowMeta.active : f.active,
+          lifecycle:
+            rowMeta.lifecycle === 'draft'
+              ? 'draft'
+              : rowMeta.lifecycle === 'production'
+                ? 'production'
+                : f.lifecycle,
           notificationEmailSource: rowMeta.notificationEmailSource === 'custom' ? 'custom' : 'creator',
           notificationCustomEmail: rowMeta.notificationCustomEmail ?? f.notificationCustomEmail,
           notifyOnError: rowMeta.notifyOnError !== false,
@@ -1998,7 +2009,8 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
               <span className="fw-block-step">Général</span>
               <h2>Identification et classement</h2>
               <p className="fw-block-intro">
-                Nom, description et projet de ce workflow. L’activation (réception sur l’URL) se règle en haut à droite.
+                Nom, description et projet. L’activation de l’URL (actif / inactif) se règle en haut à droite ; le passage en
+                production (exécution des actions) se choisit ci-dessous.
               </p>
             </header>
             {isAdmin ? (
@@ -2043,6 +2055,16 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                     {isAdmin && p.organizationName ? ` — ${p.organizationName}` : ''}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>État de mise en ligne</span>
+              <select
+                value={form.lifecycle === 'production' ? 'production' : 'draft'}
+                onChange={(e) => setForm((f) => ({ ...f, lifecycle: e.target.value }))}
+              >
+                <option value="draft">Brouillon — réceptions tracées, aucune action exécutée</option>
+                <option value="production">En production — exécution des actions du flux</option>
               </select>
             </label>
             <p className="muted small" style={{ marginTop: '-0.25rem' }}>
@@ -2418,6 +2440,11 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                               <span className={`fw-workflow-card__status ${row.active ? 'is-on' : 'is-off'}`}>
                                 {row.active ? 'Actif' : 'Inactif'}
                               </span>
+                              <span
+                                className={`fw-workflow-card__status ${row.lifecycle === 'draft' ? 'is-draft' : 'is-production'}`}
+                              >
+                                {row.lifecycle === 'draft' ? 'Brouillon' : 'Production'}
+                              </span>
                               {projLabel !== '—' ? (
                                 <span className="fw-workflow-card__project">{projLabel}</span>
                               ) : (
@@ -2553,6 +2580,11 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                 <div className="fw-detail-hero-chips">
                   <span className={`fw-detail-chip ${detailWebhook.active ? 'fw-detail-chip--accent' : ''}`}>
                     {detailWebhook.active ? 'Actif' : 'Inactif'}
+                  </span>
+                  <span
+                    className={`fw-detail-chip ${detailWebhook.lifecycle === 'draft' ? 'fw-detail-chip--draft' : ''}`}
+                  >
+                    {detailWebhook.lifecycle === 'draft' ? 'Brouillon' : 'En production'}
                   </span>
                   {typeof detailWebhook.logsCount === 'number' ? (
                     <span className="fw-detail-chip">

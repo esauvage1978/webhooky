@@ -54,6 +54,10 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
             return $this->handleInactiveWorkflowIngress($webhook, $request);
         }
 
+        if ($webhook->isDraft()) {
+            return $this->handleDraftWorkflowIngress($webhook, $request);
+        }
+
         $actions = $webhook->getActiveActionsOrdered();
         if ($actions === []) {
             $logId = $this->persistIngressRejectionLog($webhook, $request, 'Aucune action active sur ce webhook.');
@@ -301,6 +305,61 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                 'code' => 'workflow_inactive',
                 'logId' => $log->getId(),
                 'message' => 'Workflow désactivé : réception enregistrée, aucune action exécutée.',
+                'actions' => [],
+            ],
+            Response::HTTP_OK,
+        );
+    }
+
+    /**
+     * Brouillon : même traçabilité que l’ingress normal (parse + journal), sans actions ni quota d’événements.
+     */
+    private function handleDraftWorkflowIngress(FormWebhook $webhook, Request $request): JsonResponse
+    {
+        $log = new FormWebhookLog();
+        $log->setFormWebhook($webhook);
+        $log->setClientIp($request->getClientIp());
+        $log->setUserAgent(mb_substr((string) $request->headers->get('User-Agent', ''), 0, 512));
+        $log->setContentType((string) $request->headers->get('Content-Type', ''));
+        $log->setRawBody($this->truncateRaw($request->getContent()));
+        $log->setStatus(FormWebhookLogStatus::RECEIVED);
+
+        $t0 = (int) round(microtime(true) * 1000);
+
+        try {
+            $parsed = $this->payloadParserChain->parse($request);
+            $log->setParsedInput($parsed);
+            $log->setStatus(FormWebhookLogStatus::SKIPPED);
+        } catch (\Throwable $e) {
+            $this->applicationErrorLogger->logThrowable($e, $request, ApplicationErrorLog::SOURCE_HANDLED, [
+                'handler' => 'form_webhook_draft_parse',
+                'formWebhookId' => $webhook->getId(),
+            ]);
+            $log->setStatus(FormWebhookLogStatus::ERROR);
+            $log->setErrorDetail($e->getMessage());
+            $this->persistLog($log, $t0);
+            $this->runNotifier->notifyAfterRun($webhook, $log, false);
+
+            return new JsonResponse(
+                [
+                    'ok' => false,
+                    'error' => $e->getMessage(),
+                    'logId' => $log->getId(),
+                    'actions' => [],
+                ],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
+        $this->persistLog($log, $t0);
+
+        return new JsonResponse(
+            [
+                'ok' => true,
+                'skipped' => true,
+                'code' => 'workflow_draft',
+                'logId' => $log->getId(),
+                'message' => 'Workflow en brouillon : réception enregistrée, aucune action exécutée.',
                 'actions' => [],
             ],
             Response::HTTP_OK,

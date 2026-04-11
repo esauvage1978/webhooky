@@ -18,6 +18,7 @@ final class FormWebhookAuditDetailsPresenter
         'name' => 'Nom',
         'description' => 'Description',
         'active' => 'État actif / inactif',
+        'lifecycle' => 'Brouillon / production',
         'organizationId' => 'Organisation',
         'projectId' => 'Projet',
         'notificationEmailSource' => 'Source de l’e-mail de notification',
@@ -175,6 +176,18 @@ final class FormWebhookAuditDetailsPresenter
     public static function labelForKey(string $key): string
     {
         return self::KEY_LABELS[$key] ?? $key;
+    }
+
+    private static function formatLifecycleForDisplay(mixed $v): ?string
+    {
+        if ($v === 'draft') {
+            return 'Brouillon';
+        }
+        if ($v === 'production') {
+            return 'En production';
+        }
+
+        return self::formatValueForDisplay($v);
     }
 
     private static function formatValueForDisplay(mixed $v): ?string
