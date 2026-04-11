@@ -9,3 +9,11 @@
 
 controllers:
     resource: routing.controllers
+
+# Déclaration explicite (évite tout souci de découverte / cache des attributs en prod).
+api_organizations_regenerate_webhook_prefix:
+    path: /api/organizations/{id}/regenerate-webhook-prefix
+    controller: App\Controller\ApiOrganizationController::regenerateWebhookPrefix
+    methods: POST
+    requirements:
+        id: '\d+'

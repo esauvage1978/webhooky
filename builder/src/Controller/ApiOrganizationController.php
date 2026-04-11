@@ -405,7 +405,6 @@ final class ApiOrganizationController extends AbstractController
     }
 
     /** Remplace le préfixe hex (12 car.) des URL d’ingress /webhook/form/… pour cette organisation. */
-    #[Route('/{id}/regenerate-webhook-prefix', name: 'api_organizations_regenerate_webhook_prefix', methods: ['POST'], requirements: ['id' => '\d+'])]
     #[IsGranted('ROLE_ADMIN')]
     public function regenerateWebhookPrefix(int $id): JsonResponse
     {
