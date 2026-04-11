@@ -61,6 +61,55 @@ function truncateMiddle(str, maxLen = 52) {
   return s.slice(0, left) + ellipsis + s.slice(-right);
 }
 
+/**
+ * Dernière exécution « correcte » (API `lastExecutionVerified`) ou repli sur `lastLogStatus`.
+ *
+ * @returns {boolean|null} true = vérifié, false = à vérifier, null = aucune exécution
+ */
+function lastExecutionVerifiedFromRow(row) {
+  const v = row?.lastExecutionVerified;
+  if (v === true || v === false) return v;
+  const s = row?.lastLogStatus;
+  if (s == null || s === '') return null;
+  if (s === 'error') return false;
+  if (s === 'sent' || s === 'skipped') return true;
+  return false;
+}
+
+/**
+ * Switch visuel (lecture seule) : position et libellés selon le dernier journal d’exécution.
+ *
+ * @param {{ verified: boolean|null; compact?: boolean }} props
+ */
+function LastExecutionVerifiedSwitch({ verified, compact = false }) {
+  const ok = verified === true;
+  const none = verified == null;
+  const title = ok
+    ? 'Dernière exécution : sans erreur enregistrée (vérifié).'
+    : none
+      ? 'Aucune exécution enregistrée pour l’instant.'
+      : 'Dernière exécution : erreur — à vérifier.';
+  const cls = ok ? 'fw-last-exec-switch--ok' : none ? 'fw-last-exec-switch--none' : 'fw-last-exec-switch--bad';
+  return (
+    <span className={`fw-last-exec-switch ${cls}`} role="status" title={title}>
+      <span className="fw-last-exec-switch__track" aria-hidden="true">
+        <span className="fw-last-exec-switch__thumb" />
+      </span>
+      {compact ? (
+        <span className="fw-last-exec-switch__compact-label">{ok ? 'Vérifié' : none ? '—' : 'À vérifier'}</span>
+      ) : (
+        <span className="fw-last-exec-switch__labels">
+          <span className={ok ? 'is-em' : 'muted'}>Vérifié</span>
+          <span className="fw-last-exec-switch__sep" aria-hidden="true">
+            /
+          </span>
+          <span className={!ok ? 'is-em' : 'muted'}>À vérifier</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 const FORM_WEBHOOK_AUDIT_ACTION_LABELS = {
   created: 'Création',
   updated: 'Mise à jour',
@@ -2422,6 +2471,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                   {visibleWebhookItems.map((row) => {
                     const projLabel = resolveWebhookProjectLabel(row, projects);
                     const urlDisplay = truncateMiddle(row.ingressUrl, 52);
+                    const lastExecVerified = lastExecutionVerifiedFromRow(row);
                     const lastLogFailed = row.lastLogStatus === 'error';
                     const errSnippet =
                       typeof row.lastLogErrorDetail === 'string' && row.lastLogErrorDetail
@@ -2444,6 +2494,9 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                                 className={`fw-workflow-card__status ${row.lifecycle === 'draft' ? 'is-draft' : 'is-production'}`}
                               >
                                 {row.lifecycle === 'draft' ? 'Brouillon' : 'Production'}
+                              </span>
+                              <span className="fw-workflow-card__verified-wrap" title="Dernière exécution">
+                                <LastExecutionVerifiedSwitch verified={lastExecVerified} compact />
                               </span>
                               {projLabel !== '—' ? (
                                 <span className="fw-workflow-card__project">{projLabel}</span>
@@ -2585,6 +2638,9 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                     className={`fw-detail-chip ${detailWebhook.lifecycle === 'draft' ? 'fw-detail-chip--draft' : ''}`}
                   >
                     {detailWebhook.lifecycle === 'draft' ? 'Brouillon' : 'En production'}
+                  </span>
+                  <span className="fw-detail-chip fw-detail-chip--last-exec" title="Basé sur la dernière ligne du journal">
+                    <LastExecutionVerifiedSwitch verified={lastExecutionVerifiedFromRow(detailWebhook)} />
                   </span>
                   {typeof detailWebhook.logsCount === 'number' ? (
                     <span className="fw-detail-chip">

@@ -13,6 +13,7 @@ use App\Entity\ResourceAuditLog;
 use App\Entity\User;
 use App\Entity\WebhookProject;
 use App\FormWebhook\FormWebhookErrorNotifyPlatformInfo;
+use App\FormWebhook\FormWebhookLogStatus;
 use App\FormWebhook\FormWebhookNotificationRecipientResolver;
 use App\Repository\FormWebhookLogRepository;
 use App\Repository\FormWebhookRepository;
@@ -986,7 +987,31 @@ final class ApiFormWebhookController extends AbstractController
             $row['lastLogErrorDetail'] = null;
         }
 
+        $row['lastExecutionVerified'] = $this->lastExecutionVerifiedFromSummary($lastLogSummary);
+
         return $row;
+    }
+
+    /**
+     * Indication dérivée du dernier journal : exécution sans erreur enregistrée (sent / skipped) vs erreur.
+     *
+     * @param array{status: string, receivedAt: string|null, errorDetail: string|null}|null $lastLogSummary
+     */
+    private function lastExecutionVerifiedFromSummary(?array $lastLogSummary): ?bool
+    {
+        if ($lastLogSummary === null) {
+            return null;
+        }
+
+        $st = (string) ($lastLogSummary['status'] ?? '');
+        if ($st === FormWebhookLogStatus::ERROR) {
+            return false;
+        }
+        if (\in_array($st, [FormWebhookLogStatus::SENT, FormWebhookLogStatus::SKIPPED], true)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

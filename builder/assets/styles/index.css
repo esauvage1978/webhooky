@@ -3276,6 +3276,12 @@ h1 {
   color: #2d5599;
 }
 
+.fw-workflow-card__verified-wrap {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
 .fw-workflow-card__project {
   max-width: 100%;
   padding: 0.18rem 0.5rem;
@@ -4225,6 +4231,91 @@ h1 {
   background: rgba(180, 140, 60, 0.12);
   border-color: rgba(140, 110, 40, 0.22);
   color: #7a5f1e;
+}
+
+.fw-detail-chip--last-exec {
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+/* Dernier journal : switch lecture seule (Vérifié / À vérifier) */
+.fw-last-exec-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink-soft);
+}
+
+.fw-last-exec-switch__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+  transition: background 0.15s ease;
+}
+
+.fw-last-exec-switch--ok .fw-last-exec-switch__track {
+  background: rgba(46, 160, 120, 0.42);
+}
+
+.fw-last-exec-switch--bad .fw-last-exec-switch__track {
+  background: rgba(210, 90, 70, 0.38);
+}
+
+.fw-last-exec-switch--none .fw-last-exec-switch__track {
+  background: rgba(100, 116, 139, 0.22);
+}
+
+.fw-last-exec-switch__thumb {
+  position: absolute;
+  top: 0.1rem;
+  left: 0.1rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(12, 25, 41, 0.18);
+  transition: transform 0.15s ease;
+}
+
+.fw-last-exec-switch--ok .fw-last-exec-switch__thumb {
+  transform: translateX(1.05rem);
+}
+
+.fw-last-exec-switch__labels {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+
+.fw-last-exec-switch__labels .is-em {
+  font-weight: 700;
+  color: var(--ink, #1a2330);
+}
+
+.fw-last-exec-switch__labels .muted {
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.fw-last-exec-switch__sep {
+  font-weight: 500;
+  opacity: 0.45;
+}
+
+.fw-last-exec-switch__compact-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .fw-detail-desc {
