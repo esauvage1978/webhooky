@@ -51,30 +51,30 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     loading: true,
     error: '',
   });
-  const [optFilters, setOptFilters] = useState({ category: '', domain: '', optionName: '' });
+  const [optFilters, setOptFilters] = useState({ domain: '', category: '', optionName: '' });
   const [optModal, setOptModal] = useState({
     open: false,
     saving: false,
     error: '',
     form: emptyPlatformOptionForm(),
   });
-  const [optionMeta, setOptionMeta] = useState({ categories: [], domains: [], error: '' });
+  const [optionMeta, setOptionMeta] = useState({ domains: [], categories: [], error: '' });
 
   const loadOptionMeta = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/options/meta/choices', apiJsonInit());
       const data = (await parseJson(res)) ?? {};
       if (!res.ok) {
-        setOptionMeta({ categories: [], domains: [], error: data?.error ?? 'Listes indisponibles' });
+        setOptionMeta({ domains: [], categories: [], error: data?.error ?? 'Listes indisponibles' });
         return;
       }
       setOptionMeta({
-        categories: normalizeMetaChoicesList(data.categories),
         domains: normalizeMetaChoicesList(data.domains),
+        categories: normalizeMetaChoicesList(data.categories),
         error: '',
       });
     } catch {
-      setOptionMeta({ categories: [], domains: [], error: 'Erreur réseau (listes)' });
+      setOptionMeta({ domains: [], categories: [], error: 'Erreur réseau (listes)' });
     }
   }, []);
 
@@ -91,8 +91,8 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('limit', String(perPage));
-        if (f.category.trim()) params.set('category', f.category.trim());
         if (f.domain.trim()) params.set('domain', f.domain.trim());
+        if (f.category.trim()) params.set('category', f.category.trim());
         if (f.optionName.trim()) params.set('optionName', f.optionName.trim());
         const res = await fetch(`/api/admin/options?${params}`, apiJsonInit());
         const data = await parseJson(res);
@@ -150,8 +150,8 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     const body = {
       optionName: form.optionName.trim(),
       optionValue: form.optionValue,
-      category: form.category.trim(),
       domain: form.domain.trim() || null,
+      category: form.category.trim(),
       comment: form.comment.trim() || null,
     };
     try {
@@ -208,21 +208,21 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
     .join(' ');
   const { className: _omit, ...restCardProps } = contentCardProps;
 
-  const categoryFilterChoices = useMemo(
-    () => orderedChoicesWithOrphan(optionMeta.categories, optFilters.category),
-    [optionMeta.categories, optFilters.category],
-  );
   const domainFilterChoices = useMemo(
     () => orderedChoicesWithOrphan(optionMeta.domains, optFilters.domain),
     [optionMeta.domains, optFilters.domain],
   );
-  const modalCategoryChoices = useMemo(
-    () => orderedChoicesWithOrphan(optionMeta.categories, optModal.form.category),
-    [optionMeta.categories, optModal.form.category],
+  const categoryFilterChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.categories, optFilters.category),
+    [optionMeta.categories, optFilters.category],
   );
   const modalDomainChoices = useMemo(
     () => orderedChoicesWithOrphan(optionMeta.domains, optModal.form.domain),
     [optionMeta.domains, optModal.form.domain],
+  );
+  const modalCategoryChoices = useMemo(
+    () => orderedChoicesWithOrphan(optionMeta.categories, optModal.form.category),
+    [optionMeta.categories, optModal.form.category],
   );
 
   const filterFields = (
@@ -281,7 +281,7 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
         type="button"
         className={showHubLayout ? 'btn secondary small' : 'btn btn-secondary'}
         onClick={() => {
-          const empty = { category: '', domain: '', optionName: '' };
+          const empty = { domain: '', category: '', optionName: '' };
           setOptFilters(empty);
           void loadPlatformOptions(1, empty);
         }}

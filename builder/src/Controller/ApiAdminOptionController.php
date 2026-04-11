@@ -44,8 +44,8 @@ final class ApiAdminOptionController extends AbstractController
             ?? $this->optionRepository->findOneByCategoryAndOptionName(self::META_CATEGORY, self::META_OPTION_DOMAIN_LIST);
 
         return new JsonResponse([
-            'categories' => $this->splitChoiceList($catRow),
             'domains' => $this->splitChoiceList($domRow),
+            'categories' => $this->splitChoiceList($catRow),
         ]);
     }
 
@@ -192,12 +192,6 @@ final class ApiAdminOptionController extends AbstractController
                 $o->setOptionValue($v);
             }
         }
-        if (!$patch || \array_key_exists('category', $payload)) {
-            $v = $takeString('category');
-            if (null !== $v) {
-                $o->setCategory($v);
-            }
-        }
 
         if (\array_key_exists('domain', $payload)) {
             $d = $payload['domain'];
@@ -208,6 +202,13 @@ final class ApiAdminOptionController extends AbstractController
             }
         } elseif (!$patch) {
             $o->setDomain(null);
+        }
+
+        if (!$patch || \array_key_exists('category', $payload)) {
+            $v = $takeString('category');
+            if (null !== $v) {
+                $o->setCategory($v);
+            }
         }
 
         if (\array_key_exists('comment', $payload)) {
