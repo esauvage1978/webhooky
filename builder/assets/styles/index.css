@@ -3388,6 +3388,10 @@ h1 {
   color: var(--coral);
 }
 
+.fw-url-box--workflow-card .fw-url-box__actions .fw-btn-ghost:disabled {
+  opacity: 0.55;
+}
+
 .fw-workflow-card__footer {
   margin-top: auto;
   padding: 0.85rem 1.2rem 1.05rem;
@@ -4044,6 +4048,15 @@ h1 {
   color: rgba(255, 255, 255, 0.88);
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
+}
+
+.fw-url-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem 0.5rem;
+  flex-shrink: 0;
 }
 
 .fw-url-box code {

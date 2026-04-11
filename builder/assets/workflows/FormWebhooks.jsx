@@ -61,6 +61,63 @@ function truncateMiddle(str, maxLen = 52) {
   return s.slice(0, left) + ellipsis + s.slice(-right);
 }
 
+/** POST JSON minimal pour valider l’URL d’ingress (même origine ou domaine public). */
+function webhookTestRequestBody() {
+  return JSON.stringify({
+    _webhooky_test: true,
+    message: 'Test Webhooky',
+    email: 'test@example.com',
+    ts: new Date().toISOString(),
+  });
+}
+
+/**
+ * @returns {{ ok: boolean; message: string; detail?: string }}
+ */
+async function runWebhookIngressTest(url) {
+  if (url == null || String(url).trim() === '') {
+    return { ok: false, message: 'URL manquante.' };
+  }
+  try {
+    const res = await fetch(String(url).trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      credentials: 'omit',
+      body: webhookTestRequestBody(),
+    });
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (res.ok && data && data.ok === true) {
+      const code = data.code ? String(data.code) : '';
+      const skipped = data.skipped ? ' — traces uniquement (pas d’actions)' : '';
+      const logId = data.logId != null ? ` · journal #${data.logId}` : '';
+      return {
+        ok: true,
+        message: `Réponse OK${code ? ` (${code})` : ''}${skipped}${logId}`,
+      };
+    }
+    if (data && typeof data.error === 'string') {
+      return {
+        ok: false,
+        message: 'Le serveur a répondu avec une erreur.',
+        detail: `${data.error} (HTTP ${res.status})`,
+      };
+    }
+    return {
+      ok: false,
+      message: `HTTP ${res.status}`,
+      detail: text ? text.slice(0, 280) : undefined,
+    };
+  } catch (e) {
+    return { ok: false, message: e?.message || 'Erreur réseau (CORS ou URL inaccessible depuis le navigateur).' };
+  }
+}
+
 /**
  * Dernière exécution « correcte » (API `lastExecutionVerified`) ou repli sur `lastLogStatus`.
  *
@@ -1049,6 +1106,8 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
   const [webhookAuditError, setWebhookAuditError] = useState('');
   const [detailWebhookAudit, setDetailWebhookAudit] = useState(null);
   const [detailWebhookAuditLoading, setDetailWebhookAuditLoading] = useState(false);
+  /** Test POST sur l’URL d’ingress (liste / fiche / éditeur). */
+  const [webhookTest, setWebhookTest] = useState({ id: null, loading: false, msg: '', err: '' });
 
   const loadProjects = useCallback(async () => {
     setProjectsReady(false);
@@ -1364,6 +1423,24 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
       String(a.name).localeCompare(String(b.name), 'fr', { sensitivity: 'base' }),
     );
   }, [items, projectFilter, listSearchNorm, activeOrgIdForWorkflowList]);
+
+  const editWebhookIngressUrl = useMemo(() => {
+    if (editingId === 'new' || editingId == null) return null;
+    const w = items.find((x) => x.id === editingId || String(x.id) === String(editingId));
+    return w?.ingressUrl ?? null;
+  }, [items, editingId]);
+
+  const handleTestWebhook = useCallback(async (webhookId, url) => {
+    const tid = webhookId != null ? String(webhookId) : null;
+    setWebhookTest({ id: tid, loading: true, msg: '', err: '' });
+    const r = await runWebhookIngressTest(url);
+    setWebhookTest({
+      id: tid,
+      loading: false,
+      msg: r.ok ? r.message : '',
+      err: r.ok ? '' : r.detail || r.message,
+    });
+  }, []);
 
   const loadLogsForId = useCallback(async (webhookId) => {
     const row = items.find((w) => w.id === webhookId);
@@ -2217,6 +2294,41 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
               <span className="fw-type-badge">Webhook · POST entrant</span>
               <span className="muted small">URL unique générée à l’enregistrement, corps formulaire ou JSON.</span>
             </div>
+            {editWebhookIngressUrl ? (
+              <div className="fw-webhook-test-block" style={{ marginTop: '1rem' }}>
+                <p className="muted small" style={{ marginTop: 0 }}>
+                  Tester la réception : envoi d’un POST JSON depuis le navigateur (même comportement qu’un client
+                  externe sur cette URL).
+                </p>
+                <div className="fw-url-box fw-url-box--full" title={editWebhookIngressUrl}>
+                  <code className="fw-url-code">{editWebhookIngressUrl}</code>
+                  <div className="fw-url-box__actions">
+                    <button
+                      type="button"
+                      className="fw-btn-ghost"
+                      disabled={webhookTest.loading && webhookTest.id === String(editingId)}
+                      title="POST JSON de test"
+                      onClick={() => void handleTestWebhook(editingId, editWebhookIngressUrl)}
+                    >
+                      {webhookTest.loading && webhookTest.id === String(editingId) ? 'Envoi…' : 'Tester'}
+                    </button>
+                    <button type="button" className="fw-btn-ghost" onClick={() => copyUrl(editWebhookIngressUrl)}>
+                      Copier
+                    </button>
+                  </div>
+                </div>
+                {webhookTest.id === String(editingId) && webhookTest.err ? (
+                  <p className="error small" style={{ marginTop: '0.45rem' }}>
+                    {webhookTest.err}
+                  </p>
+                ) : null}
+                {webhookTest.id === String(editingId) && webhookTest.msg ? (
+                  <p className="muted small" style={{ marginTop: '0.35rem' }}>
+                    {webhookTest.msg}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -2559,10 +2671,31 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                             title={row.ingressUrl}
                           >
                             <code className="fw-url-code">{urlDisplay}</code>
-                            <button type="button" className="fw-btn-ghost" onClick={() => copyUrl(row.ingressUrl)}>
-                              Copier
-                            </button>
+                            <div className="fw-url-box__actions">
+                              <button
+                                type="button"
+                                className="fw-btn-ghost"
+                                disabled={webhookTest.loading && webhookTest.id === String(row.id)}
+                                title="Envoyer un POST JSON de test (consomme le quota si le workflow est en production)"
+                                onClick={() => void handleTestWebhook(row.id, row.ingressUrl)}
+                              >
+                                {webhookTest.loading && webhookTest.id === String(row.id) ? '…' : 'Tester'}
+                              </button>
+                              <button type="button" className="fw-btn-ghost" onClick={() => copyUrl(row.ingressUrl)}>
+                                Copier
+                              </button>
+                            </div>
                           </div>
+                          {webhookTest.id === String(row.id) && webhookTest.err ? (
+                            <p className="error small" style={{ margin: '0.35rem 0 0' }}>
+                              {webhookTest.err}
+                            </p>
+                          ) : null}
+                          {webhookTest.id === String(row.id) && webhookTest.msg ? (
+                            <p className="muted small" style={{ margin: '0.35rem 0 0' }}>
+                              {webhookTest.msg}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="fw-workflow-card__footer">
                           <button
@@ -2745,10 +2878,36 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                 </p>
                 <div className="fw-url-box fw-url-box--full" title={detailWebhook.ingressUrl}>
                   <code className="fw-url-code">{detailWebhook.ingressUrl}</code>
-                  <button type="button" className="fw-btn-ghost" onClick={() => copyUrl(detailWebhook.ingressUrl)}>
-                    Copier
-                  </button>
+                  <div className="fw-url-box__actions">
+                    <button
+                      type="button"
+                      className="fw-btn-ghost"
+                      disabled={webhookTest.loading && webhookTest.id === String(detailWebhook.id)}
+                      title="Envoyer un POST JSON de test depuis votre navigateur"
+                      onClick={() => void handleTestWebhook(detailWebhook.id, detailWebhook.ingressUrl)}
+                    >
+                      {webhookTest.loading && webhookTest.id === String(detailWebhook.id) ? 'Envoi…' : 'Tester'}
+                    </button>
+                    <button type="button" className="fw-btn-ghost" onClick={() => copyUrl(detailWebhook.ingressUrl)}>
+                      Copier
+                    </button>
+                  </div>
                 </div>
+                <p className="muted small" style={{ marginTop: '0.5rem' }}>
+                  Un test envoie un petit JSON d’exemple. En <strong>production</strong>, cela compte comme une exécution
+                  (quota). En <strong>brouillon</strong> ou webhook <strong>désactivé</strong>, seules les traces sont
+                  enregistrées, sans actions.
+                </p>
+                {webhookTest.id === String(detailWebhook.id) && webhookTest.err ? (
+                  <p className="error small" style={{ marginTop: '0.5rem' }}>
+                    {webhookTest.err}
+                  </p>
+                ) : null}
+                {webhookTest.id === String(detailWebhook.id) && webhookTest.msg ? (
+                  <p className="muted small" style={{ marginTop: '0.45rem' }}>
+                    {webhookTest.msg}
+                  </p>
+                ) : null}
                 <WebhookDetailNotificationsPanel webhook={detailWebhook} />
               </div>
             ) : null}
