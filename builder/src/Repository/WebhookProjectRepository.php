@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Organization;
 use App\Entity\WebhookProject;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -68,5 +69,32 @@ class WebhookProjectRepository extends ServiceEntityRepository
             ->setParameter('p', $project)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * @param list<int> $organizationIds
+     * @return array<int, int> organization id => nombre de projets
+     */
+    public function countByOrganizationIds(array $organizationIds): array
+    {
+        if ($organizationIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('p')
+            ->select('o.id AS oid', 'COUNT(p.id) AS cnt')
+            ->join('p.organization', 'o')
+            ->andWhere('o.id IN (:ids)')
+            ->setParameter('ids', $organizationIds, ArrayParameterType::INTEGER)
+            ->groupBy('o.id')
+            ->getQuery()
+            ->getArrayResult();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['oid']] = (int) $r['cnt'];
+        }
+
+        return $out;
     }
 }

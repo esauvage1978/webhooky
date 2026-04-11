@@ -4108,6 +4108,16 @@ h1 {
   align-items: flex-start;
 }
 
+.organizations-page .org-table-wrap--organizations-admin .org-table {
+  min-width: 68rem;
+}
+
+.organizations-page .org-table td.numeric,
+.organizations-page .org-table th.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .dashboard-home-hero {
   align-items: flex-start;
 }

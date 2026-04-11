@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { parseJson } from '../lib/http.js';
 
+function formatAdminQuotaCell(subscription) {
+  if (!subscription) return '—';
+  const consumed = subscription.eventsConsumed ?? 0;
+  if (subscription.subscriptionExempt) {
+    return `${Number(consumed).toLocaleString('fr-FR')} (interne)`;
+  }
+  const allowance = subscription.eventsAllowance ?? 0;
+  return `${Number(consumed).toLocaleString('fr-FR')} / ${Number(allowance).toLocaleString('fr-FR')}`;
+}
+
 export default function Organizations({ user, onOrganizationChanged }) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const [items, setItems] = useState([]);
@@ -202,14 +212,23 @@ export default function Organizations({ user, onOrganizationChanged }) {
         </form>
       )}
 
-      <div className="org-table-wrap">
+      <div className={`org-table-wrap${isAdmin ? ' org-table-wrap--organizations-admin' : ''}`}>
         <table className="org-table">
           <thead>
             <tr>
               <th>ID</th>
               <th>Nom</th>
               <th title="Préfixe des jetons d’ingress (/webhook/form/…)">Préfixe webhook</th>
-              {isAdmin ? <th>Utilisateur</th> : null}
+              {isAdmin ? (
+                <>
+                  <th>Forfait</th>
+                  <th title="Réceptions (lignes journal) ce mois civil">Ingress mois</th>
+                  <th title="Événements consommés (total) / plafond forfait">Quota évén.</th>
+                  <th>Membres</th>
+                  <th>Projets</th>
+                  <th>Webhooks</th>
+                </>
+              ) : null}
               <th className="org-table-th-actions" aria-label="Actions" />
             </tr>
           </thead>
@@ -219,7 +238,7 @@ export default function Organizations({ user, onOrganizationChanged }) {
                 {editingId === row.id ? (
                   <>
                     <td>{row.id}</td>
-                    <td colSpan={isAdmin ? 4 : 3}>
+                    <td colSpan={isAdmin ? 9 : 3}>
                       <form className="inline-form" onSubmit={(e) => void submitUpdate(e)}>
                         {row.webhookPublicPrefix ? (
                           <span className="muted small" style={{ marginRight: '0.75rem' }} title="Non modifiable">
@@ -265,11 +284,29 @@ export default function Organizations({ user, onOrganizationChanged }) {
                       </code>
                     </td>
                     {isAdmin ? (
-                      <td>
-                        <span className="badge-count" title={row.members?.map((m) => m.email).join(', ') ?? ''}>
-                          {row.memberCount ?? row.members?.length ?? 0}
-                        </span>
-                      </td>
+                      <>
+                        <td className="small">{row.subscription?.planLabel ?? '—'}</td>
+                        <td className="numeric small" title="Ingress enregistrés ce mois (journaux)">
+                          {(row.adminListStats?.ingressCountCurrentMonth ?? 0).toLocaleString('fr-FR')}
+                        </td>
+                        <td className="numeric small" title="Consommé / plafond (forfait)">
+                          {formatAdminQuotaCell(row.subscription)}
+                        </td>
+                        <td className="numeric">
+                          <span
+                            className="badge-count"
+                            title={row.members?.map((m) => m.email).join(', ') ?? ''}
+                          >
+                            {row.memberCount ?? row.members?.length ?? 0}
+                          </span>
+                        </td>
+                        <td className="numeric small">
+                          {(row.adminListStats?.projectCount ?? 0).toLocaleString('fr-FR')}
+                        </td>
+                        <td className="numeric small">
+                          {(row.subscription?.webhookCount ?? 0).toLocaleString('fr-FR')}
+                        </td>
+                      </>
                     ) : null}
                     {isAdmin ? (
                       <td className="actions">

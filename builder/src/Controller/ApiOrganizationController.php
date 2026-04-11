@@ -11,6 +11,7 @@ use App\Repository\FormWebhookLogRepository;
 use App\Repository\OrganizationInvoiceRepository;
 use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
+use App\Repository\WebhookProjectRepository;
 use App\Subscription\SubscriptionEntitlementService;
 use App\WebhookProject\DefaultWebhookProjectService;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -35,6 +36,7 @@ final class ApiOrganizationController extends AbstractController
         private readonly SubscriptionEntitlementService $subscriptionEntitlement,
         private readonly FormWebhookLogRepository $formWebhookLogRepository,
         private readonly OrganizationInvoiceRepository $organizationInvoiceRepository,
+        private readonly WebhookProjectRepository $webhookProjectRepository,
         private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
     ) {
     }
@@ -46,7 +48,23 @@ final class ApiOrganizationController extends AbstractController
         $user = $this->currentUser();
         if ($this->isAdmin($user)) {
             $orgs = $this->organizationRepository->findByNameAsc();
-            $payload = array_map(fn (Organization $o) => $this->serializeOrganization($o, true), $orgs);
+            $ids = array_values(array_filter(array_map(static fn (Organization $o) => $o->getId(), $orgs)));
+            $startThis = (new \DateTimeImmutable('first day of this month'))->setTime(0, 0, 0);
+            $startNext = (new \DateTimeImmutable('first day of next month'))->setTime(0, 0, 0);
+            $ingressByOrg = $this->formWebhookLogRepository->countIngressForOrganizationIdsBetween($ids, $startThis, $startNext);
+            $projectsByOrg = $this->webhookProjectRepository->countByOrganizationIds($ids);
+            $payload = array_map(function (Organization $o) use ($ingressByOrg, $projectsByOrg) {
+                $row = $this->serializeOrganization($o, true);
+                $id = $o->getId();
+                if ($id !== null) {
+                    $row['adminListStats'] = [
+                        'ingressCountCurrentMonth' => $ingressByOrg[$id] ?? 0,
+                        'projectCount' => $projectsByOrg[$id] ?? 0,
+                    ];
+                }
+
+                return $row;
+            }, $orgs);
 
             return new JsonResponse($payload);
         }

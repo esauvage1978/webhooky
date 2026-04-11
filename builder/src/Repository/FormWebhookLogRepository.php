@@ -185,6 +185,43 @@ class FormWebhookLogRepository extends ServiceEntityRepository
     }
 
     /**
+     * Ingress par organisation sur [from, to) — une requête pour la liste admin.
+     *
+     * @param list<int> $organizationIds
+     * @return array<int, int> organization id => nombre de lignes de journal
+     */
+    public function countIngressForOrganizationIdsBetween(
+        array $organizationIds,
+        \DateTimeImmutable $fromInclusive,
+        \DateTimeImmutable $toExclusive,
+    ): array {
+        if ($organizationIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('l')
+            ->select('o.id AS oid', 'COUNT(l.id) AS cnt')
+            ->join('l.formWebhook', 'w')
+            ->join('w.organization', 'o')
+            ->andWhere('o.id IN (:ids)')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->setParameter('ids', $organizationIds, ArrayParameterType::INTEGER)
+            ->setParameter('from', $fromInclusive)
+            ->setParameter('to', $toExclusive)
+            ->groupBy('o.id')
+            ->getQuery()
+            ->getArrayResult();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['oid']] = (int) $r['cnt'];
+        }
+
+        return $out;
+    }
+
+    /**
      * Réceptions agrégées par projet (lignes de journal d’ingress) sur [from, to).
      *
      * @return list<array{projectId: int, projectName: string, ingressCount: int}>
