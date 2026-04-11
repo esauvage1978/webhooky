@@ -8,6 +8,7 @@ use App\Entity\FormWebhook;
 use App\Entity\Organization;
 use App\Entity\WebhookProject;
 use App\Repository\FormWebhookRepository;
+use App\Repository\OrganizationRepository;
 use App\Repository\WebhookProjectRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -18,6 +19,7 @@ final class DefaultWebhookProjectService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly OrganizationRepository $organizationRepository,
         private readonly WebhookProjectRepository $webhookProjectRepository,
         private readonly FormWebhookRepository $formWebhookRepository,
     ) {
@@ -53,10 +55,12 @@ final class DefaultWebhookProjectService
      * Corrige aussi les lignes dont {@see FormWebhook::$project} pointe vers un id absent de
      * {@see WebhookProject} (sinon `doctrine:schema:update` échoue sur la FK).
      *
-     * @return array{organizations: int, defaultsCreated: int, webhooksAttached: int, danglingProjectIdsFixed: int}
+     * @return array{organizations: int, defaultsCreated: int, webhooksAttached: int, danglingProjectIdsFixed: int, webhookPrefixesFilled: int}
      */
     public function ensureAllOrganizationsHaveDefaultAndAttachWebhooks(): array
     {
+        $webhookPrefixesFilled = $this->organizationRepository->ensureMissingWebhookPublicPrefixes();
+
         $organizationsProcessed = 0;
         $defaultsCreated = 0;
         $webhooksAttached = 0;
@@ -104,6 +108,7 @@ final class DefaultWebhookProjectService
             'defaultsCreated' => $defaultsCreated,
             'webhooksAttached' => $webhooksAttached,
             'danglingProjectIdsFixed' => $danglingProjectIdsFixed,
+            'webhookPrefixesFilled' => $webhookPrefixesFilled,
         ];
     }
 

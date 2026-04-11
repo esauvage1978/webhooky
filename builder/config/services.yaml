@@ -21,5 +21,9 @@ services:
         arguments:
             $parsers: !tagged_iterator app.form_webhook.payload_parser
 
+    App\Doctrine\OrganizationWebhookPrefixSubscriber:
+        tags:
+            - { name: doctrine.event_subscriber }
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

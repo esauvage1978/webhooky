@@ -16,6 +16,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: OrganizationRepository::class)]
 #[ORM\Table(name: 'organization')]
 #[ORM\UniqueConstraint(name: 'UNIQ_ORGANIZATION_NAME', fields: ['name'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_ORGANIZATION_WEBHOOK_PUBLIC_PREFIX', fields: ['webhookPublicPrefix'])]
 #[ORM\HasLifecycleCallbacks]
 class Organization
 {
@@ -28,6 +29,12 @@ class Organization
     #[Assert\Length(max: 180)]
     #[ORM\Column(length: 180)]
     private string $name = '';
+
+    /**
+     * Préfixe hexadécimal (12 car.) unique : l’URL d’ingress utilise préfixe + jeton public du workflow (UUID).
+     */
+    #[ORM\Column(length: 12)]
+    private string $webhookPublicPrefix = '';
 
     #[Assert\Length(max: 255)]
     #[ORM\Column(length: 255, nullable: true)]
@@ -150,6 +157,18 @@ class Organization
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getWebhookPublicPrefix(): string
+    {
+        return $this->webhookPublicPrefix;
+    }
+
+    public function setWebhookPublicPrefix(string $webhookPublicPrefix): static
+    {
+        $this->webhookPublicPrefix = strtolower($webhookPublicPrefix);
 
         return $this;
     }

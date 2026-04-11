@@ -163,6 +163,19 @@ class FormWebhook
         return $this->publicToken;
     }
 
+    /**
+     * Jeton complet dans l’URL d’ingress : préfixe organisation + UUID du workflow.
+     */
+    public function getIngressPublicToken(): string
+    {
+        $org = $this->organization;
+        if ($org === null || $org->getWebhookPublicPrefix() === '') {
+            return $this->publicToken;
+        }
+
+        return $org->getWebhookPublicPrefix().$this->publicToken;
+    }
+
     public function setPublicToken(string $publicToken): static
     {
         $this->publicToken = $publicToken;

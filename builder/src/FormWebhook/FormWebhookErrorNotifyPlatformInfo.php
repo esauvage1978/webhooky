@@ -25,7 +25,8 @@ final readonly class FormWebhookErrorNotifyPlatformInfo
     public function snapshot(): array
     {
         $url = $this->errorNotifyWebhookUrlResolver->resolve();
-        $tokenOk = $url !== '' && preg_match('#/webhook/form/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})#i', $url) === 1;
+        $segment = $url !== '' ? FormWebhookIngressTokenParser::extractTokenSegmentFromUrl($url) : null;
+        $tokenOk = $segment !== null && FormWebhookIngressTokenParser::isValidIngressToken($segment);
 
         return [
             'primaryChannelForErrors' => $tokenOk ? 'webhook_form' : 'smtp_only',

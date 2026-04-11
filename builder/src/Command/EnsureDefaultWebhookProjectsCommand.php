@@ -28,8 +28,9 @@ final class EnsureDefaultWebhookProjectsCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $stats = $this->defaultWebhookProjectService->ensureAllOrganizationsHaveDefaultAndAttachWebhooks();
         $io->success(sprintf(
-            'Organisations : %d | Nouveaux projets « Général » : %d | Workflows avec projet invalide corrigés : %d | Workflows sans projet rattachés : %d',
+            'Organisations : %d | Préfixes webhook org. attribués : %d | Nouveaux projets « Général » : %d | Workflows avec projet invalide corrigés : %d | Workflows sans projet rattachés : %d',
             $stats['organizations'],
+            $stats['webhookPrefixesFilled'],
             $stats['defaultsCreated'],
             $stats['danglingProjectIdsFixed'],
             $stats['webhooksAttached'],

@@ -909,10 +909,12 @@ final class ApiFormWebhookController extends AbstractController
      */
     private function serialize(FormWebhook $w, string $origin, int $logsCount = 0, ?array $lastLogSummary = null): array
     {
-        $path = '/webhook/form/'.$w->getPublicToken();
+        $ingressToken = $w->getIngressPublicToken();
+        $path = '/webhook/form/'.$ingressToken;
         $row = [
             'id' => $w->getId(),
-            'publicToken' => $w->getPublicToken(),
+            'publicToken' => $ingressToken,
+            'workflowPublicToken' => $w->getPublicToken(),
             'ingressUrl' => $origin.$path,
             'logsCount' => $logsCount,
             'version' => $w->getVersion(),

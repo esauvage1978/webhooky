@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\ApplicationErrorLog;
 use App\Entity\User;
 use App\FormWebhook\FormWebhookIngressHandler;
+use App\FormWebhook\FormWebhookIngressTokenParser;
 use App\Logging\ApplicationErrorLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -49,7 +50,7 @@ final class AuthMailer
         $token = $webhookUrl !== '' ? $this->extractFormWebhookToken($webhookUrl) : null;
 
         if ($webhookUrl !== '' && $token === null) {
-            $this->logger->error('AuthMailer : WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL / option webhooky_register_verify_webhook_url ne contient pas un jeton /webhook/form/{uuid} — inscription sans appel webhook.', [
+            $this->logger->error('AuthMailer : WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL / option webhooky_register_verify_webhook_url ne contient pas un jeton /webhook/form/{préfixe+uuid} valide — inscription sans appel webhook.', [
                 'webhookUrl' => $webhookUrl,
             ]);
         }
@@ -137,7 +138,7 @@ final class AuthMailer
         $token = $webhookUrl !== '' ? $this->extractFormWebhookToken($webhookUrl) : null;
 
         if ($webhookUrl !== '' && $token === null) {
-            $this->logger->error('AuthMailer : WEBHOOKY_USER_INVITE_WEBHOOK_URL / option webhooky_user_invite_webhook_url ne contient pas un jeton /webhook/form/{uuid} — invitation sans appel webhook.', [
+            $this->logger->error('AuthMailer : WEBHOOKY_USER_INVITE_WEBHOOK_URL / option webhooky_user_invite_webhook_url ne contient pas un jeton /webhook/form/{préfixe+uuid} valide — invitation sans appel webhook.', [
                 'webhookUrl' => $webhookUrl,
             ]);
         }
@@ -262,11 +263,12 @@ final class AuthMailer
      */
     private function extractFormWebhookToken(string $webhookUrl): ?string
     {
-        if (preg_match('#/webhook/form/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})#i', $webhookUrl, $m) === 1) {
-            return $m[1];
+        $segment = FormWebhookIngressTokenParser::extractTokenSegmentFromUrl($webhookUrl);
+        if ($segment === null || !FormWebhookIngressTokenParser::isValidIngressToken($segment)) {
+            return null;
         }
 
-        return null;
+        return $segment;
     }
 
     private function appOrigin(): string

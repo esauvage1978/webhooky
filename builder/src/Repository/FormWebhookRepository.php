@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\FormWebhook;
 use App\Entity\Organization;
+use App\FormWebhook\FormWebhookIngressTokenParser;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,8 +15,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class FormWebhookRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly OrganizationRepository $organizationRepository,
+    ) {
         parent::__construct($registry, FormWebhook::class);
     }
 
@@ -58,19 +61,47 @@ class FormWebhookRepository extends ServiceEntityRepository
      */
     public function findOneByPublicTokenForIngress(string $token): ?FormWebhook
     {
-        return $this->createQueryBuilder('w')
+        $parsed = FormWebhookIngressTokenParser::parseComposite(strtolower($token));
+        if (\is_array($parsed)) {
+            $org = $this->organizationRepository->findOneByWebhookPublicPrefix($parsed['prefix']);
+            if ($org === null) {
+                return null;
+            }
+
+            return $this->findOneByPublicTokenForIngressWithOrg($parsed['workflowPublicToken'], $org);
+        }
+
+        $legacyUuid = FormWebhookIngressTokenParser::parseLegacyUuidOnly($token);
+        if ($legacyUuid !== null) {
+            return $this->findOneByPublicTokenForIngressWithOrg($legacyUuid, null);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param non-empty-string $workflowPublicToken Jeton UUID stocké sur le workflow (sans préfixe org).
+     */
+    private function findOneByPublicTokenForIngressWithOrg(string $workflowPublicToken, ?Organization $expectedOrg): ?FormWebhook
+    {
+        $qb = $this->createQueryBuilder('w')
             ->distinct()
             ->leftJoin('w.createdBy', 'cb')->addSelect('cb')
+            ->leftJoin('w.organization', 'org')->addSelect('org')
             ->leftJoin('w.project', 'pr')->addSelect('pr')
             ->leftJoin('w.actions', 'a', 'WITH', 'a.active = true')
             ->addSelect('a')
             ->leftJoin('a.mailjet', 'mj')->addSelect('mj')
             ->leftJoin('a.serviceConnection', 'sc')->addSelect('sc')
             ->andWhere('w.publicToken = :t')
-            ->orderBy('a.sortOrder', 'ASC')
-            ->setParameter('t', $token)
-            ->getQuery()
-            ->getOneOrNullResult();
+            ->setParameter('t', $workflowPublicToken)
+            ->orderBy('a.sortOrder', 'ASC');
+
+        if ($expectedOrg !== null) {
+            $qb->andWhere('w.organization = :org')->setParameter('org', $expectedOrg);
+        }
+
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
     /**

@@ -434,6 +434,7 @@ final class ApiOrganizationController extends AbstractController
         $row = [
             'id' => $organization->getId(),
             'name' => $organization->getName(),
+            'webhookPublicPrefix' => $organization->getWebhookPublicPrefix(),
             'billing' => [
                 'line1' => $organization->getBillingLine1(),
                 'line2' => $organization->getBillingLine2(),

@@ -9,6 +9,7 @@ use App\Entity\FormWebhook;
 use App\Entity\FormWebhookActionLog;
 use App\Entity\FormWebhookLog;
 use App\Logging\ApplicationErrorLogger;
+use App\FormWebhook\FormWebhookIngressTokenParser;
 use App\Service\WebhookyPublicUrlResolver;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Lazy;
@@ -162,7 +163,7 @@ final class FormWebhookRunNotifier
         }
 
         // Éviter une boucle si le workflow en échec est le même que le webhook d’alerte.
-        return $webhook->getPublicToken() !== $token;
+        return $webhook->getIngressPublicToken() !== $token;
     }
 
     private function resolveErrorNotifyWebhookUrl(): string
@@ -172,11 +173,12 @@ final class FormWebhookRunNotifier
 
     private function extractFormWebhookToken(string $webhookUrl): ?string
     {
-        if (preg_match('#/webhook/form/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})#i', $webhookUrl, $m) === 1) {
-            return $m[1];
+        $segment = FormWebhookIngressTokenParser::extractTokenSegmentFromUrl($webhookUrl);
+        if ($segment === null || !FormWebhookIngressTokenParser::isValidIngressToken($segment)) {
+            return null;
         }
 
-        return null;
+        return $segment;
     }
 
     /**
@@ -205,7 +207,7 @@ final class FormWebhookRunNotifier
             'workflow_id' => (string) ($webhook->getId() ?? ''),
             'organization_name' => $webhook->getOrganization()?->getName() ?? '',
             'log_id' => (string) ($log->getId() ?? ''),
-            'ingress_url' => $base.'/webhook/form/'.$webhook->getPublicToken(),
+            'ingress_url' => $base.'/webhook/form/'.$webhook->getIngressPublicToken(),
             'failure_stage' => $failureStage,
             'failure_stage_label' => $failureStageLabel,
             'global_error_detail' => (string) ($log->getErrorDetail() ?? ''),
