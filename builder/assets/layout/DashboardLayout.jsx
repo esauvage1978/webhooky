@@ -17,7 +17,7 @@ const NAV_ORGANIZATIONS = { id: 'organizations', label: 'Organisations', icon: M
 
 const NAV_ADMIN_SUPERVISION = { id: 'adminSupervision', label: 'Supervision', icon: MdiShieldAlert };
 
-const NAV_ADMIN_OPTIONS = { id: 'adminOptions', label: 'Options', icon: MdiTune };
+const NAV_ADMIN_OPTIONS = { id: 'adminOptions', label: 'Options plateforme', icon: MdiTune };
 
 const NAV_USERS = { id: 'users', label: 'Utilisateurs', icon: MdiPeople };
 
@@ -105,7 +105,7 @@ function MdiTune() {
     <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden>
       <path
         fill="currentColor"
-        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm12 4v-2H11v2h8zm0-4v-2h-4v2h4z"
+        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-4h-2v6h2zM7 9v2H3v2h4v2h2V5H7v4zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
       />
     </svg>
   );
