@@ -51,4 +51,24 @@ class ApplicationErrorLogRepository extends ServiceEntityRepository
         /** @var list<ApplicationErrorLog> $items */
         return ['items' => $items, 'total' => $total];
     }
+
+    /**
+     * Supprime les lignes dont la date de création est dans l’intervalle (mêmes règles que la liste admin).
+     *
+     * @return int nombre de lignes supprimées
+     */
+    public function deleteInCreatedAtRange(?\DateTimeImmutable $dateFrom, ?\DateTimeImmutable $dateTo): int
+    {
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->delete(ApplicationErrorLog::class, 'e');
+
+        if ($dateFrom instanceof \DateTimeImmutable) {
+            $qb->andWhere('e.createdAt >= :df')->setParameter('df', $dateFrom);
+        }
+        if ($dateTo instanceof \DateTimeImmutable) {
+            $qb->andWhere('e.createdAt <= :dt')->setParameter('dt', $dateTo);
+        }
+
+        return (int) $qb->getQuery()->execute();
+    }
 }

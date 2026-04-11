@@ -61,6 +61,48 @@ final class ApiAdminApplicationErrorController extends AbstractController
         ]);
     }
 
+    /** Supprime toutes les entrées dont la date est dans la période (identique aux filtres de liste). */
+    #[Route('/purge', name: 'api_admin_application_errors_purge', methods: ['POST'])]
+    public function purge(Request $request): JsonResponse
+    {
+        $payload = json_decode($request->getContent(), true);
+        if (!\is_array($payload)) {
+            return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $dateFrom = null;
+        $dateTo = null;
+        $df = $payload['dateFrom'] ?? null;
+        if (\is_string($df) && $df !== '') {
+            try {
+                $dateFrom = new \DateTimeImmutable($df);
+            } catch (\Exception) {
+            }
+        }
+        $dt = $payload['dateTo'] ?? null;
+        if (\is_string($dt) && $dt !== '') {
+            try {
+                if (1 === preg_match('/^\d{4}-\d{2}-\d{2}$/', $dt)) {
+                    $dateTo = new \DateTimeImmutable($dt.' 23:59:59');
+                } else {
+                    $dateTo = new \DateTimeImmutable($dt);
+                }
+            } catch (\Exception) {
+            }
+        }
+
+        if ($dateFrom === null && $dateTo === null) {
+            return new JsonResponse(
+                ['error' => 'Indiquez au moins une borne de date (dateFrom et/ou dateTo).'],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
+        $deleted = $this->applicationErrorLogRepository->deleteInCreatedAtRange($dateFrom, $dateTo);
+
+        return new JsonResponse(['deleted' => $deleted]);
+    }
+
     #[Route('/{id}', name: 'api_admin_application_errors_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(int $id): JsonResponse
     {

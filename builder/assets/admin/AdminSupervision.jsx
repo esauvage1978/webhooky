@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import ErrorAlert from '../components/ui/ErrorAlert.jsx';
 import Tabs from '../components/ui/Tabs.jsx';
-import { apiJsonInit, parseJson } from '../lib/http.js';
+import { apiJsonInit, apiPostJson, parseJson } from '../lib/http.js';
 
 const SUPERVISION_TABS = [
   { id: 'errors', label: 'Erreurs applicatives' },
@@ -59,6 +59,8 @@ export default function AdminSupervision() {
   const [errFilters, setErrFilters] = useState(() => defaultSupervisionDateRangeDays(7));
   const [errDetail, setErrDetail] = useState({ loading: false, data: null, error: '' });
   const [selectedErrId, setSelectedErrId] = useState(null);
+  const [errPurgeBusy, setErrPurgeBusy] = useState(false);
+  const [errPurgeError, setErrPurgeError] = useState('');
   const [resAudit, setResAudit] = useState({
     items: [],
     total: 0,
@@ -98,6 +100,7 @@ export default function AdminSupervision() {
 
   const loadErrors = useCallback(
     async (page = 1, filters = errFilters) => {
+      setErrPurgeError('');
       setErrList((s) => ({ ...s, loading: true, error: '' }));
       try {
         const params = new URLSearchParams();
@@ -130,6 +133,40 @@ export default function AdminSupervision() {
     },
     [errFilters],
   );
+
+  const purgeErrorsInRange = useCallback(async () => {
+    if (!errFilters.dateFrom && !errFilters.dateTo) {
+      setErrPurgeError('Indiquez au moins une date (du ou au).');
+      return;
+    }
+    setErrPurgeError('');
+    if (errList.loading || errList.total === 0) return;
+    const ok = window.confirm(
+      `Supprimer définitivement ${errList.total} entrée(s) correspondant à cette période ? Cette action est irréversible.`,
+    );
+    if (!ok) return;
+    setErrPurgeBusy(true);
+    try {
+      const body = {};
+      if (errFilters.dateFrom) body.dateFrom = errFilters.dateFrom;
+      if (errFilters.dateTo) body.dateTo = errFilters.dateTo;
+      const res = await apiPostJson('/api/admin/application-errors/purge', {
+        body: JSON.stringify(body),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) {
+        setErrPurgeError(data?.error ?? 'Purge impossible');
+        return;
+      }
+      setSelectedErrId(null);
+      setErrDetail({ loading: false, data: null, error: '' });
+      await loadErrors(1);
+    } catch {
+      setErrPurgeError('Erreur réseau');
+    } finally {
+      setErrPurgeBusy(false);
+    }
+  }, [errFilters, errList.loading, errList.total, loadErrors]);
 
   const openErrorDetail = useCallback(async (id) => {
     setSelectedErrId(id);
@@ -293,40 +330,66 @@ export default function AdminSupervision() {
       {tab === 'errors' ? (
         <div className="content-card" role="tabpanel" id="panel-errors" aria-labelledby="tab-errors">
           <ErrorAlert>{errList.error}</ErrorAlert>
-          <div className="users-filters-minimal admin-supervision-resource-filters admin-supervision-errors-filters">
-            <label className="users-filter-min">
-              <span className="users-filter-min-label muted">Du</span>
-              <input
-                type="date"
-                value={errFilters.dateFrom}
-                onChange={(e) => setErrFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-              />
-            </label>
-            <label className="users-filter-min">
-              <span className="users-filter-min-label muted">Au</span>
-              <input
-                type="date"
-                value={errFilters.dateTo}
-                onChange={(e) => setErrFilters((f) => ({ ...f, dateTo: e.target.value }))}
-              />
-            </label>
-            <div className="users-filter-min admin-supervision-filter-actions">
-              <button type="button" className="btn btn-primary" onClick={() => void loadErrors(1)}>
-                Filtrer
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  const next = defaultSupervisionDateRangeDays(7);
-                  setErrFilters(next);
-                  void loadErrors(1, next);
-                }}
-              >
-                7&nbsp;jours
-              </button>
+          <ErrorAlert>{errPurgeError}</ErrorAlert>
+          <section className="admin-supervision-errors-filters-block" aria-labelledby="supervision-errors-filters-title">
+            <div className="admin-supervision-errors-filters-head">
+              <h3 id="supervision-errors-filters-title" className="admin-supervision-errors-filters-title">
+                Période affichée
+              </h3>
+              <p className="muted small admin-supervision-errors-filters-hint">
+                La liste ci-dessous et le total reflètent cette plage. <strong>Purger la période</strong> supprime
+                définitivement toutes les entrées correspondantes en base (pas seulement la page courante).
+              </p>
             </div>
-          </div>
+            <div className="users-filters-minimal admin-supervision-resource-filters admin-supervision-errors-filters">
+              <label className="users-filter-min">
+                <span className="users-filter-min-label muted">Du</span>
+                <input
+                  type="date"
+                  value={errFilters.dateFrom}
+                  onChange={(e) => setErrFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+                />
+              </label>
+              <label className="users-filter-min">
+                <span className="users-filter-min-label muted">Au</span>
+                <input
+                  type="date"
+                  value={errFilters.dateTo}
+                  onChange={(e) => setErrFilters((f) => ({ ...f, dateTo: e.target.value }))}
+                />
+              </label>
+              <div className="users-filter-min admin-supervision-filter-actions admin-supervision-errors-filter-actions">
+                <button type="button" className="btn btn-primary" onClick={() => void loadErrors(1)}>
+                  Appliquer les filtres
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const next = defaultSupervisionDateRangeDays(7);
+                    setErrFilters(next);
+                    void loadErrors(1, next);
+                  }}
+                >
+                  7&nbsp;jours
+                </button>
+                <button
+                  type="button"
+                  className="btn danger"
+                  disabled={
+                    errPurgeBusy ||
+                    errList.loading ||
+                    errList.total === 0 ||
+                    (!errFilters.dateFrom && !errFilters.dateTo)
+                  }
+                  aria-busy={errPurgeBusy}
+                  onClick={() => void purgeErrorsInRange()}
+                >
+                  {errPurgeBusy ? 'Purge…' : 'Purger la période'}
+                </button>
+              </div>
+            </div>
+          </section>
           {errList.loading ? <p className="muted">Chargement…</p> : null}
           {!errList.loading && errList.items.length === 0 && !errList.error ? (
             <p className="muted">Aucune erreur enregistrée pour l’instant.</p>

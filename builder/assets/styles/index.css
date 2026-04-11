@@ -5557,6 +5557,45 @@ h1 {
   margin-bottom: 1rem;
 }
 
+.admin-supervision-errors-filters-block {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated, var(--bg-secondary, #f5f5f5)) 100%, transparent);
+}
+
+.admin-supervision-errors-filters-head {
+  margin-bottom: 0.85rem;
+}
+
+.admin-supervision-errors-filters-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.admin-supervision-errors-filters-hint {
+  margin: 0;
+  max-width: 52rem;
+  line-height: 1.45;
+}
+
+.admin-supervision-errors-filters {
+  margin-bottom: 0;
+}
+
+.admin-supervision-errors-filter-actions {
+  align-items: flex-end;
+}
+
+@media (min-width: 720px) {
+  .admin-supervision-errors-filters {
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+}
+
 .admin-supervision-filter-actions {
   display: flex;
   flex-wrap: wrap;
