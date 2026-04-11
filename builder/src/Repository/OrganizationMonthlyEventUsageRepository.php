@@ -97,27 +97,39 @@ class OrganizationMonthlyEventUsageRepository extends ServiceEntityRepository
      */
     public function countsByYearMonthKeysForOrganization(Organization $organization, array $yearMonthTuples): array
     {
-        $codes = [];
+        /** @var array<string, array{y: int, m: int}> $uniquePairs clé stable pour dédoublonner */
+        $uniquePairs = [];
         foreach ($yearMonthTuples as $tuple) {
             $y = (int) ($tuple['year'] ?? 0);
             $m = (int) ($tuple['month'] ?? 0);
             if ($y >= 1 && $m >= 1 && $m <= 12) {
-                $codes[] = $y * 100 + $m;
+                $uniquePairs[\sprintf('%d-%d', $y, $m)] = ['y' => $y, 'm' => $m];
             }
         }
-        $codes = array_values(array_unique($codes));
-        if ($codes === []) {
+        if ($uniquePairs === []) {
             return [];
         }
 
-        $rows = $this->createQueryBuilder('u')
+        $qb = $this->createQueryBuilder('u')
             ->select('u.year', 'u.month', 'u.eventCount')
             ->where('u.organization = :o')
-            ->andWhere('(u.year * 100 + u.month) IN (:codes)')
-            ->setParameter('o', $organization)
-            ->setParameter('codes', $codes, ArrayParameterType::INTEGER)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('o', $organization);
+
+        $or = $qb->expr()->orX();
+        $i = 0;
+        foreach ($uniquePairs as $pair) {
+            $suffix = (string) $i;
+            $or->add($qb->expr()->andX(
+                $qb->expr()->eq('u.year', ':ym'.$suffix.'y'),
+                $qb->expr()->eq('u.month', ':ym'.$suffix.'m'),
+            ));
+            $qb->setParameter('ym'.$suffix.'y', $pair['y']);
+            $qb->setParameter('ym'.$suffix.'m', $pair['m']);
+            ++$i;
+        }
+        $qb->andWhere($or);
+
+        $rows = $qb->getQuery()->getArrayResult();
 
         $out = [];
         foreach ($rows as $row) {
