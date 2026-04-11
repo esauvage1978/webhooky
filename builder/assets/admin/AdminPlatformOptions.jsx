@@ -228,20 +228,6 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
   const filterFields = (
     <>
       <label className="users-filter-min">
-        <span className="users-filter-min-label muted">Catégorie</span>
-        <select
-          value={optFilters.category}
-          onChange={(e) => setOptFilters((f) => ({ ...f, category: e.target.value }))}
-        >
-          <option value="">Toutes</option>
-          {categoryFilterChoices.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="users-filter-min">
         <span className="users-filter-min-label muted">Domaine</span>
         <select
           value={optFilters.domain}
@@ -249,6 +235,20 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
         >
           <option value="">Tous</option>
           {domainFilterChoices.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="users-filter-min">
+        <span className="users-filter-min-label muted">Catégorie</span>
+        <select
+          value={optFilters.category}
+          onChange={(e) => setOptFilters((f) => ({ ...f, category: e.target.value }))}
+        >
+          <option value="">Toutes</option>
+          {categoryFilterChoices.map((v) => (
             <option key={v} value={v}>
               {v}
             </option>
@@ -342,8 +342,8 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
           <thead>
             <tr>
               <th>Id</th>
-              <th>Catégorie</th>
               <th>Domaine</th>
+              <th>Catégorie</th>
               <th>Nom</th>
               <th>Commentaire</th>
               <th>Valeur</th>
@@ -361,8 +361,8 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
             {opts.items.map((row) => (
               <tr key={row.id}>
                 <td className="mono muted">{row.id}</td>
-                <td>{row.category}</td>
                 <td>{row.domain ?? '—'}</td>
+                <td>{row.category}</td>
                 <td className="mono small">{row.optionName}</td>
                 <td className="small muted">
                   {row.comment && row.comment.length > 60 ? `${row.comment.slice(0, 57)}…` : row.comment ?? '—'}
@@ -464,6 +464,20 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
             <ErrorAlert>{optModal.error}</ErrorAlert>
             {optionMeta.error ? <p className="muted small">{optionMeta.error}</p> : null}
             <label className="field">
+              <span>Domaine (optionnel)</span>
+              <select
+                value={optModal.form.domain ?? ''}
+                onChange={(e) => setOptModal((m) => ({ ...m, form: { ...m.form, domain: e.target.value } }))}
+              >
+                <option value="">Aucun</option>
+                {modalDomainChoices.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
               <span>Catégorie</span>
               <select
                 value={optModal.form.category}
@@ -474,20 +488,6 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
                   Choisir…
                 </option>
                 {modalCategoryChoices.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Domaine (optionnel)</span>
-              <select
-                value={optModal.form.domain ?? ''}
-                onChange={(e) => setOptModal((m) => ({ ...m, form: { ...m.form, domain: e.target.value } }))}
-              >
-                <option value="">Aucun</option>
-                {modalDomainChoices.map((v) => (
                   <option key={v} value={v}>
                     {v}
                   </option>
