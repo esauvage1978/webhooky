@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { parseJson } from '../lib/http.js';
+import { apiPostJson, parseJson } from '../lib/http.js';
 
 function formatAdminQuotaCell(subscription) {
   if (!subscription) return '—';
@@ -20,6 +20,7 @@ export default function Organizations({ user, onOrganizationChanged }) {
   const [formName, setFormName] = useState('');
   const [formUserId, setFormUserId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [regeneratingOrgId, setRegeneratingOrgId] = useState(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -120,6 +121,30 @@ export default function Organizations({ user, onOrganizationChanged }) {
       setError('Erreur réseau');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const regenerateWebhookPrefix = async (row) => {
+    if (!isAdmin) return;
+    const ok = window.confirm(
+      `Régénérer le préfixe webhook pour « ${row.name} » ? Les anciennes URL d’ingress (/webhook/form/…) ne fonctionneront plus tant que les intégrations n’auront pas été mises à jour avec les nouvelles URL des workflows.`,
+    );
+    if (!ok) return;
+    setError('');
+    setRegeneratingOrgId(row.id);
+    try {
+      const res = await apiPostJson(`/api/organizations/${row.id}/regenerate-webhook-prefix`, { body: '{}' });
+      const data = await parseJson(res);
+      if (!res.ok) {
+        setError(data?.error ?? 'Régénération impossible');
+        return;
+      }
+      await refresh();
+      await onOrganizationChanged?.();
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setRegeneratingOrgId(null);
     }
   };
 
@@ -277,11 +302,24 @@ export default function Organizations({ user, onOrganizationChanged }) {
                     <td>{row.id}</td>
                     <td>{row.name}</td>
                     <td>
-                      <code className="mono small" title="Token d’organisation (début des URL de workflows)">
-                        {row.webhookPublicPrefix && row.webhookPublicPrefix !== ''
-                          ? row.webhookPublicPrefix
-                          : '—'}
-                      </code>
+                      <div className="org-webhook-prefix-cell">
+                        <code className="mono small" title="Préfixe d’organisation (début des URL /webhook/form/…)">
+                          {row.webhookPublicPrefix && row.webhookPublicPrefix !== ''
+                            ? row.webhookPublicPrefix
+                            : '—'}
+                        </code>
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            className="btn secondary small org-regenerate-prefix-btn"
+                            title="Attribuer un nouveau préfixe (les anciennes URL d’ingress cessent de fonctionner)"
+                            disabled={regeneratingOrgId === row.id}
+                            onClick={() => void regenerateWebhookPrefix(row)}
+                          >
+                            {regeneratingOrgId === row.id ? '…' : 'Régénérer'}
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                     {isAdmin ? (
                       <>

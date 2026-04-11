@@ -404,6 +404,30 @@ final class ApiOrganizationController extends AbstractController
         return new JsonResponse($this->serializeOrganization($organization, true));
     }
 
+    /** Remplace le préfixe hex (12 car.) des URL d’ingress /webhook/form/… pour cette organisation. */
+    #[Route('/{id}/regenerate-webhook-prefix', name: 'api_organizations_regenerate_webhook_prefix', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function regenerateWebhookPrefix(int $id): JsonResponse
+    {
+        $organization = $this->organizationRepository->find($id);
+        if (!$organization instanceof Organization) {
+            return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        $organization->setWebhookPublicPrefix($this->organizationRepository->allocateUniqueWebhookPublicPrefix());
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            return new JsonResponse(
+                ['error' => 'Impossible d’attribuer un nouveau préfixe unique. Réessayez.'],
+                Response::HTTP_CONFLICT,
+            );
+        }
+
+        return new JsonResponse($this->serializeOrganization($organization, true));
+    }
+
     #[Route('/{id}', name: 'api_organizations_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     #[IsGranted('ROLE_ADMIN')]
     public function delete(int $id): JsonResponse

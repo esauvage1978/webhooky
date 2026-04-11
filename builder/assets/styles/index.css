@@ -1590,6 +1590,17 @@ h1 {
     0 8px 22px rgba(12, 25, 41, 0.06);
 }
 
+.org-webhook-prefix-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.org-regenerate-prefix-btn {
+  flex-shrink: 0;
+}
+
 /* Tableaux imbriqués facturation : éviter cadre lourd dans les <details> */
 .org-billing-month-body .org-table-wrap {
   margin-top: 0.5rem;
