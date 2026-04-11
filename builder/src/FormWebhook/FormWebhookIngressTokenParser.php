@@ -41,6 +41,10 @@ final class FormWebhookIngressTokenParser
     public static function parseComposite(string $token): ?array
     {
         $token = strtolower($token);
+        // Copie « lisible » : préfixe org (12 hex) + tiret + UUID workflow — normaliser en concaténation stricte.
+        if (preg_match('/^([0-9a-f]{12})-('.self::UUID_SEGMENT.')$/i', $token, $m) === 1) {
+            $token = $m[1].$m[2];
+        }
         $pattern = '/^([0-9a-f]{12})('.self::UUID_SEGMENT.')$/i';
         if (preg_match($pattern, $token, $m) !== 1) {
             return null;
