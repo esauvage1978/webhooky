@@ -9,8 +9,8 @@ use App\Entity\FormWebhook;
 use App\Entity\FormWebhookActionLog;
 use App\Entity\FormWebhookLog;
 use App\Logging\ApplicationErrorLogger;
+use App\Service\WebhookyPublicUrlResolver;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\Lazy;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -24,18 +24,19 @@ use Symfony\Component\Mime\Email;
  */
 final class FormWebhookRunNotifier
 {
+    private readonly string $publicUrl;
+
     public function __construct(
         private readonly MailerInterface $mailer,
         private readonly LoggerInterface $logger,
         #[Lazy]
         private readonly FormWebhookIngressHandlerInterface $formWebhookIngressHandler,
         private readonly ErrorNotifyWebhookUrlResolver $errorNotifyWebhookUrlResolver,
-        #[Autowire('%app.webhooky.error_notify_from%')]
-        private readonly string $errorNotifyFromEmail,
-        #[Autowire('%app.webhooky.public_url%')]
-        private readonly string $publicUrl,
+        private readonly ErrorNotifyWebhookFromResolver $errorNotifyWebhookFromResolver,
+        WebhookyPublicUrlResolver $webhookyPublicUrlResolver,
         private readonly ApplicationErrorLogger $applicationErrorLogger,
     ) {
+        $this->publicUrl = rtrim($webhookyPublicUrlResolver->resolve(), '/');
     }
 
     public function notifyAfterRun(FormWebhook $webhook, FormWebhookLog $log, bool $success): void
@@ -131,7 +132,7 @@ final class FormWebhookRunNotifier
 
         try {
             $email = (new Email())
-                ->from(new Address($this->errorNotifyFromEmail, 'Webhooky'))
+                ->from(new Address($this->errorNotifyWebhookFromResolver->resolve(), 'Webhooky'))
                 ->to($to)
                 ->subject($subject)
                 ->text($plain)

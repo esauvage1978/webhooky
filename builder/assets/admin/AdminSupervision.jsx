@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import AdminPlatformOptions from './AdminPlatformOptions.jsx';
 import ErrorAlert from '../components/ui/ErrorAlert.jsx';
 import Tabs from '../components/ui/Tabs.jsx';
 import { apiJsonInit, parseJson } from '../lib/http.js';
@@ -8,7 +7,6 @@ const SUPERVISION_TABS = [
   { id: 'errors', label: 'Erreurs applicatives' },
   { id: 'resources', label: 'Actions ressources' },
   { id: 'users', label: 'Actions comptes' },
-  { id: 'options', label: 'Options plateforme' },
 ];
 
 const USER_ACTION_LABELS = {
@@ -853,12 +851,6 @@ export default function AdminSupervision() {
             </div>
           ) : null}
         </div>
-      ) : null}
-
-      {tab === 'options' ? (
-        <AdminPlatformOptions
-          contentCardProps={{ role: 'tabpanel', id: 'panel-options', 'aria-labelledby': 'tab-options' }}
-        />
       ) : null}
     </div>
   );

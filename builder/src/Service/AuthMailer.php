@@ -23,12 +23,10 @@ final class AuthMailer
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly FormWebhookIngressHandler $formWebhookIngressHandler,
         private readonly LoggerInterface $logger,
-        #[Autowire('%app.webhooky.register_verify_webhook_url%')]
-        private readonly string $registerVerifyWebhookUrlDefault,
+        private readonly RegisterVerifyWebhookUrlResolver $registerVerifyWebhookUrlResolver,
         #[Autowire('%env(WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL)%')]
         private readonly string $registerVerifyWebhookUrlEnv,
-        #[Autowire('%app.webhooky.user_invite_webhook_url%')]
-        private readonly string $userInviteWebhookUrlDefault,
+        private readonly UserInviteWebhookUrlResolver $userInviteWebhookUrlResolver,
         #[Autowire('%env(WEBHOOKY_USER_INVITE_WEBHOOK_URL)%')]
         private readonly string $userInviteWebhookUrlEnv,
         #[Autowire('%env(MAILER_FROM)%')]
@@ -36,9 +34,7 @@ final class AuthMailer
         /** Surcharge explicite (staging, tests locaux avec liens locaux). Vide = URL publique canonique ci-dessous. */
         #[Autowire('%env(APP_PUBLIC_URL)%')]
         private readonly string $appPublicUrl,
-        /** Base HTTPS des liens e-mail / webhook (invitation, vérif., etc.) — voir parameters.app.webhooky.public_url */
-        #[Autowire('%app.webhooky.public_url%')]
-        private readonly string $webhookyPublicUrl,
+        private readonly WebhookyPublicUrlResolver $webhookyPublicUrlResolver,
         private readonly ApplicationErrorLogger $applicationErrorLogger,
     ) {
     }
@@ -53,7 +49,7 @@ final class AuthMailer
         $token = $webhookUrl !== '' ? $this->extractFormWebhookToken($webhookUrl) : null;
 
         if ($webhookUrl !== '' && $token === null) {
-            $this->logger->error('AuthMailer : WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL / app.webhooky.register_verify_webhook_url ne contient pas un jeton /webhook/form/{uuid} — inscription sans appel webhook.', [
+            $this->logger->error('AuthMailer : WEBHOOKY_REGISTER_VERIFY_WEBHOOK_URL / option webhooky_register_verify_webhook_url ne contient pas un jeton /webhook/form/{uuid} — inscription sans appel webhook.', [
                 'webhookUrl' => $webhookUrl,
             ]);
         }
@@ -141,7 +137,7 @@ final class AuthMailer
         $token = $webhookUrl !== '' ? $this->extractFormWebhookToken($webhookUrl) : null;
 
         if ($webhookUrl !== '' && $token === null) {
-            $this->logger->error('AuthMailer : WEBHOOKY_USER_INVITE_WEBHOOK_URL / app.webhooky.user_invite_webhook_url ne contient pas un jeton /webhook/form/{uuid} — invitation sans appel webhook.', [
+            $this->logger->error('AuthMailer : WEBHOOKY_USER_INVITE_WEBHOOK_URL / option webhooky_user_invite_webhook_url ne contient pas un jeton /webhook/form/{uuid} — invitation sans appel webhook.', [
                 'webhookUrl' => $webhookUrl,
             ]);
         }
@@ -230,7 +226,7 @@ final class AuthMailer
             return $fromEnv;
         }
 
-        return trim($this->registerVerifyWebhookUrlDefault);
+        return trim($this->registerVerifyWebhookUrlResolver->resolve());
     }
 
     private function resolveUserInviteWebhookUrl(): string
@@ -240,7 +236,7 @@ final class AuthMailer
             return $fromEnv;
         }
 
-        return trim($this->userInviteWebhookUrlDefault);
+        return trim($this->userInviteWebhookUrlResolver->resolve());
     }
 
     private function recipientDisplayNameFromEmail(string $email): string
@@ -298,6 +294,6 @@ final class AuthMailer
             return rtrim($fromEnv, '/');
         }
 
-        return rtrim(trim($this->webhookyPublicUrl), '/');
+        return rtrim(trim($this->webhookyPublicUrlResolver->resolve()), '/');
     }
 }

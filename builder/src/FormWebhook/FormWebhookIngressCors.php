@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\FormWebhook;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -13,12 +12,16 @@ use Symfony\Component\HttpFoundation\Request;
 final class FormWebhookIngressCors
 {
     /**
-     * @param list<string> $allowedOrigins origines exactes (schéma + hôte + port)
+     * Origines exactes (schéma + hôte + port), issues de l’option plateforme {@see FormWebhookCorsOriginsResolver::OPTION_NAME}.
+     *
+     * @var list<string>
      */
+    private readonly array $allowedOrigins;
+
     public function __construct(
-        #[Autowire('%app.webhooky.form_webhook_cors_origins%')]
-        private readonly array $allowedOrigins,
+        FormWebhookCorsOriginsResolver $corsOriginsResolver,
     ) {
+        $this->allowedOrigins = $corsOriginsResolver->resolve();
     }
 
     /**
