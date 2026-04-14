@@ -15,9 +15,8 @@ const submitUrl = import.meta.env.PROD ? '/contact-webhook.php' : webhookUrl;
     <div class="page-hero">
       <h1>Contact</h1>
       <p>
-        Utilisez le formulaire ci-dessous. En production, l’envoi passe par le <strong>même domaine</strong> (relai serveur)
-        vers le webhook, ce qui évite les blocages navigateur (CORS). Vous pouvez aussi nous écrire à
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        Vous pouvez nous écrire à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> ou utiliser le formulaire
+        ci-dessous.
       </p>
     </div>
 
