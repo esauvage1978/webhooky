@@ -43,7 +43,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--coral) 0%, #ff8f6b 100%);
+  background: url('/favicon.png') center / cover no-repeat;
   box-shadow: 0 6px 20px rgba(255, 90, 54, 0.35);
   flex-shrink: 0;
 }

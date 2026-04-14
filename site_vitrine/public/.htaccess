@@ -20,15 +20,18 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
+  # Host canonique : éviter le duplicate www/non-www (si www pointe aussi vers ce site)
+  RewriteCond %{HTTP_HOST} ^www\.webhooky\.fr$ [NC]
+  RewriteRule ^ https://webhooky.fr%{REQUEST_URI} [R=301,L]
+
   # HTTPS (ignorer localhost / 127.0.0.1 pour le dev local)
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]
   RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:\d+)?$ [NC]
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-  # Option : forcer l’apex sans www (décommentez si www.webhooky.fr pointe aussi vers ce site)
-  # RewriteCond %{HTTP_HOST} ^www\.webhooky\.fr$ [NC]
-  # RewriteRule ^ https://webhooky.fr%{REQUEST_URI} [R=301,L]
+  # Normaliser /index.html (évite une seconde URL indexable)
+  RewriteRule ^index\.html$ / [R=301,L]
 </IfModule>
 
 <IfModule mod_deflate.c>
