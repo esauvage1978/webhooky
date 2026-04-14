@@ -18,7 +18,6 @@ export default defineConfig({
         }
         if (
           u.endsWith('/tarifs') ||
-          u.endsWith('/documentation') ||
           u.endsWith('/contact')
         ) {
           item.priority = 0.85;
@@ -26,7 +25,6 @@ export default defineConfig({
           return item;
         }
         if (
-          u.endsWith('/documentation-technique') ||
           u.endsWith('/mentions-legales') ||
           u.endsWith('/politique-confidentialite') ||
           u.endsWith('/cgu') ||
