@@ -6,7 +6,7 @@ export const CONTACT_EMAIL = 'contact@webhooky.fr';
 
 /** Webhook formulaire (ingress) — surchargé par PUBLIC_CONTACT_WEBHOOK_URL si défini. */
 export const CONTACT_FORM_WEBHOOK_DEFAULT =
-  'https://webhooky.builders/webhook/form/64470731-3f7d-48b8-aabf-817f08ce8b42';
+  'https://webhooky.builders/webhook/form/0b40160efaa364470731-3f7d-48b8-aabf-817f08ce8b42';
 
 /** Préférences cookies (localStorage) — incrémenter pour forcer une nouvelle décision. */
 export const COOKIE_CONSENT_STORAGE_KEY = 'webhooky_cookie_consent';
