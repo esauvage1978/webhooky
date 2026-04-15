@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && php bin/console doctrine:schema:update --force && php bin/console app:ensure-default-webhook-projects"
+    "build": "vite build && php bin/console doctrine:schema:update --force && php bin/console app:ensure-default-webhook-projects && php bin/console app:ensure-default-platform-options"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
