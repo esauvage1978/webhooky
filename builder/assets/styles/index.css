@@ -5746,28 +5746,31 @@ h1 {
 .wh-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.25rem;
   margin: 0 0 1rem;
+  padding: 0 0 0.15rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .wh-tabs__btn {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-elevated);
-  padding: 0.45rem 0.85rem;
-  font-size: 0.88rem;
-  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.6rem 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
-  color: var(--ink);
+  color: var(--text-muted);
   font-family: inherit;
 }
 
 .wh-tabs__btn:hover {
-  border-color: rgba(46, 160, 120, 0.45);
+  color: var(--ink);
+  border-bottom-color: rgba(255, 90, 54, 0.35);
 }
 
 .wh-tabs__btn--active {
-  border-color: #2ea078;
-  background: rgba(46, 160, 120, 0.1);
-  color: #1e6b52;
+  color: var(--ink);
+  border-bottom-color: var(--coral);
 }
