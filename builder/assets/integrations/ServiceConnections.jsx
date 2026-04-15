@@ -43,7 +43,7 @@ function defaultConfigJson(type, typesMeta) {
   return JSON.stringify(samples[type] ?? { note: 'voir la documentation du type' }, null, 2);
 }
 
-export default function ServiceConnections({ user, hubTitle, hubDescription }) {
+export default function ServiceConnections({ user, hubTitle, hubDescription, embeddedInTabs = false }) {
   const isAdmin = user.roles.includes('ROLE_ADMIN');
   const [typesMeta, setTypesMeta] = useState([]);
   const [organizations, setOrganizations] = useState([]);
@@ -345,7 +345,7 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
 
   const canStartCreate = !noOrgUser && typesMeta.length > 0;
 
-  const hasHubHeader = !!(hubTitle || hubDescription);
+  const hasHubHeader = !embeddedInTabs && !!(hubTitle || hubDescription);
 
   const mainBody = (
     <>
@@ -357,6 +357,21 @@ export default function ServiceConnections({ user, hubTitle, hubDescription }) {
 
           {noOrgUser ? (
             <p className="muted">Rattachez votre compte à une organisation pour gérer les connecteurs.</p>
+          ) : null}
+
+          {embeddedInTabs && !noOrgUser ? (
+            <div className="wp-projects-hero-actions" style={{ marginTop: '0.25rem' }}>
+              <button
+                type="button"
+                className="fw-btn-primary wp-proj-hero-btn"
+                onClick={startCreate}
+                disabled={loading || !canStartCreate}
+                title={loading || canStartCreate || noOrgUser ? undefined : 'Aucun type de service disponible'}
+              >
+                <i className="fa-solid fa-plus" aria-hidden />
+                <span>Nouveau connecteur</span>
+              </button>
+            </div>
           ) : null}
 
           {!noOrgUser ? (
