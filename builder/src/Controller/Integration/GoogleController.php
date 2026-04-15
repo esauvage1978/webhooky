@@ -10,7 +10,6 @@ use App\Entity\WebhookProject;
 use App\Entity\User;
 use App\Integration\OrganizationIntegrationType;
 use App\Repository\OrganizationIntegrationRepository;
-use App\Repository\OrganizationRepository;
 use App\Repository\WebhookProjectRepository;
 use App\Security\SensitiveStringEncryptor;
 use App\Service\SEO\GoogleOAuthService;
@@ -30,7 +29,6 @@ final class GoogleController extends AbstractController
 
     public function __construct(
         private readonly GoogleOAuthService $googleOAuthService,
-        private readonly OrganizationRepository $organizationRepository,
         private readonly WebhookProjectRepository $webhookProjectRepository,
         private readonly OrganizationIntegrationRepository $organizationIntegrationRepository,
         private readonly SensitiveStringEncryptor $encryptor,
@@ -42,14 +40,6 @@ final class GoogleController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function start(Request $request): Response
     {
-        if (!$this->googleOAuthService->isConfigured()) {
-            return new Response(
-                '<html><body><p>OAuth Google non configuré. Un administrateur doit renseigner les options plateforme : <code>google_oauth_client_id</code> et <code>google_oauth_client_secret_cipher</code> (via Administration → Options plateforme).</p></body></html>',
-                Response::HTTP_SERVICE_UNAVAILABLE,
-                ['Content-Type' => 'text/html; charset=UTF-8'],
-            );
-        }
-
         $user = $this->getUser();
         if (!$user instanceof User) {
             return new Response('Non authentifié.', Response::HTTP_UNAUTHORIZED);
@@ -68,13 +58,21 @@ final class GoogleController extends AbstractController
             return new Response('Accès refusé à ce projet.', Response::HTTP_FORBIDDEN);
         }
 
+        if (!$this->googleOAuthService->isConfiguredForProject($project)) {
+            return new Response(
+                '<html><body><p>OAuth Google non configuré pour ce projet. Un gestionnaire doit renseigner le <strong>Client ID</strong> et le <strong>Client secret</strong> Google dans les paramètres du projet (page <em>Projets</em>, édition du projet).</p></body></html>',
+                Response::HTTP_SERVICE_UNAVAILABLE,
+                ['Content-Type' => 'text/html; charset=UTF-8'],
+            );
+        }
+
         $state = bin2hex(random_bytes(16));
         $session = $request->getSession();
         $session->set(self::SESSION_STATE, $state);
         $session->set(self::SESSION_PROJECT, $projectId);
 
         $redirectUri = $this->generateUrl('integration_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
-        $url = $this->googleOAuthService->buildAuthorizationUrl($redirectUri, $state);
+        $url = $this->googleOAuthService->buildAuthorizationUrl($project, $redirectUri, $state);
 
         return $this->redirect($url);
     }
@@ -82,10 +80,6 @@ final class GoogleController extends AbstractController
     #[Route('/auth/google/callback', name: 'integration_google_callback', methods: ['GET'])]
     public function callback(Request $request): Response
     {
-        if (!$this->googleOAuthService->isConfigured()) {
-            return new Response('OAuth Google non configuré.', Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-
         $session = $request->getSession();
         $expected = $session->get(self::SESSION_STATE);
         $projectId = (int) $session->get(self::SESSION_PROJECT, 0);
@@ -117,9 +111,13 @@ final class GoogleController extends AbstractController
             return new Response('Accès refusé à ce projet.', Response::HTTP_FORBIDDEN);
         }
 
+        if (!$this->googleOAuthService->isConfiguredForProject($project)) {
+            return new Response('OAuth Google non configuré pour ce projet.', Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
         $redirectUri = $this->generateUrl('integration_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
         try {
-            $tokens = $this->googleOAuthService->exchangeAuthorizationCode($code, $redirectUri);
+            $tokens = $this->googleOAuthService->exchangeAuthorizationCode($project, $code, $redirectUri);
         } catch (\Throwable $e) {
             return new Response('Échange de jeton impossible : '.htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), Response::HTTP_BAD_GATEWAY);
         }

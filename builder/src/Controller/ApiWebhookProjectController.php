@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Entity\WebhookProject;
 use App\Repository\OrganizationRepository;
 use App\Repository\WebhookProjectRepository;
+use App\Security\SensitiveStringEncryptor;
 use App\WebhookProject\DefaultWebhookProjectService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,6 +29,7 @@ final class ApiWebhookProjectController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
+        private readonly SensitiveStringEncryptor $sensitiveStringEncryptor,
     ) {
     }
 
@@ -82,6 +84,7 @@ final class ApiWebhookProjectController extends AbstractController
         $p->setOrganization($org);
         $p->setName($name);
         $p->setDescription(isset($data['description']) && $data['description'] !== null ? trim((string) $data['description']) : null);
+        $this->applyGoogleOAuthFields($p, $data);
 
         $v = $this->validator->validate($p);
         if (\count($v) > 0) {
@@ -143,6 +146,10 @@ final class ApiWebhookProjectController extends AbstractController
                 return new JsonResponse(['error' => 'Organisation introuvable'], Response::HTTP_BAD_REQUEST);
             }
             $p->setOrganization($o);
+        }
+
+        if (\array_key_exists('googleOAuthClientId', $data) || \array_key_exists('googleOAuthClientSecret', $data)) {
+            $this->applyGoogleOAuthFields($p, $data);
         }
 
         $v = $this->validator->validate($p);
@@ -259,12 +266,15 @@ final class ApiWebhookProjectController extends AbstractController
      */
     private function serialize(WebhookProject $p, bool $forAdmin): array
     {
+        $cipher = $p->getGoogleOAuthClientSecretCipher();
         $row = [
             'id' => $p->getId(),
             'name' => $p->getName(),
             'description' => $p->getDescription(),
             'isDefault' => $p->isDefault(),
             'webhookCount' => $this->webhookProjectRepository->countWebhooks($p),
+            'googleOAuthClientId' => $p->getGoogleOAuthClientId(),
+            'googleOAuthSecretConfigured' => $cipher !== null && trim($cipher) !== '',
         ];
         if ($p->getOrganization() instanceof Organization) {
             $o = $p->getOrganization();
@@ -275,6 +285,32 @@ final class ApiWebhookProjectController extends AbstractController
         }
 
         return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function applyGoogleOAuthFields(WebhookProject $p, array $data): void
+    {
+        if (\array_key_exists('googleOAuthClientId', $data)) {
+            $p->setGoogleOAuthClientId(trim((string) $data['googleOAuthClientId']));
+        }
+        if (!\array_key_exists('googleOAuthClientSecret', $data)) {
+            return;
+        }
+        $raw = trim((string) $data['googleOAuthClientSecret']);
+        if ($raw !== '') {
+            $p->setGoogleOAuthClientSecretCipher($this->sensitiveStringEncryptor->encrypt($raw));
+
+            return;
+        }
+        if ($p->getId() !== null) {
+            $existing = $p->getGoogleOAuthClientSecretCipher();
+            if ($existing !== null && trim($existing) !== '') {
+                return;
+            }
+        }
+        $p->setGoogleOAuthClientSecretCipher(null);
     }
 
     private function validationErrorResponse(\Symfony\Component\Validator\ConstraintViolationListInterface $violations): JsonResponse

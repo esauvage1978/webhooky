@@ -19,6 +19,8 @@ export default function WebhookProjects({ user, onNavigate }) {
   const [error, setError] = useState('');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
+  const [newProjectGoogleClientId, setNewProjectGoogleClientId] = useState('');
+  const [newProjectGoogleClientSecret, setNewProjectGoogleClientSecret] = useState('');
   const [newProjectOrgId, setNewProjectOrgId] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -84,6 +86,8 @@ export default function WebhookProjects({ user, onNavigate }) {
   const openCreateModal = () => {
     setNewProjectName('');
     setNewProjectDesc('');
+    setNewProjectGoogleClientId('');
+    setNewProjectGoogleClientSecret('');
     if (isAdmin && orgs[0]) setNewProjectOrgId(String(orgs[0].id));
     setEditingProject(null);
     setModal('create');
@@ -96,6 +100,9 @@ export default function WebhookProjects({ user, onNavigate }) {
       name: p.name,
       description: p.description ?? '',
       isDefault: !!p.isDefault,
+      googleOAuthClientId: p.googleOAuthClientId ?? '',
+      googleOAuthClientSecret: '',
+      googleOAuthSecretConfigured: !!p.googleOAuthSecretConfigured,
     });
     setModal('edit');
     setMsg('');
@@ -129,6 +136,10 @@ export default function WebhookProjects({ user, onNavigate }) {
         name,
         description: newProjectDesc.trim() ? newProjectDesc.trim() : null,
       };
+      const gid = newProjectGoogleClientId.trim();
+      const gsec = newProjectGoogleClientSecret.trim();
+      if (gid) body.googleOAuthClientId = gid;
+      if (gsec) body.googleOAuthClientSecret = gsec;
       if (isAdmin) {
         const oid = newProjectOrgId || (orgs[0]?.id != null ? String(orgs[0].id) : '');
         if (!oid) {
@@ -170,14 +181,19 @@ export default function WebhookProjects({ user, onNavigate }) {
     setSaving(true);
     setMsg('');
     try {
+      const body = {
+        name,
+        description: editingProject.description?.trim() ? editingProject.description.trim() : null,
+        googleOAuthClientId: editingProject.googleOAuthClientId?.trim() ?? '',
+      };
+      if (editingProject.googleOAuthClientSecret?.trim()) {
+        body.googleOAuthClientSecret = editingProject.googleOAuthClientSecret.trim();
+      }
       const res = await fetch(`/api/webhook-projects/${editingProject.id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          name,
-          description: editingProject.description?.trim() ? editingProject.description.trim() : null,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await parseJson(res);
       if (!res.ok) {
@@ -427,6 +443,32 @@ export default function WebhookProjects({ user, onNavigate }) {
                 <span>Description (optionnel)</span>
                 <input value={newProjectDesc} onChange={(e) => setNewProjectDesc(e.target.value)} />
               </label>
+              <details className="wp-proj-oauth-details">
+                <summary className="muted small" style={{ cursor: 'pointer' }}>
+                  OAuth Google Search Console (optionnel à la création)
+                </summary>
+                <p className="muted small" style={{ marginTop: '0.5rem' }}>
+                  Identifiants du client OAuth de la console Google Cloud (type « application Web »), avec l’URI de
+                  redirection de cette app. Vous pourrez les modifier plus tard dans ce même écran.
+                </p>
+                <label className="field">
+                  <span>Client ID Google</span>
+                  <input
+                    value={newProjectGoogleClientId}
+                    onChange={(e) => setNewProjectGoogleClientId(e.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="field">
+                  <span>Client secret Google</span>
+                  <input
+                    type="password"
+                    value={newProjectGoogleClientSecret}
+                    onChange={(e) => setNewProjectGoogleClientSecret(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </label>
+              </details>
               <div className="sc-modal-actions">
                 <button type="submit" className="btn wp-proj-modal-btn" disabled={saving}>
                   {saving ? (
@@ -499,6 +541,35 @@ export default function WebhookProjects({ user, onNavigate }) {
                   autoFocus={editingProject.isDefault}
                 />
               </label>
+              <div className="integrations-block" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border, #e5e7eb)' }}>
+                <h5 className="integrations-block__title" style={{ fontSize: '0.95rem', marginBottom: '0.35rem' }}>
+                  OAuth Google Search Console
+                </h5>
+                <p className="muted small" style={{ marginTop: 0 }}>
+                  Ces champs permettent à vos utilisateurs de connecter Search Console pour ce projet. Le secret est stocké
+                  chiffré et n’est jamais réaffiché ; laissez-le vide pour conserver le secret actuel.
+                </p>
+                <label className="field">
+                  <span>Client ID Google</span>
+                  <input
+                    value={editingProject.googleOAuthClientId ?? ''}
+                    onChange={(e) => setEditingProject((ep) => ({ ...ep, googleOAuthClientId: e.target.value }))}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="field">
+                  <span>Client secret Google</span>
+                  <input
+                    type="password"
+                    value={editingProject.googleOAuthClientSecret ?? ''}
+                    onChange={(e) => setEditingProject((ep) => ({ ...ep, googleOAuthClientSecret: e.target.value }))}
+                    placeholder={
+                      editingProject.googleOAuthSecretConfigured ? '•••• laisser vide pour ne pas changer' : ''
+                    }
+                    autoComplete="new-password"
+                  />
+                </label>
+              </div>
               <div className="sc-modal-actions">
                 <button type="submit" className="btn wp-proj-modal-btn" disabled={saving}>
                   {saving ? (

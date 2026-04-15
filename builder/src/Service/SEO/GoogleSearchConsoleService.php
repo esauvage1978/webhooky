@@ -101,10 +101,16 @@ final class GoogleSearchConsoleService
         if ($exp !== null && $exp->getTimestamp() > time() + 90) {
             return $this->encryptor->decrypt($integration->getAccessTokenCipher());
         }
-        if (!$this->googleOAuth->isConfigured()) {
-            throw new \RuntimeException('OAuth Google non configuré côté serveur.');
+        $project = $integration->getProject();
+        if (!$project instanceof WebhookProject) {
+            throw new \RuntimeException('Intégration GSC sans projet associé.');
         }
-        $tokens = $this->googleOAuth->refreshAccessToken($refreshPlain);
+        if (!$this->googleOAuth->isConfiguredForProject($project)) {
+            throw new \RuntimeException(
+                'Identifiants OAuth Google manquants pour ce projet. Renseignez le Client ID et le secret dans la fiche du projet.',
+            );
+        }
+        $tokens = $this->googleOAuth->refreshAccessToken($project, $refreshPlain);
         $access = (string) ($tokens['access_token'] ?? '');
         if ($access === '') {
             throw new \RuntimeException('Rafraîchissement du jeton Google invalide.');

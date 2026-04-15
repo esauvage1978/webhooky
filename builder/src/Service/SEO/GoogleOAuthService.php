@@ -4,38 +4,33 @@ declare(strict_types=1);
 
 namespace App\Service\SEO;
 
-use App\Repository\OptionRepository;
+use App\Entity\WebhookProject;
 use App\Security\SensitiveStringEncryptor;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * OAuth2 Google (Search Console en lecture seule).
+ * OAuth2 Google (Search Console en lecture seule) — identifiants **par projet** (WebhookProject).
  */
 final class GoogleOAuthService
 {
     public const SCOPE_READONLY = 'https://www.googleapis.com/auth/webmasters.readonly';
 
-    private const OPT_CLIENT_ID = 'google_oauth_client_id';
-
-    private const OPT_CLIENT_SECRET_CIPHER = 'google_oauth_client_secret_cipher';
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly OptionRepository $optionRepository,
         private readonly SensitiveStringEncryptor $encryptor,
     ) {
     }
 
-    public function isConfigured(): bool
+    public function isConfiguredForProject(WebhookProject $project): bool
     {
-        [$id, $secret] = $this->resolveClientCredentials();
+        [$id, $secret] = $this->resolveClientCredentials($project);
 
         return $id !== '' && $secret !== '';
     }
 
-    public function buildAuthorizationUrl(string $redirectUri, string $state): string
+    public function buildAuthorizationUrl(WebhookProject $project, string $redirectUri, string $state): string
     {
-        [$clientId] = $this->resolveClientCredentials();
+        [$clientId] = $this->resolveClientCredentials($project);
         $q = http_build_query([
             'client_id' => $clientId,
             'redirect_uri' => $redirectUri,
@@ -53,9 +48,10 @@ final class GoogleOAuthService
     /**
      * @return array{access_token: string, refresh_token?: string, expires_in: int, scope?: string}
      */
-    public function exchangeAuthorizationCode(string $code, string $redirectUri): array
+    public function exchangeAuthorizationCode(WebhookProject $project, string $code, string $redirectUri): array
     {
-        [$clientId, $clientSecret] = $this->resolveClientCredentials(true);
+        [$clientId, $clientSecret] = $this->resolveClientCredentials($project, true);
+
         return $this->postToken([
             'code' => $code,
             'client_id' => $clientId,
@@ -68,9 +64,10 @@ final class GoogleOAuthService
     /**
      * @return array{access_token: string, expires_in: int, scope?: string}
      */
-    public function refreshAccessToken(string $refreshToken): array
+    public function refreshAccessToken(WebhookProject $project, string $refreshToken): array
     {
-        [$clientId, $clientSecret] = $this->resolveClientCredentials(true);
+        [$clientId, $clientSecret] = $this->resolveClientCredentials($project, true);
+
         return $this->postToken([
             'refresh_token' => $refreshToken,
             'client_id' => $clientId,
@@ -82,10 +79,10 @@ final class GoogleOAuthService
     /**
      * @return array{0: string, 1: string} clientId, clientSecret
      */
-    private function resolveClientCredentials(bool $requireConfigured = false): array
+    private function resolveClientCredentials(WebhookProject $project, bool $requireConfigured = false): array
     {
-        $id = trim((string) ($this->optionRepository->findFirstByOptionName(self::OPT_CLIENT_ID)?->getOptionValue() ?? ''));
-        $cipher = trim((string) ($this->optionRepository->findFirstByOptionName(self::OPT_CLIENT_SECRET_CIPHER)?->getOptionValue() ?? ''));
+        $id = trim($project->getGoogleOAuthClientId());
+        $cipher = trim((string) ($project->getGoogleOAuthClientSecretCipher() ?? ''));
         $secret = '';
         if ($cipher !== '') {
             try {
@@ -95,7 +92,7 @@ final class GoogleOAuthService
             }
         }
         if ($requireConfigured && ($id === '' || $secret === '')) {
-            throw new \RuntimeException('OAuth Google non configuré (options plateforme).');
+            throw new \RuntimeException('OAuth Google non configuré pour ce projet (client ID et secret requis).');
         }
 
         return [$id, $secret];

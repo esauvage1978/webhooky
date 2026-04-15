@@ -52,6 +52,16 @@ class WebhookProject
     private bool $isDefault = false;
 
     /**
+     * Client OAuth Google (écran de consentement / Search Console) — renseigné par le gestionnaire au niveau du projet.
+     */
+    #[ORM\Column(length: 191, options: ['default' => ''])]
+    private string $googleOAuthClientId = '';
+
+    /** Secret client chiffré (libsodium) ; jamais exposé en clair via l’API. */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $googleOAuthClientSecretCipher = null;
+
+    /**
      * @var Collection<int, FormWebhook>
      */
     #[ORM\OneToMany(targetEntity: FormWebhook::class, mappedBy: 'project')]
@@ -143,5 +153,29 @@ class WebhookProject
     public function getWebhooks(): Collection
     {
         return $this->webhooks;
+    }
+
+    public function getGoogleOAuthClientId(): string
+    {
+        return $this->googleOAuthClientId;
+    }
+
+    public function setGoogleOAuthClientId(string $googleOAuthClientId): static
+    {
+        $this->googleOAuthClientId = $googleOAuthClientId;
+
+        return $this;
+    }
+
+    public function getGoogleOAuthClientSecretCipher(): ?string
+    {
+        return $this->googleOAuthClientSecretCipher;
+    }
+
+    public function setGoogleOAuthClientSecretCipher(?string $googleOAuthClientSecretCipher): static
+    {
+        $this->googleOAuthClientSecretCipher = $googleOAuthClientSecretCipher;
+
+        return $this;
     }
 }

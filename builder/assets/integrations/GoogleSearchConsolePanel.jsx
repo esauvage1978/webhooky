@@ -24,6 +24,15 @@ export default function GoogleSearchConsolePanel({ user }) {
     return absoluteAppPath(`/api/webhook-projects/${pid}`);
   }, [projectId]);
 
+  const selectedProject = useMemo(
+    () => projects.find((p) => String(p.id) === String(projectId)),
+    [projects, projectId],
+  );
+  const oauthReady =
+    !!selectedProject &&
+    String(selectedProject.googleOAuthClientId ?? '').trim() !== '' &&
+    !!selectedProject.googleOAuthSecretConfigured;
+
   const loadProjects = useCallback(async () => {
     setError('');
     try {
@@ -106,9 +115,9 @@ export default function GoogleSearchConsolePanel({ user }) {
 
   const connectHref = useMemo(() => {
     const pid = projectId ? Number(projectId) : 0;
-    if (!pid || Number.isNaN(pid) || pid < 1) return '#';
+    if (!pid || Number.isNaN(pid) || pid < 1 || !oauthReady) return '#';
     return absoluteAppPath(`/auth/google?projectId=${encodeURIComponent(String(pid))}`);
-  }, [projectId]);
+  }, [projectId, oauthReady]);
 
   const saveSite = async () => {
     if (!projectApiBase || !selectedSite.trim()) return;
@@ -167,9 +176,19 @@ export default function GoogleSearchConsolePanel({ user }) {
         <i className="fa-solid fa-chart-line" aria-hidden /> Google Search Console
       </h3>
       <p className="integrations-block__intro muted small">
-        OAuth par <strong>projet</strong>, jetons chiffrés côté serveur. Les workflows <code>gsc_fetch</code> utilisent la
-        propriété sélectionnée pour le projet.
+        Les <strong>identifiants OAuth Google</strong> (Client ID + secret) se renseignent dans la fiche du projet (page{' '}
+        <strong>Projets</strong>). Les jetons utilisateur sont chiffrés côté serveur. Les workflows <code>gsc_fetch</code>{' '}
+        utilisent la propriété GSC choisie pour ce projet.
       </p>
+      {!oauthReady && projectId && selectedProject ? (
+        <div className="auth-notice err" role="status" style={{ maxWidth: '40rem' }}>
+          Renseignez le Client ID et le secret Google pour ce projet dans{' '}
+          <a href={absoluteAppPath(`/projets-workflows?editProject=${encodeURIComponent(String(projectId))}`)}>
+            Projets → modifier ce projet
+          </a>
+          , puis revenez ici pour connecter Search Console.
+        </div>
+      ) : null}
       <label className="field" style={{ maxWidth: '28rem' }}>
         <span>Projet</span>
         <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={projects.length === 0}>
@@ -182,7 +201,15 @@ export default function GoogleSearchConsolePanel({ user }) {
         </select>
       </label>
       <div className="gsc-panel-actions" style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <a className="btn btn-primary wp-proj-hero-btn" href={connectHref} aria-disabled={connectHref === '#'}>
+        <a
+          className={`btn btn-primary wp-proj-hero-btn${connectHref === '#' ? ' disabled' : ''}`}
+          href={connectHref}
+          aria-disabled={connectHref === '#'}
+          onClick={(e) => {
+            if (connectHref === '#') e.preventDefault();
+          }}
+          title={!oauthReady ? 'Configurez d’abord OAuth sur le projet' : undefined}
+        >
           <i className="fa-brands fa-google" aria-hidden /> Connecter Google Search Console
         </a>
         {status?.connected ? (

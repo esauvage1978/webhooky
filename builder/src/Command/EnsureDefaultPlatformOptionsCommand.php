@@ -105,18 +105,6 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
                 'domain' => self::DOMAINE,
                 'category' => self::CATEGORY_HOOK,
             ],
-            [
-                'optionName' => 'google_oauth_client_id',
-                'optionValue' => '',
-                'domain' => self::DOMAINE,
-                'category' => self::CATEGORY_SEO,
-            ],
-            [
-                'optionName' => 'google_oauth_client_secret_cipher',
-                'optionValue' => '',
-                'domain' => self::DOMAINE,
-                'category' => self::CATEGORY_SEO,
-            ],
         ];
     }
 
