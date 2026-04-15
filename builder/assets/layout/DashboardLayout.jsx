@@ -28,8 +28,8 @@ const NAV_ORG_BILLING = { id: 'organizationBilling', label: 'Organisation & fact
 const NAV_WEBHOOK_STACK = [
   { id: 'webhookProjects', label: 'Projets', icon: MdiFolder },
   { id: 'integrations', label: 'Intégrations', icon: MdiIntegrationHub },
-  { id: 'formWebhooks', label: 'Workflows', icon: MdiWebhook },
   { id: 'seoInsights', label: 'SEO & IA', icon: MdiTrendingUp },
+  { id: 'formWebhooks', label: 'Workflows', icon: MdiWebhook },
 ];
 
 const SECTION_ADMIN = 'Administration';

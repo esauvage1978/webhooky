@@ -49,7 +49,8 @@ export default function SeoInsights({ user }) {
     void load();
   }, [load]);
 
-  const saveAi = async () => {
+  const saveAi = async (e) => {
+    e.preventDefault();
     if (!orgUrl || !canManage) return;
     setSaving(true);
     setNotice(null);
@@ -123,9 +124,9 @@ export default function SeoInsights({ user }) {
 
         {!loading && org ? (
           <>
-            <section className="integrations-block">
+            <section className="integrations-block seo-insights-summary">
               <h3 className="integrations-block__title">Résumé</h3>
-              <ul className="small muted" style={{ paddingLeft: '1.2rem' }}>
+              <ul className="seo-insights-summary__list small muted">
                 <li>
                   <strong>Mots-clés GSC</strong> : récupérés dans l’étape <code>gsc_fetch</code> (cache 24 h par
                   organisation et URL).
@@ -142,26 +143,53 @@ export default function SeoInsights({ user }) {
             </section>
 
             {canManage ? (
-              <section className="integrations-block" style={{ marginTop: '1.5rem' }}>
+              <section className="integrations-block seo-insights-ai-block">
                 <h3 className="integrations-block__title">Fournisseur IA (organisation)</h3>
-                <p className="muted small">Actuellement : Ollama uniquement ; d’autres providers pourront s’ajouter.</p>
-                <div className="org-form-grid" style={{ maxWidth: '32rem' }}>
-                  <label className="form-field">
-                    <span className="form-label">Provider</span>
-                    <input className="form-control" value={provider} onChange={(e) => setProvider(e.target.value)} />
+                <p className="muted small seo-insights-ai-block__intro">
+                  Actuellement : Ollama uniquement ; d’autres providers pourront s’ajouter.
+                </p>
+                <form className="seo-ai-settings-form" onSubmit={(e) => void saveAi(e)}>
+                  <div className="seo-ai-settings-form__row">
+                    <label className="field">
+                      <span>Provider</span>
+                      <input
+                        type="text"
+                        name="aiProvider"
+                        value={provider}
+                        onChange={(e) => setProvider(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="ollama"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Modèle</span>
+                      <input
+                        type="text"
+                        name="aiModel"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="mistral"
+                      />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>URL de base Ollama</span>
+                    <input
+                      type="url"
+                      name="ollamaBaseUrl"
+                      value={baseUrl}
+                      onChange={(e) => setBaseUrl(e.target.value)}
+                      autoComplete="off"
+                      placeholder="http://127.0.0.1:11434"
+                    />
                   </label>
-                  <label className="form-field">
-                    <span className="form-label">Modèle</span>
-                    <input className="form-control" value={model} onChange={(e) => setModel(e.target.value)} />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-label">URL de base Ollama</span>
-                    <input className="form-control" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
-                  </label>
-                </div>
-                <button type="button" className="btn btn-primary" style={{ marginTop: '1rem' }} disabled={saving} onClick={() => void saveAi()}>
-                  {saving ? 'Enregistrement…' : 'Enregistrer'}
-                </button>
+                  <button type="submit" className="btn btn-primary seo-ai-settings-form__submit" disabled={saving}>
+                    {saving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                </form>
               </section>
             ) : (
               <p className="muted small">Seuls les gestionnaires peuvent modifier la configuration IA.</p>
