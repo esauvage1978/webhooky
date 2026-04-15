@@ -81,6 +81,8 @@ export function pathToNavId(pathname) {
     case 'mailjets':
     case 'integrations':
       return 'integrations';
+    case 'seo':
+      return 'seoInsights';
     case 'organizations':
     case 'organisations':
       return 'organizations';
@@ -115,6 +117,9 @@ export function navIdToPath(navId) {
       break;
     case 'integrations':
       rel = '/integrations';
+      break;
+    case 'seoInsights':
+      rel = '/seo';
       break;
     case 'organizations':
       rel = '/organizations';
@@ -185,6 +190,9 @@ export function userCanAccessNav(user, navId) {
   if (navId === 'organizationBilling') {
     if (!user.organization) return false;
     return isAdmin || isManager;
+  }
+  if (navId === 'seoInsights') {
+    return userHasOrganizationContext(user);
   }
   return true;
 }

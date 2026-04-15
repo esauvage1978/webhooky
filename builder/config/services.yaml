@@ -6,6 +6,12 @@
 
 # Configuration applicative « Webhooky » : options plateforme (commande app:ensure-default-platform-options) + résolveurs dédiés.
 
+parameters:
+    env(GOOGLE_CLIENT_ID): ''
+    env(GOOGLE_CLIENT_SECRET): ''
+    env(OLLAMA_BASE_URL): 'http://127.0.0.1:11434'
+    env(OLLAMA_MODEL): 'mistral'
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -24,6 +30,20 @@ services:
     App\Doctrine\OrganizationWebhookPrefixSubscriber:
         tags:
             - { name: doctrine.event_subscriber }
+
+    App\Security\SensitiveStringEncryptor:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
+    App\Service\SEO\GoogleOAuthService:
+        arguments:
+            $clientId: '%env(string:GOOGLE_CLIENT_ID)%'
+            $clientSecret: '%env(string:GOOGLE_CLIENT_SECRET)%'
+
+    App\Service\AI\AIActionService:
+        arguments:
+            $defaultOllamaBaseUrl: '%env(string:OLLAMA_BASE_URL)%'
+            $defaultOllamaModel: '%env(string:OLLAMA_MODEL)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

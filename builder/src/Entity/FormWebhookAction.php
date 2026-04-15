@@ -79,6 +79,14 @@ class FormWebhookAction
     #[ORM\Column(name: 'action_comment', type: Types::TEXT, nullable: true)]
     private ?string $comment = null;
 
+    /**
+     * Actions natives du pipeline SEO (gsc_fetch, ai_action, parse_json, if…).
+     *
+     * @var array<string, mixed>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $pipelineConfig = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -278,6 +286,24 @@ class FormWebhookAction
     public function setComment(?string $comment): static
     {
         $this->comment = $comment;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getPipelineConfig(): ?array
+    {
+        return $this->pipelineConfig;
+    }
+
+    /**
+     * @param array<string, mixed>|null $pipelineConfig
+     */
+    public function setPipelineConfig(?array $pipelineConfig): static
+    {
+        $this->pipelineConfig = $pipelineConfig;
 
         return $this;
     }

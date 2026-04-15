@@ -23,6 +23,7 @@ const FormWebhooks = lazy(() => import('../workflows/FormWebhooks.jsx'));
 const OrganizationBilling = lazy(() => import('../organization/OrganizationBilling.jsx'));
 const Organizations = lazy(() => import('../organization/Organizations.jsx'));
 const WebhookProjects = lazy(() => import('../workflows/WebhookProjects.jsx'));
+const SeoInsights = lazy(() => import('../seo/SeoInsights.jsx'));
 import OrganizationContextPicker from './OrganizationContextPicker.jsx';
 import {
   AUTH_PATHS,
@@ -566,6 +567,11 @@ export default function App() {
         ) : null}
         {!needsOrgSetup && activeNav === 'integrations' ? (
           <Integrations user={user} />
+        ) : null}
+        {!needsOrgSetup && activeNav === 'seoInsights' ? (
+          <Suspense fallback={<RouteFallback />}>
+            <SeoInsights user={user} />
+          </Suspense>
         ) : null}
         {!needsOrgSetup && activeNav === 'formWebhooks' ? (
           <Suspense fallback={<RouteFallback />}>

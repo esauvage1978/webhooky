@@ -15,6 +15,7 @@ use App\Entity\WebhookProject;
 use App\FormWebhook\FormWebhookErrorNotifyPlatformInfo;
 use App\FormWebhook\FormWebhookLogStatus;
 use App\FormWebhook\FormWebhookNotificationRecipientResolver;
+use App\FormWebhook\WorkflowBuiltinActionType;
 use App\Repository\FormWebhookLogRepository;
 use App\Repository\FormWebhookRepository;
 use App\Repository\MailjetRepository;
@@ -753,7 +754,26 @@ final class ApiFormWebhookController extends AbstractController
                 $action->setSmsToDefault($v !== null && $v !== '' ? (string) $v : null);
             }
 
-            if ($actionType === ServiceIntegrationType::MAILJET) {
+            if (WorkflowBuiltinActionType::isBuiltin($actionType)) {
+                $pc = $row['pipelineConfig'] ?? $row['config'] ?? null;
+                if (!\is_array($pc)) {
+                    return new JsonResponse(
+                        ['error' => 'Champ pipelineConfig (objet) requis pour l’action « '.$actionType.' ».'],
+                        Response::HTTP_BAD_REQUEST,
+                    );
+                }
+                $action->setPipelineConfig($pc);
+                $action->setServiceConnection(null);
+                $action->setMailjet(null);
+                $action->setMailjetTemplateId(0);
+                $action->setTemplateLanguage(true);
+                $action->setRecipientEmailPostKey(null);
+                $action->setRecipientNamePostKey(null);
+                $action->setDefaultRecipientEmail(null);
+                $action->setPayloadTemplate(null);
+                $action->setSmsToPostKey(null);
+                $action->setSmsToDefault(null);
+            } elseif ($actionType === ServiceIntegrationType::MAILJET) {
                 $connId = isset($row['serviceConnectionId']) ? (int) $row['serviceConnectionId'] : 0;
                 $legacyMailjetId = isset($row['mailjetId']) ? (int) $row['mailjetId'] : 0;
 
@@ -910,7 +930,9 @@ final class ApiFormWebhookController extends AbstractController
             'sortOrder' => $a->getSortOrder(),
             'active' => $a->isActive(),
             'actionType' => $a->getActionType(),
-            'actionTypeLabel' => ServiceIntegrationType::labels()[$a->getActionType()] ?? $a->getActionType(),
+            'actionTypeLabel' => WorkflowBuiltinActionType::labels()[$a->getActionType()]
+                ?? ServiceIntegrationType::labels()[$a->getActionType()]
+                ?? $a->getActionType(),
             'serviceConnectionId' => $a->getServiceConnection()?->getId(),
             'serviceConnectionName' => $a->getServiceConnection()?->getName(),
             'payloadTemplate' => $a->getPayloadTemplate(),
@@ -924,6 +946,7 @@ final class ApiFormWebhookController extends AbstractController
             'recipientNamePostKey' => $a->getRecipientNamePostKey(),
             'defaultRecipientEmail' => $a->getDefaultRecipientEmail(),
             'comment' => $a->getComment(),
+            'pipelineConfig' => $a->getPipelineConfig(),
         ];
 
         return $row;
@@ -1094,6 +1117,7 @@ final class ApiFormWebhookController extends AbstractController
                 'comment' => $a->getComment(),
                 'active' => $a->isActive(),
                 'sortOrder' => $a->getSortOrder(),
+                'pipelineConfig' => $a->getPipelineConfig(),
             ];
         }
 

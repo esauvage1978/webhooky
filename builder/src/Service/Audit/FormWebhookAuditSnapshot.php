@@ -51,6 +51,7 @@ final class FormWebhookAuditSnapshot
                     'recipientNamePostKey' => $a->getRecipientNamePostKey(),
                     'defaultRecipientEmail' => $a->getDefaultRecipientEmail(),
                     'comment' => $a->getComment(),
+                    'pipelineConfig' => $a->getPipelineConfig(),
                 ],
                 $actions,
             ),

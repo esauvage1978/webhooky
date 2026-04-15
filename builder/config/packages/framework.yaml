@@ -11,6 +11,16 @@ framework:
             policy: sliding_window
             limit: 300
             interval: '1 minute'
+        gsc_organization:
+            policy: fixed_window
+            limit: 2000
+            interval: '1 day'
+
+    cache:
+        pools:
+            cache.gsc_queries:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 86400
 
     #esi: true
     #fragments: true

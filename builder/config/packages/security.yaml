@@ -35,6 +35,8 @@ security:
         - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/api/accept-invitation, roles: PUBLIC_ACCESS }
         - { path: ^/verify-email, roles: PUBLIC_ACCESS }
+        - { path: ^/auth/google/callback, roles: PUBLIC_ACCESS }
+        - { path: ^/auth/google, roles: ROLE_USER }
         - { path: ^/webhook, roles: PUBLIC_ACCESS }
         - { path: ^/api/admin, roles: ROLE_ADMIN }
         - { path: ^/api/organizations/.+/subscription, roles: ROLE_USER }

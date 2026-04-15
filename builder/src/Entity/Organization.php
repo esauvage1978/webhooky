@@ -100,6 +100,14 @@ class Organization
     #[ORM\OneToMany(targetEntity: OrganizationMembership::class, mappedBy: 'organization', orphanRemoval: true, cascade: ['persist'])]
     private Collection $memberships;
 
+    /**
+     * Configuration IA par organisation (provider, modèle, URL de base…).
+     *
+     * @var array<string, mixed>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $aiSettings = null;
+
     public function __construct()
     {
         $this->memberships = new ArrayCollection();
@@ -398,5 +406,23 @@ class Organization
     public function getMemberships(): Collection
     {
         return $this->memberships;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getAiSettings(): ?array
+    {
+        return $this->aiSettings;
+    }
+
+    /**
+     * @param array<string, mixed>|null $aiSettings
+     */
+    public function setAiSettings(?array $aiSettings): static
+    {
+        $this->aiSettings = $aiSettings;
+
+        return $this;
     }
 }

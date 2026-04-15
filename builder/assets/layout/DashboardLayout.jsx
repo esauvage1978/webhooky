@@ -7,6 +7,7 @@ const TOPBAR_SECTION_LABELS = {
   usersJournal: 'Journal des actions',
   adminSupervision: 'Supervision',
   adminOptions: 'Options plateforme',
+  seoInsights: 'SEO & IA',
 };
 
 const NAV_SETUP_ONLY = [{ id: 'setupOrganization', label: 'Mon organisation', icon: MdiDomain }];
@@ -28,6 +29,7 @@ const NAV_WEBHOOK_STACK = [
   { id: 'webhookProjects', label: 'Projets', icon: MdiFolder },
   { id: 'integrations', label: 'Intégrations', icon: MdiIntegrationHub },
   { id: 'formWebhooks', label: 'Workflows', icon: MdiWebhook },
+  { id: 'seoInsights', label: 'SEO & IA', icon: MdiTrendingUp },
 ];
 
 const SECTION_ADMIN = 'Administration';
@@ -128,6 +130,17 @@ function MdiWebhook() {
       <path
         fill="currentColor"
         d="M6 15.5c.83 0 1.5-.67 1.5-1.5S6.83 12.5 6 12.5 4.5 13.17 4.5 14 5.17 15.5 6 15.5m5.5-3c.83 0 1.5-.67 1.5-1.5S12.33 9.5 11.5 9.5 10 10.17 10 11s.67 1.5 1.5 1.5m4 3c.83 0 1.5-.67 1.5-1.5S16.33 12.5 15.5 12.5 14 13.17 14 14s.67 1.5 1.5 1.5M12 1C5.93 1 1 5.93 1 12s4.93 11 11 11 11-4.93 11-11S18.07 1 12 1m0 20c-4.96 0-9-4.04-9-9 0-2.11.74-4.06 1.97-5.6L18.6 18.03C17.06 19.26 15.11 20 12 20m7.03-5.4L5.4 5.97C6.94 4.74 8.89 4 12 4c4.96 0 9 4.04 9 9 0 2.11-.74 4.06-1.97 5.6z"
+      />
+    </svg>
+  );
+}
+
+function MdiTrendingUp() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"
       />
     </svg>
   );

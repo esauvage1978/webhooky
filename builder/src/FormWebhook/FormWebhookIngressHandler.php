@@ -9,6 +9,7 @@ use App\Entity\FormWebhook;
 use App\Entity\FormWebhookAction;
 use App\Entity\FormWebhookActionLog;
 use App\Entity\FormWebhookLog;
+use App\Entity\Organization;
 use App\FormWebhook\PayloadParser\PayloadParserChain;
 use App\Mailjet\MailjetApiKeyPair;
 use App\Mailjet\MailjetAuthPairInterface;
@@ -40,6 +41,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         private readonly FormWebhookRunNotifier $runNotifier,
         private readonly IntegrationActionExecutor $integrationActionExecutor,
         private readonly ApplicationErrorLogger $applicationErrorLogger,
+        private readonly BuiltinWorkflowActionExecutor $builtinWorkflowActionExecutor,
     ) {
     }
 
@@ -150,6 +152,14 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         $actionPayloads = [];
         $allOk = true;
 
+        $workflowContext = [
+            'organization_id' => $org instanceof Organization ? (int) $org->getId() : 0,
+            'user_id' => $webhook->getCreatedBy()?->getId(),
+            'workflow_id' => $webhook->getId(),
+            'data' => [],
+        ];
+        $skipNext = 0;
+
         foreach ($actions as $action) {
             $aLog = new FormWebhookActionLog();
             $aLog->setFormWebhookAction($action);
@@ -164,7 +174,32 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
             ];
 
             try {
-                if ($action->getActionType() === ServiceIntegrationType::MAILJET) {
+                if ($skipNext > 0) {
+                    --$skipNext;
+                    $aLog->setStatus(FormWebhookLogStatus::SKIPPED);
+                    $aLog->setErrorDetail('Étape ignorée (condition du pipeline).');
+                    $entry['ok'] = true;
+                    $entry['skipped'] = true;
+                    $entry['actionType'] = $action->getActionType();
+                    $aLog->setDurationMs((int) round(microtime(true) * 1000) - $tAction);
+                    $actionPayloads[] = $entry;
+
+                    continue;
+                }
+
+                if (WorkflowBuiltinActionType::isBuiltin($action->getActionType())) {
+                    if (!$org instanceof Organization) {
+                        throw new \RuntimeException('Organisation requise pour les actions SEO du pipeline.');
+                    }
+                    $exec = $this->builtinWorkflowActionExecutor->execute($action, $org, $parsed, $workflowContext, $aLog);
+                    $skipNext = (int) ($exec['skip_next'] ?? 0);
+                    $aLog->setStatus(FormWebhookLogStatus::SENT);
+                    $entry['ok'] = true;
+                    $entry['actionType'] = $action->getActionType();
+                    $entry['pipeline'] = [
+                        'dataKeys' => array_keys($workflowContext['data'] ?? []),
+                    ];
+                } elseif ($action->getActionType() === ServiceIntegrationType::MAILJET) {
                     [$toEmail, $toName] = $this->recipientResolver->resolve($action, $parsed);
                     if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
                         throw new \InvalidArgumentException('Destinataire invalide pour une action : renseignez recipientEmailPostKey ou defaultRecipientEmail.');

@@ -1,0 +1,75 @@
+{
+  "name": "SEO — correction article (GSC + IA)",
+  "description": "Exemple de workflow multi-étapes : récupération des requêtes GSC, prompt seo_corrector_v3, parsing JSON, branchement si score < 7, second passage IA.",
+  "ingressBodyExample": {
+    "body": {
+      "url": "https://votre-site.fr/article-cible",
+      "content": "Contenu HTML ou texte brut à optimiser.",
+      "keyword": "expression principale"
+    }
+  },
+  "actions": [
+    {
+      "actionType": "gsc_fetch",
+      "active": true,
+      "sortOrder": 0,
+      "variableMapping": {},
+      "pipelineConfig": {
+        "url": "{{body.url}}"
+      },
+      "comment": "Données GSC filtrées sur l’URL de page (propriété = site enregistré dans Intégrations)."
+    },
+    {
+      "actionType": "ai_action",
+      "active": true,
+      "sortOrder": 1,
+      "variableMapping": {},
+      "pipelineConfig": {
+        "promptId": "seo_corrector_v3",
+        "promptVariables": {
+          "keyword": "{{body.keyword}}",
+          "gsc_keywords": "{{data.gsc_keywords}}",
+          "content": "{{body.content}}"
+        }
+      },
+      "comment": "Nécessite Ollama (ou URL/modèle surchargés via aiSettings de l’organisation)."
+    },
+    {
+      "actionType": "parse_json",
+      "active": true,
+      "sortOrder": 2,
+      "variableMapping": {},
+      "pipelineConfig": {
+        "source": "{{data.last_ai_response}}",
+        "targetKey": "seo"
+      },
+      "comment": "Attend un JSON strict renvoyé par le modèle."
+    },
+    {
+      "actionType": "if",
+      "active": true,
+      "sortOrder": 3,
+      "variableMapping": {},
+      "pipelineConfig": {
+        "left": "{{data.seo.seo_score}}",
+        "operator": "lt",
+        "right": "7",
+        "skipIfFalse": 1
+      },
+      "comment": "Si score >= 7, saute l’étape suivante (pas de second passage IA)."
+    },
+    {
+      "actionType": "ai_action",
+      "active": true,
+      "sortOrder": 4,
+      "variableMapping": {},
+      "pipelineConfig": {
+        "promptId": "seo_improvement_followup",
+        "promptVariables": {
+          "previous_json": "{{data.last_ai_response}}"
+        }
+      },
+      "comment": "Relance uniquement lorsque le score est insuffisant."
+    }
+  ]
+}

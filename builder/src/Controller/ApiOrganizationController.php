@@ -371,6 +371,15 @@ final class ApiOrganizationController extends AbstractController
             $organization->setBillingCountry($this->trimOrNull($data['billingCountry']));
         }
 
+        if (\array_key_exists('aiSettings', $data)) {
+            $raw = $data['aiSettings'];
+            if ($raw !== null && !\is_array($raw)) {
+                return new JsonResponse(['error' => 'aiSettings doit être un objet ou null.'], Response::HTTP_BAD_REQUEST);
+            }
+            /** @var array<string, mixed>|null $raw */
+            $organization->setAiSettings(\is_array($raw) ? $raw : null);
+        }
+
         $errors = $this->validator->validate($organization);
         if (\count($errors) > 0) {
             return $this->validationErrorResponse($errors);
@@ -526,6 +535,7 @@ final class ApiOrganizationController extends AbstractController
         }
 
         $row['subscription'] = $this->subscriptionEntitlement->buildSnapshot($organization);
+        $row['aiSettings'] = $organization->getAiSettings();
 
         return $row;
     }
