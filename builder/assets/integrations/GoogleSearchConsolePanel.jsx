@@ -69,7 +69,7 @@ export default function GoogleSearchConsolePanel({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [apiBase]);
+  }, [projectApiBase]);
 
   const loadSites = useCallback(async () => {
     if (!projectApiBase) return;
