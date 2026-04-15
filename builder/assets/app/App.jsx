@@ -135,6 +135,22 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState(() => authScreenFromPath());
   const [authNotice, setAuthNotice] = useState(null);
 
+  const forceLogoutToLogin = useCallback((notice) => {
+    setAppSessionKnownLoggedIn(false);
+    try {
+      sessionStorage.removeItem(ORG_SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
+    setUser(null);
+    setActiveNav('dashboard');
+    window.history.replaceState({}, '', '/');
+    setPathname('/');
+    setAuthScreen('login');
+    if (notice) setAuthNotice(notice);
+    void fetch('/api/logout', apiJsonInit({ method: 'GET' }));
+  }, []);
+
   const authTitles = useMemo(
     () => ({
       login: { title: 'Connexion', intro: 'Identifiez-vous pour accéder à l’espace.' },
@@ -239,10 +255,14 @@ export default function App() {
       if (res.ok) {
         let data = await parseJson(res);
         if (!data || typeof data !== 'object') {
-          setUser(null);
+          forceLogoutToLogin(null);
           return;
         }
         data = normalizeMePayload(data);
+        if (!data.email || !Array.isArray(data.roles) || data.roles.length === 0) {
+          forceLogoutToLogin(null);
+          return;
+        }
         const isAdm = data.roles.includes('ROLE_ADMIN');
         const orgs = data.organizations;
         if (!isAdm && orgs.length === 1 && !data.organization) {
@@ -263,14 +283,14 @@ export default function App() {
         }
         setUser(normalizeMePayload(data));
       } else {
-        setUser(null);
+        forceLogoutToLogin(null);
       }
     } catch {
-      setUser(null);
+      forceLogoutToLogin(null);
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, []);
+  }, [forceLogoutToLogin]);
 
   useEffect(() => {
     void refreshSession();
@@ -282,26 +302,14 @@ export default function App() {
 
   useEffect(() => {
     const onSessionExpired = () => {
-      setAppSessionKnownLoggedIn(false);
-      try {
-        sessionStorage.removeItem(ORG_SESSION_KEY);
-      } catch {
-        /* ignore */
-      }
-      setUser(null);
-      setActiveNav('dashboard');
-      window.history.replaceState({}, '', '/');
-      setPathname('/');
-      setAuthScreen('login');
-      setAuthNotice({
+      forceLogoutToLogin({
         type: 'err',
         text: 'Votre session a expiré. Veuillez vous reconnecter.',
       });
-      void fetch('/api/logout', apiJsonInit({ method: 'GET' }));
     };
     window.addEventListener('webhooky:session-expired', onSessionExpired);
     return () => window.removeEventListener('webhooky:session-expired', onSessionExpired);
-  }, []);
+  }, [forceLogoutToLogin]);
 
   useEffect(() => {
     const onPop = () => {
