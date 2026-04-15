@@ -357,7 +357,9 @@ export default function DashboardLayout({
               ))
             ) : (
               <>
-                <span className="admin-breadcrumb-muted">Espace connecté</span>
+                <button type="button" className="admin-breadcrumb-link" onClick={() => onNavigate('dashboard')}>
+                  Accueil
+                </button>
                 <span className="admin-breadcrumb-sep">/</span>
                 <span className="admin-breadcrumb-current">{topBarSectionLabel}</span>
               </>
