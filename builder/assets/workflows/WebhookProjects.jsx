@@ -26,6 +26,18 @@ export default function WebhookProjects({ user, onNavigate }) {
   const [modal, setModal] = useState(null);
   const [editingProject, setEditingProject] = useState(null);
 
+  const setEditProjectInUrl = useCallback((projectId) => {
+    const p = new URLSearchParams(window.location.search);
+    if (projectId == null || projectId === '' || Number(projectId) < 1) {
+      p.delete('editProject');
+    } else {
+      p.set('editProject', String(projectId));
+    }
+    const qs = p.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ''}`;
+    window.history.replaceState({}, '', next);
+  }, []);
+
   const loadProjects = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -66,6 +78,7 @@ export default function WebhookProjects({ user, onNavigate }) {
   const closeModal = useCallback(() => {
     setModal(null);
     setEditingProject(null);
+    setEditProjectInUrl(null);
   }, []);
 
   const openCreateModal = () => {
@@ -86,7 +99,21 @@ export default function WebhookProjects({ user, onNavigate }) {
     });
     setModal('edit');
     setMsg('');
+    setEditProjectInUrl(p.id);
   };
+
+  // Deep-link : /projets-workflows?editProject=123
+  useEffect(() => {
+    if (loading || modal != null) return;
+    const raw = new URLSearchParams(window.location.search).get('editProject');
+    if (!raw) return;
+    const id = Number.parseInt(raw, 10);
+    if (!Number.isFinite(id) || id < 1) return;
+    const row = projects.find((p) => p.id === id);
+    if (row) {
+      openEditModal(row);
+    }
+  }, [loading, modal, projects]);
 
   const submitCreate = async (e) => {
     e.preventDefault();
@@ -288,7 +315,16 @@ export default function WebhookProjects({ user, onNavigate }) {
                           {list.map((p) => (
                             <tr key={p.id}>
                               <td>
-                                <strong>{p.name}</strong>
+                                <button
+                                  type="button"
+                                  className="btn secondary small"
+                                  style={{ padding: '0.3rem 0.55rem', marginTop: 0 }}
+                                  disabled={saving}
+                                  onClick={() => openEditModal(p)}
+                                  title="Éditer ce projet"
+                                >
+                                  <i className="fa-solid fa-pen-to-square" aria-hidden /> <strong>{p.name}</strong>
+                                </button>
                                 {p.isDefault ? (
                                   <span className="muted small" style={{ marginLeft: '0.35rem' }}>
                                     (par défaut)
