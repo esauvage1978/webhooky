@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Option;
 use App\Repository\OptionRepository;
+use App\Security\SensitiveStringEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,10 +26,16 @@ final class ApiAdminOptionController extends AbstractController
 
     private const META_OPTION_DOMAIN_LIST = 'option_domaine';
 
+    /** Option values jamais renvoyées en clair. */
+    private const SENSITIVE_OPTION_NAMES = [
+        'google_oauth_client_secret_cipher',
+    ];
+
     public function __construct(
         private readonly OptionRepository $optionRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
+        private readonly SensitiveStringEncryptor $encryptor,
     ) {
     }
 
@@ -180,6 +187,11 @@ final class ApiAdminOptionController extends AbstractController
             return \is_string($v) || \is_int($v) || \is_float($v) ? (string) $v : null;
         };
 
+        $incomingName = $o->getOptionName();
+        if (\array_key_exists('optionName', $payload)) {
+            $incomingName = (string) ($takeString('optionName') ?? $incomingName);
+        }
+
         if (!$patch || \array_key_exists('optionName', $payload)) {
             $v = $takeString('optionName');
             if (null !== $v) {
@@ -189,7 +201,20 @@ final class ApiAdminOptionController extends AbstractController
         if (!$patch || \array_key_exists('optionValue', $payload)) {
             $v = $takeString('optionValue');
             if (null !== $v) {
-                $o->setOptionValue($v);
+                $isSensitive = \in_array($incomingName, self::SENSITIVE_OPTION_NAMES, true);
+                $trim = trim($v);
+                if ($isSensitive) {
+                    // UX : la valeur n’est jamais renvoyée par l’API ; un PUT avec optionValue vide ne doit pas effacer le secret existant.
+                    if ($trim === '' && $o->getId() !== null && trim($o->getOptionValue()) !== '') {
+                        // keep existing
+                    } elseif ($trim === '') {
+                        $o->setOptionValue('');
+                    } else {
+                        $o->setOptionValue(str_starts_with($trim, 'v1|') ? $trim : $this->encryptor->encrypt($trim));
+                    }
+                } else {
+                    $o->setOptionValue($v);
+                }
             }
         }
 
@@ -230,10 +255,15 @@ final class ApiAdminOptionController extends AbstractController
      */
     private function serialize(Option $o): array
     {
+        $name = $o->getOptionName();
+        $isSensitive = \in_array($name, self::SENSITIVE_OPTION_NAMES, true);
+
         return [
             'id' => $o->getId(),
-            'optionName' => $o->getOptionName(),
-            'optionValue' => $o->getOptionValue(),
+            'optionName' => $name,
+            'optionValue' => $isSensitive ? '' : $o->getOptionValue(),
+            'sensitive' => $isSensitive,
+            'configured' => $isSensitive ? (trim($o->getOptionValue()) !== '') : null,
             'domain' => $o->getDomain(),
             'category' => $o->getCategory(),
             'comment' => $o->getComment(),

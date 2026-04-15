@@ -368,7 +368,13 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
                   {row.comment && row.comment.length > 60 ? `${row.comment.slice(0, 57)}…` : row.comment ?? '—'}
                 </td>
                 <td className="small">
-                  {row.optionValue && row.optionValue.length > 80
+                  {row.sensitive ? (
+                    row.configured ? (
+                      <span className="muted">•••••• (configuré)</span>
+                    ) : (
+                      <span className="muted">—</span>
+                    )
+                  ) : row.optionValue && row.optionValue.length > 80
                     ? `${row.optionValue.slice(0, 77)}…`
                     : row.optionValue}
                 </td>
@@ -512,6 +518,12 @@ export default function AdminPlatformOptions({ contentCardProps = {}, showHubLay
                 required
               />
             </label>
+            {String(optModal.form.optionName || '').trim() === 'google_oauth_client_secret_cipher' ? (
+              <p className="muted small" style={{ marginTop: 0 }}>
+                Valeur sensible : elle sera chiffrée côté serveur et ne sera jamais réaffichée. Laisse vide pour conserver le secret
+                existant.
+              </p>
+            ) : null}
             <label className="field">
               <span>Commentaire (optionnel)</span>
               <textarea

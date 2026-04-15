@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\SEO;
 
+use App\Repository\OptionRepository;
+use App\Security\SensitiveStringEncryptor;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -13,22 +15,29 @@ final class GoogleOAuthService
 {
     public const SCOPE_READONLY = 'https://www.googleapis.com/auth/webmasters.readonly';
 
+    private const OPT_CLIENT_ID = 'google_oauth_client_id';
+
+    private const OPT_CLIENT_SECRET_CIPHER = 'google_oauth_client_secret_cipher';
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $clientId,
-        private readonly string $clientSecret,
+        private readonly OptionRepository $optionRepository,
+        private readonly SensitiveStringEncryptor $encryptor,
     ) {
     }
 
     public function isConfigured(): bool
     {
-        return $this->clientId !== '' && $this->clientSecret !== '';
+        [$id, $secret] = $this->resolveClientCredentials();
+
+        return $id !== '' && $secret !== '';
     }
 
     public function buildAuthorizationUrl(string $redirectUri, string $state): string
     {
+        [$clientId] = $this->resolveClientCredentials();
         $q = http_build_query([
-            'client_id' => $this->clientId,
+            'client_id' => $clientId,
             'redirect_uri' => $redirectUri,
             'response_type' => 'code',
             'scope' => self::SCOPE_READONLY,
@@ -46,10 +55,11 @@ final class GoogleOAuthService
      */
     public function exchangeAuthorizationCode(string $code, string $redirectUri): array
     {
+        [$clientId, $clientSecret] = $this->resolveClientCredentials(true);
         return $this->postToken([
             'code' => $code,
-            'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
             'redirect_uri' => $redirectUri,
             'grant_type' => 'authorization_code',
         ]);
@@ -60,12 +70,35 @@ final class GoogleOAuthService
      */
     public function refreshAccessToken(string $refreshToken): array
     {
+        [$clientId, $clientSecret] = $this->resolveClientCredentials(true);
         return $this->postToken([
             'refresh_token' => $refreshToken,
-            'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
             'grant_type' => 'refresh_token',
         ]);
+    }
+
+    /**
+     * @return array{0: string, 1: string} clientId, clientSecret
+     */
+    private function resolveClientCredentials(bool $requireConfigured = false): array
+    {
+        $id = trim((string) ($this->optionRepository->findFirstByOptionName(self::OPT_CLIENT_ID)?->getOptionValue() ?? ''));
+        $cipher = trim((string) ($this->optionRepository->findFirstByOptionName(self::OPT_CLIENT_SECRET_CIPHER)?->getOptionValue() ?? ''));
+        $secret = '';
+        if ($cipher !== '') {
+            try {
+                $secret = $this->encryptor->decrypt($cipher);
+            } catch (\Throwable) {
+                $secret = '';
+            }
+        }
+        if ($requireConfigured && ($id === '' || $secret === '')) {
+            throw new \RuntimeException('OAuth Google non configuré (options plateforme).');
+        }
+
+        return [$id, $secret];
     }
 
     /**

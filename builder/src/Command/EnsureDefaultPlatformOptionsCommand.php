@@ -23,6 +23,7 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
     private const CATEGORY_HOOK = 'Hook';
     private const CATEGORY_ERROR = 'Error';
     private const CATEGORY_USERS = 'Users';
+    private const CATEGORY_SEO = 'SEO';
 
     private const DOMAINE = 'WebHooky';
 
@@ -50,7 +51,7 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
         return [
             [
                 'optionName' => 'option_category',
-                 'optionValue' => self::CATEGORY_OPTIONS . ';' . self::CATEGORY_HOOK . ';' . self::CATEGORY_ERROR . ';' . self::CATEGORY_USERS,
+                 'optionValue' => self::CATEGORY_OPTIONS . ';' . self::CATEGORY_HOOK . ';' . self::CATEGORY_ERROR . ';' . self::CATEGORY_USERS . ';' . self::CATEGORY_SEO,
                  'category' => self::CATEGORY_OPTIONS,
                  'domain' => self::DOMAINE
             ],
@@ -103,6 +104,18 @@ final class EnsureDefaultPlatformOptionsCommand extends Command
                 'optionValue' => implode(';', self::DEFAULT_WEBHOOK_CORS_ORIGINS),
                 'domain' => self::DOMAINE,
                 'category' => self::CATEGORY_HOOK,
+            ],
+            [
+                'optionName' => 'google_oauth_client_id',
+                'optionValue' => '',
+                'domain' => self::DOMAINE,
+                'category' => self::CATEGORY_SEO,
+            ],
+            [
+                'optionName' => 'google_oauth_client_secret_cipher',
+                'optionValue' => '',
+                'domain' => self::DOMAINE,
+                'category' => self::CATEGORY_SEO,
             ],
         ];
     }

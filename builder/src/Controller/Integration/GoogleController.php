@@ -41,7 +41,7 @@ final class GoogleController extends AbstractController
     {
         if (!$this->googleOAuthService->isConfigured()) {
             return new Response(
-                '<html><body><p>OAuth Google non configuré (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).</p></body></html>',
+                '<html><body><p>OAuth Google non configuré. Un administrateur doit renseigner les options plateforme : <code>google_oauth_client_id</code> et <code>google_oauth_client_secret_cipher</code> (via Administration → Options plateforme).</p></body></html>',
                 Response::HTTP_SERVICE_UNAVAILABLE,
                 ['Content-Type' => 'text/html; charset=UTF-8'],
             );
