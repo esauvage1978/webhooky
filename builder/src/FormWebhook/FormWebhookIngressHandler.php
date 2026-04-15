@@ -10,6 +10,7 @@ use App\Entity\FormWebhookAction;
 use App\Entity\FormWebhookActionLog;
 use App\Entity\FormWebhookLog;
 use App\Entity\Organization;
+use App\Entity\WebhookProject;
 use App\FormWebhook\PayloadParser\PayloadParserChain;
 use App\Mailjet\MailjetApiKeyPair;
 use App\Mailjet\MailjetAuthPairInterface;
@@ -159,6 +160,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
             'data' => [],
         ];
         $skipNext = 0;
+        $project = $webhook->getProject();
 
         foreach ($actions as $action) {
             $aLog = new FormWebhookActionLog();
@@ -191,7 +193,10 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     if (!$org instanceof Organization) {
                         throw new \RuntimeException('Organisation requise pour les actions SEO du pipeline.');
                     }
-                    $exec = $this->builtinWorkflowActionExecutor->execute($action, $org, $parsed, $workflowContext, $aLog);
+                    if (!$project instanceof WebhookProject) {
+                        throw new \RuntimeException('Projet requis pour les actions SEO du pipeline.');
+                    }
+                    $exec = $this->builtinWorkflowActionExecutor->execute($action, $project, $parsed, $workflowContext, $aLog);
                     $skipNext = (int) ($exec['skip_next'] ?? 0);
                     $aLog->setStatus(FormWebhookLogStatus::SENT);
                     $entry['ok'] = true;

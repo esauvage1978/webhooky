@@ -20,9 +20,9 @@ class OrganizationIntegration
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Organization::class)]
+    #[ORM\ManyToOne(targetEntity: WebhookProject::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ?Organization $organization = null;
+    private ?WebhookProject $project = null;
 
     #[Assert\NotBlank]
     #[Assert\Length(max: 32)]
@@ -58,14 +58,14 @@ class OrganizationIntegration
         return $this->id;
     }
 
-    public function getOrganization(): ?Organization
+    public function getProject(): ?WebhookProject
     {
-        return $this->organization;
+        return $this->project;
     }
 
-    public function setOrganization(?Organization $organization): static
+    public function setProject(?WebhookProject $project): static
     {
-        $this->organization = $organization;
+        $this->project = $project;
 
         return $this;
     }

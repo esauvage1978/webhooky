@@ -7,6 +7,7 @@ namespace App\FormWebhook;
 use App\Entity\FormWebhookAction;
 use App\Entity\FormWebhookActionLog;
 use App\Entity\Organization;
+use App\Entity\WebhookProject;
 use App\Service\AI\AIActionService;
 use App\Service\AI\SeoPromptRegistry;
 use App\Service\SEO\GoogleSearchConsoleService;
@@ -30,11 +31,15 @@ final class BuiltinWorkflowActionExecutor
      */
     public function execute(
         FormWebhookAction $action,
-        Organization $organization,
+        WebhookProject $project,
         array $parsed,
         array &$context,
         FormWebhookActionLog $aLog,
     ): array {
+        $organization = $project->getOrganization();
+        if (!$organization instanceof Organization) {
+            throw new \RuntimeException('Organisation manquante pour ce projet.');
+        }
         $oid = $organization->getId();
         if ($oid === null || (int) $oid !== (int) ($context['organization_id'] ?? 0)) {
             throw new \RuntimeException('Incohérence d’organisation sur l’action pipeline.');
@@ -45,7 +50,7 @@ final class BuiltinWorkflowActionExecutor
         $cfg = $action->getPipelineConfig() ?? [];
 
         return match ($type) {
-            WorkflowBuiltinActionType::GSC_FETCH => $this->runGscFetch($organization, $parsed, $context, $aLog, $cfg),
+            WorkflowBuiltinActionType::GSC_FETCH => $this->runGscFetch($project, $parsed, $context, $aLog, $cfg),
             WorkflowBuiltinActionType::AI_ACTION => $this->runAi($organization, $parsed, $context, $aLog, $cfg),
             WorkflowBuiltinActionType::PARSE_JSON => $this->runParseJson($parsed, $context, $aLog, $cfg),
             WorkflowBuiltinActionType::IF => $this->runIf($parsed, $context, $aLog, $cfg),
@@ -60,7 +65,7 @@ final class BuiltinWorkflowActionExecutor
      * @return array{skip_next: int}
      */
     private function runGscFetch(
-        Organization $organization,
+        WebhookProject $project,
         array $parsed,
         array &$context,
         FormWebhookActionLog $aLog,
@@ -68,7 +73,7 @@ final class BuiltinWorkflowActionExecutor
     ): array {
         $tpl = isset($cfg['url']) ? (string) $cfg['url'] : '';
         $pageFilter = $this->pipelineInterpolator->interpolateTemplate($tpl, $parsed, $context['data'] ?? []);
-        $result = $this->googleSearchConsoleService->getTopQueries($organization, $pageFilter);
+        $result = $this->googleSearchConsoleService->getTopQueries($project, $pageFilter);
         $context['data']['gsc_fetch'] = $result;
         $context['data']['gsc_keywords'] = json_encode($result['keywords'] ?? [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         $aLog->setVariablesSent(['gsc_keyword_count' => (string) \count($result['keywords'] ?? [])]);

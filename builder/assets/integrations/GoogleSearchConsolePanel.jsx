@@ -7,6 +7,7 @@ import { apiJsonInit, parseJson } from '../lib/http.js';
  */
 export default function GoogleSearchConsolePanel({ user }) {
   const orgId = user.organization?.id;
+  const isAdmin = user.roles?.includes?.('ROLE_ADMIN');
   const [status, setStatus] = useState(null);
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,18 +15,47 @@ export default function GoogleSearchConsolePanel({ user }) {
   const [selectedSite, setSelectedSite] = useState('');
   const [savingSite, setSavingSite] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState('');
 
-  const apiBase = useMemo(() => {
-    if (orgId == null) return '';
-    return absoluteAppPath(`/api/organizations/${orgId}`);
-  }, [orgId]);
+  const projectApiBase = useMemo(() => {
+    const pid = projectId ? Number(projectId) : 0;
+    if (!pid || Number.isNaN(pid) || pid < 1) return '';
+    return absoluteAppPath(`/api/webhook-projects/${pid}`);
+  }, [projectId]);
+
+  const loadProjects = useCallback(async () => {
+    setError('');
+    try {
+      const r = await fetch('/api/webhook-projects', apiJsonInit({ method: 'GET' }));
+      const data = await parseJson(r);
+      if (!r.ok) {
+        setProjects([]);
+        return;
+      }
+      const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      const filtered = orgId == null || isAdmin ? items : items.filter((p) => String(p.organizationId) === String(orgId));
+      setProjects(filtered);
+      const qp = new URLSearchParams(window.location.search);
+      const fromQuery = qp.get('projectId');
+      const preferred =
+        fromQuery && filtered.some((p) => String(p.id) === String(fromQuery))
+          ? String(fromQuery)
+          : filtered[0]?.id != null
+            ? String(filtered[0].id)
+            : '';
+      setProjectId((cur) => cur || preferred);
+    } catch {
+      setProjects([]);
+    }
+  }, [orgId, isAdmin]);
 
   const refresh = useCallback(async () => {
-    if (!apiBase) return;
+    if (!projectApiBase) return;
     setLoading(true);
     setError('');
     try {
-      const r = await fetch(`${apiBase}/gsc`, apiJsonInit({ method: 'GET' }));
+      const r = await fetch(`${projectApiBase}/gsc`, apiJsonInit({ method: 'GET' }));
       const data = await parseJson(r);
       if (!r.ok) {
         setError((data && data.error) || 'Impossible de charger le statut GSC.');
@@ -42,10 +72,10 @@ export default function GoogleSearchConsolePanel({ user }) {
   }, [apiBase]);
 
   const loadSites = useCallback(async () => {
-    if (!apiBase) return;
+    if (!projectApiBase) return;
     setError('');
     try {
-      const r = await fetch(`${apiBase}/gsc/sites`, apiJsonInit({ method: 'GET' }));
+      const r = await fetch(`${projectApiBase}/gsc/sites`, apiJsonInit({ method: 'GET' }));
       const data = await parseJson(r);
       if (!r.ok) {
         setError((data && data.error) || 'Liste des sites indisponible.');
@@ -55,11 +85,16 @@ export default function GoogleSearchConsolePanel({ user }) {
     } catch {
       setError('Erreur réseau (sites).');
     }
-  }, [apiBase]);
+  }, [projectApiBase]);
 
   useEffect(() => {
+    void loadProjects();
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (!projectApiBase) return;
     void refresh();
-  }, [refresh]);
+  }, [projectApiBase, refresh]);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -70,17 +105,18 @@ export default function GoogleSearchConsolePanel({ user }) {
   }, [loadSites]);
 
   const connectHref = useMemo(() => {
-    if (orgId == null) return '#';
-    return absoluteAppPath(`/auth/google?organizationId=${encodeURIComponent(String(orgId))}`);
-  }, [orgId]);
+    const pid = projectId ? Number(projectId) : 0;
+    if (!pid || Number.isNaN(pid) || pid < 1) return '#';
+    return absoluteAppPath(`/auth/google?projectId=${encodeURIComponent(String(pid))}`);
+  }, [projectId]);
 
   const saveSite = async () => {
-    if (!apiBase || !selectedSite.trim()) return;
+    if (!projectApiBase || !selectedSite.trim()) return;
     setSavingSite(true);
     setError('');
     try {
       const r = await fetch(
-        `${apiBase}/gsc/site`,
+        `${projectApiBase}/gsc/site`,
         apiJsonInit({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -102,11 +138,11 @@ export default function GoogleSearchConsolePanel({ user }) {
   };
 
   const disconnect = async () => {
-    if (!apiBase) return;
+    if (!projectApiBase) return;
     if (!window.confirm('Déconnecter Google Search Console pour cette organisation ?')) return;
     setError('');
     try {
-      const r = await fetch(`${apiBase}/gsc`, apiJsonInit({ method: 'DELETE' }));
+      const r = await fetch(`${projectApiBase}/gsc`, apiJsonInit({ method: 'DELETE' }));
       if (!r.ok && r.status !== 204) {
         const data = await parseJson(r);
         setError((data && data.error) || 'Échec de la déconnexion.');
@@ -131,11 +167,22 @@ export default function GoogleSearchConsolePanel({ user }) {
         <i className="fa-solid fa-chart-line" aria-hidden /> Google Search Console
       </h3>
       <p className="integrations-block__intro muted small">
-        OAuth par organisation, jetons chiffrés côté serveur. Les workflows <code>gsc_fetch</code> utilisent uniquement la
-        propriété sélectionnée ici.
+        OAuth par <strong>projet</strong>, jetons chiffrés côté serveur. Les workflows <code>gsc_fetch</code> utilisent la
+        propriété sélectionnée pour le projet.
       </p>
+      <label className="field" style={{ maxWidth: '28rem' }}>
+        <span>Projet</span>
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={projects.length === 0}>
+          {projects.length === 0 ? <option value="">Aucun projet</option> : null}
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="gsc-panel-actions" style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <a className="btn btn-primary wp-proj-hero-btn" href={connectHref}>
+        <a className="btn btn-primary wp-proj-hero-btn" href={connectHref} aria-disabled={connectHref === '#'}>
           <i className="fa-brands fa-google" aria-hidden /> Connecter Google Search Console
         </a>
         {status?.connected ? (

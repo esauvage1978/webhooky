@@ -6,10 +6,12 @@ namespace App\Controller\Integration;
 
 use App\Entity\Organization;
 use App\Entity\OrganizationIntegration;
+use App\Entity\WebhookProject;
 use App\Entity\User;
 use App\Integration\OrganizationIntegrationType;
 use App\Repository\OrganizationIntegrationRepository;
 use App\Repository\OrganizationRepository;
+use App\Repository\WebhookProjectRepository;
 use App\Security\SensitiveStringEncryptor;
 use App\Service\SEO\GoogleOAuthService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,11 +26,12 @@ final class GoogleController extends AbstractController
 {
     private const SESSION_STATE = 'google_gsc_oauth_state';
 
-    private const SESSION_ORG = 'google_gsc_oauth_org_id';
+    private const SESSION_PROJECT = 'google_gsc_oauth_project_id';
 
     public function __construct(
         private readonly GoogleOAuthService $googleOAuthService,
         private readonly OrganizationRepository $organizationRepository,
+        private readonly WebhookProjectRepository $webhookProjectRepository,
         private readonly OrganizationIntegrationRepository $organizationIntegrationRepository,
         private readonly SensitiveStringEncryptor $encryptor,
         private readonly EntityManagerInterface $entityManager,
@@ -52,22 +55,23 @@ final class GoogleController extends AbstractController
             return new Response('Non authentifié.', Response::HTTP_UNAUTHORIZED);
         }
 
-        $orgId = (int) $request->query->get('organizationId', 0);
-        if ($orgId < 1) {
-            return new Response('Paramètre organizationId manquant.', Response::HTTP_BAD_REQUEST);
+        $projectId = (int) $request->query->get('projectId', 0);
+        if ($projectId < 1) {
+            return new Response('Paramètre projectId manquant.', Response::HTTP_BAD_REQUEST);
         }
-        $org = $this->organizationRepository->find($orgId);
-        if (!$org instanceof Organization) {
-            return new Response('Organisation introuvable.', Response::HTTP_NOT_FOUND);
+        $project = $this->webhookProjectRepository->find($projectId);
+        if (!$project instanceof WebhookProject) {
+            return new Response('Projet introuvable.', Response::HTTP_NOT_FOUND);
         }
-        if (!$user->hasMembershipInOrganization($org)) {
-            return new Response('Accès refusé à cette organisation.', Response::HTTP_FORBIDDEN);
+        $org = $project->getOrganization();
+        if (!$org instanceof Organization || !$user->hasMembershipInOrganization($org)) {
+            return new Response('Accès refusé à ce projet.', Response::HTTP_FORBIDDEN);
         }
 
         $state = bin2hex(random_bytes(16));
         $session = $request->getSession();
         $session->set(self::SESSION_STATE, $state);
-        $session->set(self::SESSION_ORG, $orgId);
+        $session->set(self::SESSION_PROJECT, $projectId);
 
         $redirectUri = $this->generateUrl('integration_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $url = $this->googleOAuthService->buildAuthorizationUrl($redirectUri, $state);
@@ -84,13 +88,13 @@ final class GoogleController extends AbstractController
 
         $session = $request->getSession();
         $expected = $session->get(self::SESSION_STATE);
-        $orgId = (int) $session->get(self::SESSION_ORG, 0);
+        $projectId = (int) $session->get(self::SESSION_PROJECT, 0);
         $state = (string) $request->query->get('state', '');
         if (!\is_string($expected) || $expected === '' || !hash_equals($expected, $state)) {
             return new Response('Session OAuth invalide ou expirée.', Response::HTTP_BAD_REQUEST);
         }
         $session->remove(self::SESSION_STATE);
-        $session->remove(self::SESSION_ORG);
+        $session->remove(self::SESSION_PROJECT);
 
         $code = (string) $request->query->get('code', '');
         if ($code === '') {
@@ -104,9 +108,13 @@ final class GoogleController extends AbstractController
             return new Response('Veuillez vous reconnecter puis relancer la connexion Google.', Response::HTTP_UNAUTHORIZED);
         }
 
-        $org = $this->organizationRepository->find($orgId);
+        $project = $this->webhookProjectRepository->find($projectId);
+        if (!$project instanceof WebhookProject) {
+            return new Response('Projet invalide pour ce jeton OAuth.', Response::HTTP_FORBIDDEN);
+        }
+        $org = $project->getOrganization();
         if (!$org instanceof Organization || !$user->hasMembershipInOrganization($org)) {
-            return new Response('Organisation invalide pour ce jeton OAuth.', Response::HTTP_FORBIDDEN);
+            return new Response('Accès refusé à ce projet.', Response::HTTP_FORBIDDEN);
         }
 
         $redirectUri = $this->generateUrl('integration_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
@@ -122,12 +130,10 @@ final class GoogleController extends AbstractController
             return new Response('Réponse Google incomplète (refresh token manquant — réessayez avec prompt=consent).', Response::HTTP_BAD_GATEWAY);
         }
 
-        foreach ($this->organizationIntegrationRepository->findGscIntegrationsForOrganization($org) as $old) {
-            $this->entityManager->remove($old);
-        }
+        $this->organizationIntegrationRepository->removeGscForProject($project);
 
         $integration = new OrganizationIntegration();
-        $integration->setOrganization($org);
+        $integration->setProject($project);
         $integration->setType(OrganizationIntegrationType::GSC);
         $integration->setAccessTokenCipher($this->encryptor->encrypt($access));
         $integration->setRefreshTokenCipher($this->encryptor->encrypt($refresh));
@@ -139,6 +145,6 @@ final class GoogleController extends AbstractController
         $this->entityManager->persist($integration);
         $this->entityManager->flush();
 
-        return $this->redirect('/integrations?gsc=connected');
+        return $this->redirect('/integrations?tab=gsc&gsc=connected&projectId='.$projectId);
     }
 }

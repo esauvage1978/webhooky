@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Organization;
 use App\Entity\OrganizationIntegration;
+use App\Entity\WebhookProject;
 use App\Integration\OrganizationIntegrationType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -20,34 +20,24 @@ class OrganizationIntegrationRepository extends ServiceEntityRepository
         parent::__construct($registry, OrganizationIntegration::class);
     }
 
-    /**
-     * Intégration GSC pour une organisation (la plus récente si plusieurs).
-     */
-    public function findLatestGscForOrganization(Organization $organization): ?OrganizationIntegration
+    public function findGscForProject(WebhookProject $project): ?OrganizationIntegration
     {
         return $this->createQueryBuilder('i')
-            ->andWhere('i.organization = :org')
+            ->andWhere('i.project = :p')
             ->andWhere('i.type = :t')
-            ->setParameter('org', $organization)
+            ->setParameter('p', $project)
             ->setParameter('t', OrganizationIntegrationType::GSC)
-            ->orderBy('i.id', 'DESC')
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
     }
 
-    /**
-     * @return list<OrganizationIntegration>
-     */
-    public function findGscIntegrationsForOrganization(Organization $organization): array
+    public function removeGscForProject(WebhookProject $project): void
     {
-        return $this->createQueryBuilder('i')
-            ->andWhere('i.organization = :org')
-            ->andWhere('i.type = :t')
-            ->setParameter('org', $organization)
-            ->setParameter('t', OrganizationIntegrationType::GSC)
-            ->orderBy('i.id', 'ASC')
-            ->getQuery()
-            ->getResult();
+        $row = $this->findGscForProject($project);
+        if (!$row instanceof OrganizationIntegration) {
+            return;
+        }
+        $this->getEntityManager()->remove($row);
     }
 }

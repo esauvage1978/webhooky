@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\SEO;
 
-use App\Entity\Organization;
 use App\Entity\OrganizationIntegration;
+use App\Entity\WebhookProject;
 use App\Integration\OrganizationIntegrationType;
 use App\Repository\OrganizationIntegrationRepository;
 use App\Security\SensitiveStringEncryptor;
@@ -41,24 +41,24 @@ final class GoogleSearchConsoleService
      *
      * @return array{keywords: list<array{query: string, clicks: int, impressions: int, ctr: float, position: float}>}
      */
-    public function getTopQueries(Organization $organization, string $pageUrlFilter = ''): array
+    public function getTopQueries(WebhookProject $project, string $pageUrlFilter = ''): array
     {
-        $integration = $this->integrationRepository->findLatestGscForOrganization($organization);
+        $integration = $this->integrationRepository->findGscForProject($project);
         if (!$integration instanceof OrganizationIntegration) {
-            throw new \RuntimeException('Google Search Console n’est pas connecté pour cette organisation.');
+            throw new \RuntimeException('Google Search Console n’est pas connecté pour ce projet.');
         }
         $siteUrl = $integration->getSiteUrl();
         if ($siteUrl === null || $siteUrl === '') {
             throw new \RuntimeException('Sélectionnez une propriété Search Console (site) pour cette organisation.');
         }
 
-        $orgId = (int) $organization->getId();
+        $orgId = (int) ($project->getOrganization()?->getId() ?? 0);
         $limiter = $this->gscLimiter->create('org_'.$orgId);
         if (!$limiter->consume()->isAccepted()) {
             throw new \RuntimeException('Quota d’appels Search Console atteint pour cette organisation. Réessayez plus tard.');
         }
 
-        $cacheKey = $this->cacheKey($orgId, $siteUrl, $pageUrlFilter);
+        $cacheKey = $this->cacheKey((int) $project->getId(), $siteUrl, $pageUrlFilter);
         $item = $this->gscCache->getItem($cacheKey);
         if ($item->isHit()) {
             /** @var array{keywords: list<array<string, mixed>>} $cached */
@@ -89,9 +89,9 @@ final class GoogleSearchConsoleService
         return $out;
     }
 
-    private function cacheKey(int $organizationId, string $siteUrl, string $pageUrl): string
+    private function cacheKey(int $projectId, string $siteUrl, string $pageUrl): string
     {
-        return 'gsc_v'.self::CACHE_VERSION.'_'.$organizationId.'_'.hash('sha256', $siteUrl."\n".$pageUrl);
+        return 'gsc_v'.self::CACHE_VERSION.'_p'.$projectId.'_'.hash('sha256', $siteUrl."\n".$pageUrl);
     }
 
     private function getValidAccessToken(OrganizationIntegration $integration): string
@@ -123,9 +123,9 @@ final class GoogleSearchConsoleService
     /**
      * @return list<array<string, mixed>>
      */
-    public function listSitesForOrganization(Organization $organization): array
+    public function listSitesForProject(WebhookProject $project): array
     {
-        $integration = $this->integrationRepository->findLatestGscForOrganization($organization);
+        $integration = $this->integrationRepository->findGscForProject($project);
         if (!$integration instanceof OrganizationIntegration) {
             return [];
         }
