@@ -299,7 +299,7 @@ final class ApiFormWebhookController extends AbstractController
 
     #[Route('/{id}', name: 'api_form_webhooks_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     #[IsGranted('ROLE_USER')]
-    public function delete(int $id): Response
+    public function delete(int $id, Request $request): Response
     {
         $webhook = $this->formWebhookRepository->find($id);
         if (!$webhook instanceof FormWebhook) {
