@@ -8,7 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   root: path.resolve(__dirname, 'assets'),
-  base: '/build/',
+  /* Chemins relatifs dans le CSS (url ./fa-*.woff2) : compat basePath Symfony / sous-dossier + évite polices FA en 404. */
+  base: './',
   build: {
     outDir: path.resolve(__dirname, 'public/build'),
     emptyOutDir: true,
