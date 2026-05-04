@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\Organization;
 use App\Entity\User;
 use App\Onboarding\UserOnboardingEvaluator;
+use App\Repository\OrganizationRepository;
 use App\Subscription\SubscriptionPlan;
 use App\WebhookProject\DefaultWebhookProjectService;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -26,6 +27,7 @@ final class ApiOnboardingController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly OrganizationRepository $organizationRepository,
         private readonly UserOnboardingEvaluator $onboardingEvaluator,
         private readonly ValidatorInterface $validator,
         private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
@@ -67,6 +69,7 @@ final class ApiOnboardingController extends AbstractController
             return new JsonResponse(['error' => 'Validation', 'fields' => $messages], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $this->organizationRepository->ensureWebhookPublicPrefix($organization);
         $this->entityManager->persist($organization);
         $user->addOrganizationMembership($organization);
         $user->setOrganization($organization);

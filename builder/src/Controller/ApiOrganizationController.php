@@ -252,6 +252,7 @@ final class ApiOrganizationController extends AbstractController
             return $this->validationErrorResponse($errors);
         }
 
+        $this->organizationRepository->ensureWebhookPublicPrefix($organization);
         $this->entityManager->persist($organization);
         $this->attachUserToOrganization($user, $organization);
 
@@ -294,6 +295,7 @@ final class ApiOrganizationController extends AbstractController
             return $this->validationErrorResponse($errors);
         }
 
+        $this->organizationRepository->ensureWebhookPublicPrefix($organization);
         $this->entityManager->persist($organization);
 
         if (isset($data['userId']) && $data['userId'] !== '' && $data['userId'] !== null) {

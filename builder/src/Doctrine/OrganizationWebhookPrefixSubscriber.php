@@ -31,9 +31,6 @@ final class OrganizationWebhookPrefixSubscriber implements EventSubscriber
         if (!$entity instanceof Organization) {
             return;
         }
-        if ($entity->getWebhookPublicPrefix() !== '') {
-            return;
-        }
-        $entity->setWebhookPublicPrefix($this->organizationRepository->allocateUniqueWebhookPublicPrefix());
+        $this->organizationRepository->ensureWebhookPublicPrefix($entity);
     }
 }

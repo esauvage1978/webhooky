@@ -63,6 +63,17 @@ class OrganizationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Attribue un préfixe webhook unique avant persistance si absent (contrainte DB sur webhook_public_prefix).
+     */
+    public function ensureWebhookPublicPrefix(Organization $organization): void
+    {
+        if (trim($organization->getWebhookPublicPrefix()) !== '') {
+            return;
+        }
+        $organization->setWebhookPublicPrefix($this->allocateUniqueWebhookPublicPrefix());
+    }
+
+    /**
      * Génère un préfixe hexadécimal unique pour {@see Organization::webhookPublicPrefix}.
      */
     public function allocateUniqueWebhookPublicPrefix(): string

@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Entity\Organization;
 use App\Entity\User;
+use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use App\WebhookProject\DefaultWebhookProjectService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,6 +26,7 @@ final class CreatePlatformManagerCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly OrganizationRepository $organizationRepository,
         private readonly UserRepository $userRepository,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly DefaultWebhookProjectService $defaultWebhookProjectService,
@@ -63,6 +65,7 @@ final class CreatePlatformManagerCommand extends Command
         if ($organization === null) {
             $organization = (new Organization())->setName($orgName);
             $organization->applyFreePlan();
+            $this->organizationRepository->ensureWebhookPublicPrefix($organization);
             $this->entityManager->persist($organization);
         }
 
