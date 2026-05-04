@@ -254,7 +254,12 @@ export default function App() {
       const res = await fetch('/api/me', apiJsonInit());
       if (res.ok) {
         let data = await parseJson(res);
-        if (!data || typeof data !== 'object') {
+        // Session anonyme : GET /api/me renvoie 200 + JSON null (ApiMeController), pas une erreur.
+        if (data === null) {
+          setUser(null);
+          return;
+        }
+        if (typeof data !== 'object') {
           forceLogoutToLogin(null);
           return;
         }
