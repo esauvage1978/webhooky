@@ -15,7 +15,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: OrganizationRepository::class)]
 #[ORM\Table(name: 'organization')]
-#[ORM\UniqueConstraint(name: 'UNIQ_ORGANIZATION_NAME', fields: ['name'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_ORGANIZATION_WEBHOOK_PUBLIC_PREFIX', fields: ['webhookPublicPrefix'])]
 #[ORM\HasLifecycleCallbacks]
 class Organization
