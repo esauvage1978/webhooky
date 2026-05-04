@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ export default function ForgotPasswordForm() {
     setError('');
     setPending(true);
     try {
-      const res = await fetch('/api/forgot-password', {
+      const res = await fetch(absoluteAppPath('/api/forgot-password'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -39,7 +40,7 @@ export default function ForgotPasswordForm() {
           les courriers indésirables.
         </p>
         <p>
-          <a href="/" className="login-inline-link">
+          <a href={absoluteAppPath('/')} className="login-inline-link">
             Retour à la connexion
           </a>
         </p>
@@ -65,7 +66,7 @@ export default function ForgotPasswordForm() {
         {pending ? 'Envoi…' : 'Envoyer le lien'}
       </button>
       <p className="login-switch">
-        <a href="/" className="login-inline-link">
+        <a href={absoluteAppPath('/')} className="login-inline-link">
           Retour à la connexion
         </a>
       </p>

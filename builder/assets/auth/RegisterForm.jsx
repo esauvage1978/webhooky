@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export default function RegisterForm() {
     setFields({});
     setPending(true);
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch(absoluteAppPath('/api/register'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -43,7 +44,7 @@ export default function RegisterForm() {
           pour activer votre compte avant de vous connecter.
         </p>
         <p>
-          <a href="/" className="login-inline-link">
+          <a href={absoluteAppPath('/')} className="login-inline-link">
             Retour à la connexion
           </a>
         </p>
@@ -84,7 +85,7 @@ export default function RegisterForm() {
       </button>
       <p className="login-switch">
         Déjà un compte ?{' '}
-        <a href="/" className="login-inline-link">
+        <a href={absoluteAppPath('/')} className="login-inline-link">
           Connexion
         </a>
       </p>

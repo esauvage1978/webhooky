@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 
 export default function InvitationForm() {
   const token = useMemo(() => new URLSearchParams(window.location.search).get('token') ?? '', []);
@@ -24,7 +25,7 @@ export default function InvitationForm() {
     }
     setPending(true);
     try {
-      const res = await fetch('/api/accept-invitation', {
+      const res = await fetch(absoluteAppPath('/api/accept-invitation'), {
         method: 'POST',
         credentials: 'omit',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -37,7 +38,7 @@ export default function InvitationForm() {
         return;
       }
       setDone(true);
-      window.history.replaceState({}, '', '/invitation');
+      window.history.replaceState({}, '', absoluteAppPath('/invitation'));
     } catch {
       setError('Erreur réseau');
     } finally {
@@ -50,7 +51,7 @@ export default function InvitationForm() {
       <div className="login-form">
         <p className="login-success">Votre mot de passe est enregistré. Vous pouvez vous connecter.</p>
         <p>
-          <a href="/" className="login-inline-link">
+          <a href={absoluteAppPath('/')} className="login-inline-link">
             Connexion
           </a>
         </p>
@@ -93,7 +94,7 @@ export default function InvitationForm() {
         {pending ? 'Enregistrement…' : 'Activer mon accès'}
       </button>
       <p className="login-switch">
-        <a href="/" className="login-inline-link">
+        <a href={absoluteAppPath('/')} className="login-inline-link">
           Connexion
         </a>
       </p>

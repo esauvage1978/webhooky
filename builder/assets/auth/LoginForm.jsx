@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiJsonInit, parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 
 export default function LoginForm({ onSuccess }) {
   const [email, setEmail] = useState('');
@@ -13,7 +14,7 @@ export default function LoginForm({ onSuccess }) {
     setPending(true);
     try {
       const res = await fetch(
-        '/api/login',
+        absoluteAppPath('/api/login'),
         apiJsonInit({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -62,11 +63,11 @@ export default function LoginForm({ onSuccess }) {
         {pending ? 'Connexion…' : 'Se connecter'}
       </button>
       <p className="login-switch">
-        <a href="/inscription" className="login-inline-link">
+        <a href={absoluteAppPath('/inscription')} className="login-inline-link">
           Créer un compte
         </a>
         {' · '}
-        <a href="/mot-de-passe-oublie" className="login-inline-link">
+        <a href={absoluteAppPath('/mot-de-passe-oublie')} className="login-inline-link">
           Mot de passe oublié
         </a>
       </p>

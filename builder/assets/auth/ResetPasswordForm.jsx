@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 
 export default function ResetPasswordForm() {
   const token = useMemo(() => new URLSearchParams(window.location.search).get('token') ?? '', []);
@@ -24,7 +25,7 @@ export default function ResetPasswordForm() {
     }
     setPending(true);
     try {
-      const res = await fetch('/api/reset-password', {
+      const res = await fetch(absoluteAppPath('/api/reset-password'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -49,7 +50,7 @@ export default function ResetPasswordForm() {
       <div className="login-form">
         <p className="login-success">Mot de passe mis à jour. Vous pouvez vous connecter.</p>
         <p>
-          <a href="/" className="login-inline-link">
+          <a href={absoluteAppPath('/')} className="login-inline-link">
             Connexion
           </a>
         </p>
@@ -92,11 +93,11 @@ export default function ResetPasswordForm() {
         {pending ? 'Enregistrement…' : 'Enregistrer le mot de passe'}
       </button>
       <p className="login-switch">
-        <a href="/mot-de-passe-oublie" className="login-inline-link">
+        <a href={absoluteAppPath('/mot-de-passe-oublie')} className="login-inline-link">
           Renvoyer un lien
         </a>
         {' · '}
-        <a href="/" className="login-inline-link">
+        <a href={absoluteAppPath('/')} className="login-inline-link">
           Connexion
         </a>
       </p>
