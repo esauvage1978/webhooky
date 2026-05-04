@@ -39,7 +39,8 @@ function isApiRequest(input) {
   try {
     const u = new URL(urlStr, window.location.origin);
     const path = u.pathname.replace(/\/+$/, '') || '/';
-    return path.startsWith('/api/');
+    // Compat préfixe Symfony (ex. /public/api/me) : pas seulement racine /api/…
+    return path.includes('/api/');
   } catch {
     return false;
   }

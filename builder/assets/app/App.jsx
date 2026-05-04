@@ -10,7 +10,9 @@ import ResetPasswordForm from '../auth/ResetPasswordForm.jsx';
 import DashboardHome from '../dashboard/DashboardHome.jsx';
 import Integrations from '../integrations/Integrations.jsx';
 import DashboardLayout from '../layout/DashboardLayout.jsx';
+import { authDebug } from '../lib/authDebug.js';
 import { apiJsonInit, parseJson } from '../lib/http.js';
+import { absoluteAppPath } from '../lib/paths.js';
 import { setAppSessionKnownLoggedIn } from '../lib/sessionFetch.js';
 import OnboardingWizard from '../organization/OnboardingWizard.jsx';
 import SetupOrganization from '../organization/SetupOrganization.jsx';
@@ -136,6 +138,7 @@ export default function App() {
   const [authNotice, setAuthNotice] = useState(null);
 
   const forceLogoutToLogin = useCallback((notice) => {
+    authDebug('forceLogoutToLogin', { notice: notice ?? null, path: window.location.pathname });
     setAppSessionKnownLoggedIn(false);
     try {
       sessionStorage.removeItem(ORG_SESSION_KEY);
@@ -144,11 +147,17 @@ export default function App() {
     }
     setUser(null);
     setActiveNav('dashboard');
-    window.history.replaceState({}, '', '/');
-    setPathname('/');
-    setAuthScreen('login');
+    const p = normalizePath(window.location.pathname);
+    if (AUTH_PATHS.includes(p)) {
+      setPathname(p);
+      setAuthScreen(authScreenFromPath());
+    } else {
+      window.history.replaceState({}, '', absoluteAppPath('/'));
+      setPathname('/');
+      setAuthScreen('login');
+    }
     if (notice) setAuthNotice(notice);
-    void fetch('/api/logout', apiJsonInit({ method: 'GET' }));
+    void fetch(absoluteAppPath('/api/logout'), apiJsonInit({ method: 'GET' }));
   }, []);
 
   const authTitles = useMemo(
@@ -251,20 +260,28 @@ export default function App() {
     const quiet = opts.quiet === true;
     if (!quiet) setLoading(true);
     try {
-      const res = await fetch('/api/me', apiJsonInit());
+      const meUrl = absoluteAppPath('/api/me');
+      const res = await fetch(meUrl, apiJsonInit());
+      authDebug('refreshSession /api/me', { url: meUrl, status: res.status, ok: res.ok });
       if (res.ok) {
         let data = await parseJson(res);
         // Session anonyme : GET /api/me renvoie 200 + JSON null (ApiMeController), pas une erreur.
         if (data === null) {
+          authDebug('refreshSession → anonyme (JSON null ou corps vide)');
           setUser(null);
           return;
         }
         if (typeof data !== 'object') {
+          authDebug('refreshSession → déconnexion (payload non objet)', { type: typeof data });
           forceLogoutToLogin(null);
           return;
         }
         data = normalizeMePayload(data);
         if (!data.email || !Array.isArray(data.roles) || data.roles.length === 0) {
+          authDebug('refreshSession → déconnexion (e-mail / rôles manquants)', {
+            hasEmail: !!data.email,
+            rolesLen: Array.isArray(data.roles) ? data.roles.length : -1,
+          });
           forceLogoutToLogin(null);
           return;
         }
@@ -272,7 +289,7 @@ export default function App() {
         const orgs = data.organizations;
         if (!isAdm && orgs.length === 1 && !data.organization) {
           const r2 = await fetch(
-            '/api/me/active-organization',
+            absoluteAppPath('/api/me/active-organization'),
             apiJsonInit({
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -288,9 +305,11 @@ export default function App() {
         }
         setUser(normalizeMePayload(data));
       } else {
+        authDebug('refreshSession → déconnexion (/api/me HTTP non OK)', { status: res.status });
         forceLogoutToLogin(null);
       }
-    } catch {
+    } catch (e) {
+      authDebug('refreshSession → exception', { message: e instanceof Error ? e.message : String(e) });
       forceLogoutToLogin(null);
     } finally {
       if (!quiet) setLoading(false);
@@ -338,7 +357,7 @@ export default function App() {
         return;
       }
       if (popPath === '/mailjet' || popPath === '/mailjets') {
-        window.history.replaceState({}, '', '/integrations');
+        window.history.replaceState({}, '', absoluteAppPath('/integrations'));
         popPath = '/integrations';
         setPathname('/integrations');
       }
@@ -350,7 +369,7 @@ export default function App() {
       if (nav === null && !AUTH_PATHS.includes(popPath)) {
         setActiveNav('dashboard');
         if (popPath !== '/') {
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', absoluteAppPath('/'));
           setPathname('/');
         }
       }
@@ -376,7 +395,7 @@ export default function App() {
       }
       setActiveNav('setupOrganization');
       if (normalizePath(window.location.pathname) !== '/mon-organisation') {
-        window.history.replaceState({}, '', '/mon-organisation');
+        window.history.replaceState({}, '', absoluteAppPath('/mon-organisation'));
         setPathname('/mon-organisation');
       }
       return;
@@ -384,7 +403,7 @@ export default function App() {
 
     let syncPath = replaceLegacyWebhooksUrlIfNeeded();
     if (syncPath === '/mailjet' || syncPath === '/mailjets') {
-      window.history.replaceState({}, '', '/integrations');
+      window.history.replaceState({}, '', absoluteAppPath('/integrations'));
       syncPath = '/integrations';
       setPathname('/integrations');
     }
@@ -397,7 +416,7 @@ export default function App() {
     }
 
     if (syncPath !== '/') {
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     }
     setActiveNav('dashboard');
@@ -408,7 +427,7 @@ export default function App() {
     const q = new URLSearchParams(window.location.search);
     if (q.get('verified') === '1') {
       setAuthNotice({ type: 'ok', text: 'Votre adresse e-mail est confirmée. Vous pouvez vous connecter.' });
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
       setAuthScreen('login');
     }
@@ -420,7 +439,7 @@ export default function App() {
         expired: 'Ce lien a expiré. Inscrivez-vous à nouveau ou contactez un administrateur.',
       };
       setAuthNotice({ type: 'err', text: map[verr] ?? 'La confirmation a échoué.' });
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
       setAuthScreen('login');
     }
@@ -428,7 +447,7 @@ export default function App() {
 
   const handleLogout = async () => {
     setAppSessionKnownLoggedIn(false);
-    await fetch('/api/logout', apiJsonInit({ method: 'GET' }));
+    await fetch(absoluteAppPath('/api/logout'), apiJsonInit({ method: 'GET' }));
     try {
       sessionStorage.removeItem(ORG_SESSION_KEY);
     } catch {
@@ -438,7 +457,7 @@ export default function App() {
     setActiveNav('dashboard');
     const p = normalizePath(window.location.pathname);
     if (!AUTH_PATHS.includes(p)) {
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     } else {
       setPathname(window.location.pathname);
@@ -449,7 +468,7 @@ export default function App() {
   useEffect(() => {
     if (user && !user.roles.includes('ROLE_ADMIN') && activeNav === 'organizations') {
       setActiveNav('dashboard');
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     }
   }, [user, activeNav]);
@@ -457,7 +476,7 @@ export default function App() {
   useEffect(() => {
     if (user && !user.roles.includes('ROLE_ADMIN') && activeNav === 'adminSupervision') {
       setActiveNav('dashboard');
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     }
   }, [user, activeNav]);
@@ -465,7 +484,7 @@ export default function App() {
   useEffect(() => {
     if (user && !user.roles.includes('ROLE_ADMIN') && activeNav === 'adminOptions') {
       setActiveNav('dashboard');
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     }
   }, [user, activeNav]);
@@ -476,7 +495,7 @@ export default function App() {
     const isManager = user.roles.includes('ROLE_MANAGER');
     if (!isAdmin && !isManager && (activeNav === 'users' || activeNav === 'usersJournal')) {
       setActiveNav('dashboard');
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', absoluteAppPath('/'));
       setPathname('/');
     }
   }, [user, activeNav]);
@@ -488,7 +507,7 @@ export default function App() {
     if ((!isAdmin && !isManager) || !user.organization) {
       if (activeNav === 'organizationBilling') {
         setActiveNav('dashboard');
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({}, '', absoluteAppPath('/'));
         setPathname('/');
       }
     }
@@ -497,7 +516,7 @@ export default function App() {
   const switchOrganization = useCallback(
     async (organizationId) => {
       const res = await fetch(
-        '/api/me/active-organization',
+        absoluteAppPath('/api/me/active-organization'),
         apiJsonInit({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
