@@ -2013,6 +2013,54 @@ h1 {
   color: var(--ink-soft);
 }
 
+.log-kv-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.log-kv-title-row .log-kv-title {
+  margin: 0;
+}
+
+.log-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.log-copy-btn:hover {
+  background: var(--surface-elevated);
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.log-copy-btn--done {
+  border-color: rgba(34, 160, 90, 0.45);
+  color: #1f8a4c;
+  background: rgba(34, 160, 90, 0.08);
+}
+
+.log-copy-btn--done:hover {
+  border-color: rgba(34, 160, 90, 0.55);
+  color: #1f8a4c;
+  background: rgba(34, 160, 90, 0.1);
+}
+
 .log-kv-grid {
   display: grid;
   grid-template-columns: minmax(7rem, 32%) 1fr;

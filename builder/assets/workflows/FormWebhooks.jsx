@@ -541,6 +541,45 @@ function KeyValueBlock({ title, record, emptyText }) {
   );
 }
 
+function CopyableRawBody({ body }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (timerRef.current != null) window.clearTimeout(timerRef.current);
+  }, []);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="log-kv-block">
+      <div className="log-kv-title-row">
+        <h4 className="log-kv-title">Corps brut</h4>
+        <button
+          type="button"
+          className={`log-copy-btn ${copied ? 'log-copy-btn--done' : ''}`}
+          onClick={() => void copy()}
+          title={copied ? 'Copié' : 'Copier dans le presse-papiers'}
+          aria-label={copied ? 'Corps brut copié' : 'Copier le corps brut'}
+        >
+          <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`} aria-hidden />
+          <span>{copied ? 'Copié' : 'Copier'}</span>
+        </button>
+      </div>
+      <pre className="log-raw-body">{body}</pre>
+    </div>
+  );
+}
+
 function prettyJsonMaybe(raw) {
   if (raw == null || raw === '') return null;
   try {
@@ -3177,12 +3216,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                     <p className="muted small">Pas de détail d’action (échec très tôt ?).</p>
                   )}
 
-                  {logDetail.rawBody ? (
-                    <div className="log-kv-block">
-                      <h4 className="log-kv-title">Corps brut</h4>
-                      <pre className="log-raw-body">{logDetail.rawBody}</pre>
-                    </div>
-                  ) : null}
+                  {logDetail.rawBody ? <CopyableRawBody body={logDetail.rawBody} /> : null}
                 </>
               ) : null}
             </div>
