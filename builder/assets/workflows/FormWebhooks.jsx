@@ -3042,48 +3042,50 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
             <div className="fw-logs-layout">
             <div className="fw-logs-list">
               <div className="fw-logs-list-head">Exécutions récentes</div>
-              {logs?.error ? (
-                <p className="error" style={{ padding: '1rem' }}>
-                  {logs.error}
-                </p>
-              ) : null}
-              {logs?.items && logs.items.length === 0 ? (
-                <div className="fw-muted-box">Aucune exécution enregistrée.</div>
-              ) : null}
-              {logs?.items?.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  className={`fw-run-row ${selectedLogId === l.id ? 'fw-run-selected' : ''}`}
-                  onClick={() => void openLogDetail(l.id)}
-                >
-                  <div>
-                    <div className="fw-run-meta">
-                      <strong>#{l.id}</strong> ·{' '}
-                      {l.receivedAt ? new Date(l.receivedAt).toLocaleString('fr-FR') : '—'}
-                    </div>
-                    <div className="fw-run-meta">
-                      Statut <strong>{l.status}</strong>
-                      {l.actionsSummary
-                        ? ` · ${l.actionsSummary.succeeded}/${l.actionsSummary.total} actions OK`
-                        : ''}
-                    </div>
-                  </div>
-                  <span
-                    className={`badge ${
-                      l.status === 'sent'
-                        ? 'ok'
-                        : l.status === 'error'
-                          ? 'danger'
-                          : l.status === 'skipped'
-                            ? 'neutral'
-                            : 'warn'
-                    }`}
+              <div className="fw-logs-list-body">
+                {logs?.error ? (
+                  <p className="error" style={{ padding: '1rem' }}>
+                    {logs.error}
+                  </p>
+                ) : null}
+                {logs?.items && logs.items.length === 0 ? (
+                  <div className="fw-muted-box">Aucune exécution enregistrée.</div>
+                ) : null}
+                {logs?.items?.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    className={`fw-run-row ${selectedLogId === l.id ? 'fw-run-selected' : ''}`}
+                    onClick={() => void openLogDetail(l.id)}
                   >
-                    {l.status}
-                  </span>
-                </button>
-              ))}
+                    <div>
+                      <div className="fw-run-meta">
+                        <strong>#{l.id}</strong> ·{' '}
+                        {l.receivedAt ? new Date(l.receivedAt).toLocaleString('fr-FR') : '—'}
+                      </div>
+                      <div className="fw-run-meta">
+                        Statut <strong>{l.status}</strong>
+                        {l.actionsSummary
+                          ? ` · ${l.actionsSummary.succeeded}/${l.actionsSummary.total} actions OK`
+                          : ''}
+                      </div>
+                    </div>
+                    <span
+                      className={`badge ${
+                        l.status === 'sent'
+                          ? 'ok'
+                          : l.status === 'error'
+                            ? 'danger'
+                            : l.status === 'skipped'
+                              ? 'neutral'
+                              : 'warn'
+                      }`}
+                    >
+                      {l.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="fw-logs-detail">
