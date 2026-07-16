@@ -509,20 +509,69 @@ function formatKvValue(v) {
   return String(v);
 }
 
-function KeyValueBlock({ title, record, emptyText }) {
+function LogCopyButton({ text, ariaLabel, ariaLabelDone }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (timerRef.current != null) window.clearTimeout(timerRef.current);
+  }, []);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className={`log-copy-btn ${copied ? 'log-copy-btn--done' : ''}`}
+      onClick={() => void copy()}
+      title={copied ? 'Copié' : 'Copier dans le presse-papiers'}
+      aria-label={copied ? ariaLabelDone : ariaLabel}
+    >
+      <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`} aria-hidden />
+      <span>{copied ? 'Copié' : 'Copier'}</span>
+    </button>
+  );
+}
+
+function KeyValueBlock({ title, record, emptyText, copyable = false }) {
   const entries =
     record && typeof record === 'object' && !Array.isArray(record) ? Object.entries(record) : [];
+  const copyText =
+    copyable && entries.length > 0 ? JSON.stringify(Object.fromEntries(entries), null, 2) : '';
+
+  const titleRow = (
+    <div className="log-kv-title-row">
+      <h4 className="log-kv-title">{title}</h4>
+      {copyable && copyText ? (
+        <LogCopyButton
+          text={copyText}
+          ariaLabel={`Copier ${title}`}
+          ariaLabelDone={`${title} copié`}
+        />
+      ) : null}
+    </div>
+  );
+
   if (entries.length === 0) {
     return (
       <div className="log-kv-block">
-        <h4 className="log-kv-title">{title}</h4>
+        {copyable ? titleRow : <h4 className="log-kv-title">{title}</h4>}
         <p className="muted small">{emptyText ?? 'Aucune donnée'}</p>
       </div>
     );
   }
   return (
     <div className="log-kv-block">
-      <h4 className="log-kv-title">{title}</h4>
+      {copyable ? titleRow : <h4 className="log-kv-title">{title}</h4>}
       <dl className="log-kv-grid">
         {entries.map(([k, v]) => {
           const display = formatKvValue(v);
@@ -542,38 +591,15 @@ function KeyValueBlock({ title, record, emptyText }) {
 }
 
 function CopyableRawBody({ body }) {
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef(null);
-
-  useEffect(() => () => {
-    if (timerRef.current != null) window.clearTimeout(timerRef.current);
-  }, []);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(body);
-      setCopied(true);
-      if (timerRef.current != null) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  };
-
   return (
     <div className="log-kv-block">
       <div className="log-kv-title-row">
         <h4 className="log-kv-title">Corps brut</h4>
-        <button
-          type="button"
-          className={`log-copy-btn ${copied ? 'log-copy-btn--done' : ''}`}
-          onClick={() => void copy()}
-          title={copied ? 'Copié' : 'Copier dans le presse-papiers'}
-          aria-label={copied ? 'Corps brut copié' : 'Copier le corps brut'}
-        >
-          <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`} aria-hidden />
-          <span>{copied ? 'Copié' : 'Copier'}</span>
-        </button>
+        <LogCopyButton
+          text={body}
+          ariaLabel="Copier le corps brut"
+          ariaLabelDone="Corps brut copié"
+        />
       </div>
       <pre className="log-raw-body">{body}</pre>
     </div>
@@ -3168,6 +3194,7 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                     title="Champs reçus (après parsing)"
                     record={logDetail.parsedInput}
                     emptyText="Aucun champ parsé enregistré."
+                    copyable
                   />
 
                   {Array.isArray(logDetail.actionLogs) && logDetail.actionLogs.length > 0 ? (
