@@ -7,8 +7,10 @@ namespace App\Repository;
 use App\Entity\FormWebhook;
 use App\Entity\FormWebhookLog;
 use App\Entity\Organization;
+use App\FormWebhook\FormWebhookLogStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -24,20 +26,27 @@ class FormWebhookLogRepository extends ServiceEntityRepository
     /**
      * @return list<FormWebhookLog>
      */
-    public function findByWebhookPaginated(FormWebhook $webhook, int $page, int $limit): array
-    {
+    public function findByWebhookPaginated(
+        FormWebhook $webhook,
+        int $page,
+        int $limit,
+        ?string $status = null,
+        ?string $search = null,
+    ): array {
         $page = max(1, $page);
         $limit = min(100, max(1, $limit));
 
-        $ids = $this->createQueryBuilder('l')
+        $idsQb = $this->createQueryBuilder('l')
             ->select('l.id')
-            ->andWhere('l.formWebhook = :w')
-            ->setParameter('w', $webhook)
             ->orderBy('l.receivedAt', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getSingleColumnResult();
+            ->setMaxResults($limit);
+        $this->applyWebhookListFilters($idsQb, $webhook, $status, $search);
+        if ($this->searchNeedsActionJoin($search)) {
+            $idsQb->distinct();
+        }
+
+        $ids = $idsQb->getQuery()->getSingleColumnResult();
         if ($ids === []) {
             return [];
         }
@@ -67,14 +76,60 @@ class FormWebhookLogRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    public function countByWebhook(FormWebhook $webhook): int
+    public function countByWebhook(FormWebhook $webhook, ?string $status = null, ?string $search = null): int
     {
-        return (int) $this->createQueryBuilder('l')
-            ->select('COUNT(l.id)')
-            ->andWhere('l.formWebhook = :w')
-            ->setParameter('w', $webhook)
-            ->getQuery()
-            ->getSingleScalarResult();
+        $qb = $this->createQueryBuilder('l');
+        if ($this->searchNeedsActionJoin($search)) {
+            $qb->select('COUNT(DISTINCT l.id)');
+        } else {
+            $qb->select('COUNT(l.id)');
+        }
+        $this->applyWebhookListFilters($qb, $webhook, $status, $search);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function searchNeedsActionJoin(?string $search): bool
+    {
+        return $search !== null && trim($search) !== '';
+    }
+
+    private function applyWebhookListFilters(
+        QueryBuilder $qb,
+        FormWebhook $webhook,
+        ?string $status,
+        ?string $search,
+    ): void {
+        $qb->andWhere('l.formWebhook = :w')->setParameter('w', $webhook);
+
+        $status = $status !== null ? trim($status) : '';
+        if ($status !== '' && \in_array($status, FormWebhookLogStatus::all(), true)) {
+            $qb->andWhere('l.status = :status')->setParameter('status', $status);
+        }
+
+        $search = $search !== null ? trim($search) : '';
+        if ($search === '') {
+            return;
+        }
+
+        $like = '%'.mb_strtolower($search).'%';
+        $qb->leftJoin('l.actionLogs', 'alSearch');
+        $ors = [
+            $qb->expr()->like('LOWER(COALESCE(l.errorDetail, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(l.clientIp, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(l.rawBody, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(l.userAgent, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(l.status)', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(alSearch.toEmail, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(alSearch.mailjetMessageId, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(alSearch.errorDetail, \'\'))', ':searchLike'),
+            $qb->expr()->like('LOWER(COALESCE(alSearch.mailjetResponseBody, \'\'))', ':searchLike'),
+        ];
+        if (ctype_digit($search)) {
+            $ors[] = $qb->expr()->eq('l.id', ':searchId');
+            $qb->setParameter('searchId', (int) $search);
+        }
+        $qb->andWhere($qb->expr()->orX(...$ors))->setParameter('searchLike', $like);
     }
 
     /**

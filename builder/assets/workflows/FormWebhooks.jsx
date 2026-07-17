@@ -1143,6 +1143,11 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
   const [logsWebhookId, setLogsWebhookId] = useState(null);
   const [logsWebhookName, setLogsWebhookName] = useState('');
   const [logs, setLogs] = useState(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsSearchInput, setLogsSearchInput] = useState('');
+  const [logsDebouncedSearch, setLogsDebouncedSearch] = useState('');
+  const [logsStatusFilter, setLogsStatusFilter] = useState('');
+  const [logsPage, setLogsPage] = useState(1);
   const [logDetail, setLogDetail] = useState(null);
   const [selectedLogId, setSelectedLogId] = useState(null);
   const [logDetailLoading, setLogDetailLoading] = useState(false);
@@ -1507,20 +1512,60 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
     });
   }, []);
 
-  const loadLogsForId = useCallback(async (webhookId) => {
-    const row = items.find((w) => w.id === webhookId);
-    setLogsWebhookName(row?.name ?? `Webhook #${webhookId}`);
-    setLogsWebhookId(webhookId);
-    setLogs(null);
-    setLogDetail(null);
-    setSelectedLogId(null);
-    setLogDetailError('');
-    setView('logs');
-    const res = await fetch(`/api/form-webhooks/${webhookId}/logs?limit=50`, { credentials: 'include' });
-    const data = await parseJson(res);
-    if (res.ok) setLogs(data);
-    else setLogs({ error: data?.error });
-  }, [items]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setLogsDebouncedSearch(logsSearchInput.trim());
+      setLogsPage(1);
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [logsSearchInput]);
+
+  const openLogsView = useCallback(
+    (webhookId) => {
+      const row = items.find((w) => w.id === webhookId);
+      setLogsWebhookName(row?.name ?? `Webhook #${webhookId}`);
+      setLogsWebhookId(webhookId);
+      setLogsSearchInput('');
+      setLogsDebouncedSearch('');
+      setLogsStatusFilter('');
+      setLogsPage(1);
+      setLogs(null);
+      setLogDetail(null);
+      setSelectedLogId(null);
+      setLogDetailError('');
+      setView('logs');
+    },
+    [items],
+  );
+
+  useEffect(() => {
+    if (view !== 'logs' || logsWebhookId == null) return undefined;
+    let cancelled = false;
+    setLogsLoading(true);
+    void (async () => {
+      const params = new URLSearchParams();
+      params.set('limit', '50');
+      params.set('page', String(logsPage));
+      if (logsDebouncedSearch) params.set('search', logsDebouncedSearch);
+      if (logsStatusFilter) params.set('status', logsStatusFilter);
+      try {
+        const res = await fetch(`/api/form-webhooks/${logsWebhookId}/logs?${params.toString()}`, {
+          credentials: 'include',
+        });
+        const data = await parseJson(res);
+        if (cancelled) return;
+        if (res.ok) setLogs(data);
+        else setLogs({ error: data?.error ?? 'Chargement impossible' });
+      } catch {
+        if (!cancelled) setLogs({ error: 'Erreur réseau' });
+      } finally {
+        if (!cancelled) setLogsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [view, logsWebhookId, logsPage, logsDebouncedSearch, logsStatusFilter]);
 
   const fillEditForm = useCallback(
     (row) => {
@@ -1659,8 +1704,8 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
     }
 
     if (routeKind === 'logs' && routeId != null) {
-      if (logsWebhookId === routeId && view === 'logs' && logs != null) return undefined;
-      void loadLogsForId(routeId);
+      if (logsWebhookId === routeId && view === 'logs') return undefined;
+      openLogsView(routeId);
     }
     return undefined;
   }, [
@@ -1671,11 +1716,10 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
     onWebhooksNavigate,
     route,
     fillEditForm,
-    loadLogsForId,
+    openLogsView,
     editingId,
     view,
     logsWebhookId,
-    logs,
     detailWebhook,
   ]);
 
@@ -3104,6 +3148,70 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
           </header>
 
           <div className="content-card">
+            <div className="users-filters-minimal fw-logs-filters">
+              <label className="users-filter-min fw-logs-filter-search">
+                <span className="users-filter-min-label muted">Recherche</span>
+                <input
+                  type="search"
+                  value={logsSearchInput}
+                  onChange={(e) => setLogsSearchInput(e.target.value)}
+                  placeholder="E-mail, IP, erreur, id, contenu…"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="users-filter-min">
+                <span className="users-filter-min-label muted">Statut</span>
+                <select
+                  value={logsStatusFilter}
+                  onChange={(e) => {
+                    setLogsStatusFilter(e.target.value);
+                    setLogsPage(1);
+                  }}
+                >
+                  <option value="">Tous</option>
+                  <option value="sent">Envoyé</option>
+                  <option value="error">Erreur</option>
+                  <option value="skipped">Ignoré</option>
+                  <option value="parsed">Parsé</option>
+                  <option value="received">Reçu</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="users-pagination-minimal fw-logs-pagination">
+              <span className="muted small">
+                {logsLoading
+                  ? 'Chargement…'
+                  : typeof logs?.total === 'number'
+                    ? `${logs.total} exécution${logs.total === 1 ? '' : 's'}`
+                    : '—'}
+                {logsDebouncedSearch || logsStatusFilter ? ' (filtrées)' : ''}
+              </span>
+              {typeof logs?.totalPages === 'number' && logs.totalPages > 1 ? (
+                <div className="users-pagination-minimal-controls">
+                  <button
+                    type="button"
+                    className="users-pill-btn"
+                    disabled={logsLoading || logsPage <= 1}
+                    onClick={() => setLogsPage((p) => Math.max(1, p - 1))}
+                  >
+                    Précédent
+                  </button>
+                  <span className="muted small">
+                    Page {logsPage} / {logs.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="users-pill-btn"
+                    disabled={logsLoading || logsPage >= logs.totalPages}
+                    onClick={() => setLogsPage((p) => p + 1)}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
             <div className="fw-logs-layout">
             <div className="fw-logs-list">
               <div className="fw-logs-list-head">Exécutions récentes</div>
@@ -3113,8 +3221,17 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                     {logs.error}
                   </p>
                 ) : null}
+                {logsLoading && !logs?.items ? (
+                  <p className="muted" style={{ padding: '1rem' }}>
+                    Chargement…
+                  </p>
+                ) : null}
                 {logs?.items && logs.items.length === 0 ? (
-                  <div className="fw-muted-box">Aucune exécution enregistrée.</div>
+                  <div className="fw-muted-box">
+                    {logsDebouncedSearch || logsStatusFilter
+                      ? 'Aucune exécution ne correspond à ces filtres.'
+                      : 'Aucune exécution enregistrée.'}
+                  </div>
                 ) : null}
                 {logs?.items?.map((l) => (
                   <button
@@ -3133,7 +3250,11 @@ export default function FormWebhooks({ user, route, onWebhooksNavigate, onAppNav
                         {l.actionsSummary
                           ? ` · ${l.actionsSummary.succeeded}/${l.actionsSummary.total} actions OK`
                           : ''}
+                        {l.toEmail ? ` · ${l.toEmail}` : ''}
                       </div>
+                      {l.errorDetail ? (
+                        <div className="fw-run-meta fw-run-error-preview">{l.errorDetail}</div>
+                      ) : null}
                     </div>
                     <span
                       className={`badge ${

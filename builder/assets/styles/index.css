@@ -5244,6 +5244,19 @@ h1 {
   top: 5.75rem;
 }
 
+.fw-logs-filters {
+  margin-bottom: 0.35rem;
+}
+
+.fw-logs-filter-search {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+}
+
+.fw-logs-pagination {
+  margin-bottom: 0.85rem;
+}
+
 .fw-logs-list-head {
   flex-shrink: 0;
   padding: 0.85rem 1rem;
@@ -5251,6 +5264,15 @@ h1 {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink);
+}
+
+.fw-run-error-preview {
+  margin-top: 0.2rem;
+  color: var(--danger, #b42318);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .fw-logs-list-body {

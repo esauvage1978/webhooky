@@ -43,15 +43,34 @@ final class ApiFormWebhookLogController extends AbstractController
 
         $page = max(1, (int) $request->query->get('page', 1));
         $limit = min(100, max(1, (int) $request->query->get('limit', 25)));
+        $status = trim((string) $request->query->get('status', ''));
+        $search = trim((string) $request->query->get('search', ''));
+        if (mb_strlen($search) > 200) {
+            $search = mb_substr($search, 0, 200);
+        }
+        if ($status !== '' && !\in_array($status, FormWebhookLogStatus::all(), true)) {
+            $status = '';
+        }
 
-        $items = $this->formWebhookLogRepository->findByWebhookPaginated($webhook, $page, $limit);
-        $total = $this->formWebhookLogRepository->countByWebhook($webhook);
+        $items = $this->formWebhookLogRepository->findByWebhookPaginated(
+            $webhook,
+            $page,
+            $limit,
+            $status !== '' ? $status : null,
+            $search !== '' ? $search : null,
+        );
+        $total = $this->formWebhookLogRepository->countByWebhook(
+            $webhook,
+            $status !== '' ? $status : null,
+            $search !== '' ? $search : null,
+        );
 
         return new JsonResponse([
             'items' => array_map(fn (FormWebhookLog $l) => $this->serializeSummary($l), $items),
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
+            'totalPages' => $limit > 0 ? (int) max(1, (int) ceil($total / $limit)) : 1,
         ]);
     }
 
