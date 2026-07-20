@@ -23,13 +23,20 @@ security:
                 password_path: password
                 success_handler: App\Security\LoginSuccessHandler
                 failure_handler: App\Security\LoginFailureHandler
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
             logout:
                 path: /api/logout
+                # SPA actuelle : GET /api/logout sans jeton CSRF.
+                # Protection : cookie SameSite=Lax + same-origin. Évolution : POST + CSRF.
 
     access_control:
         - { path: ^/api/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/logout, roles: PUBLIC_ACCESS }
         - { path: ^/api/subscription/plans, roles: PUBLIC_ACCESS }
+        - { path: ^/api/stripe/webhook, roles: PUBLIC_ACCESS }
+        - { path: ^/api/billing, roles: ROLE_USER }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/forgot-password, roles: PUBLIC_ACCESS }
         - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }

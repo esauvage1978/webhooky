@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchBillingConfig, openStripeCustomerPortal, startStripeCheckout } from '../lib/billing.js';
 import { parseJson } from '../lib/http.js';
 
 function formatMonthLabel(iso) {
@@ -27,6 +28,8 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
   const [upgradeBusy, setUpgradeBusy] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
   const [pricingNote, setPricingNote] = useState('');
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [simulationAllowed, setSimulationAllowed] = useState(false);
 
   const [name, setName] = useState('');
   const [bill1, setBill1] = useState('');
@@ -79,6 +82,33 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
   }, [load]);
 
   useEffect(() => {
+    void fetchBillingConfig().then((cfg) => {
+      setStripeEnabled(cfg.stripeEnabled);
+      setSimulationAllowed(cfg.simulationAllowed);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    if (!checkout) return;
+    if (checkout === 'success') {
+      setUpgradeMsg('Paiement reçu. Votre forfait sera activé sous peu (confirmation Stripe).');
+      setActiveTab('plans');
+      void onSessionRefresh?.();
+      void load();
+    } else if (checkout === 'cancel') {
+      setUpgradeMsg('Paiement annulé.');
+      setActiveTab('plans');
+    }
+    params.delete('checkout');
+    const qs = params.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+    window.history.replaceState(null, '', next);
+  }, [load, onSessionRefresh]);
+
+  useEffect(() => {
     if (!orgDetail) return;
     setName(orgDetail.name ?? '');
     const b = orgDetail.billing ?? {};
@@ -93,6 +123,66 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
     () => (sub?.plan != null ? packDefs.filter((p) => p.forPlan === sub.plan && sub.allowEventOverage) : []),
     [packDefs, sub],
   );
+
+  const choosePlan = async (planId) => {
+    if (!orgId || planId === 'free') return false;
+    setUpgradeBusy(true);
+    setUpgradeMsg('');
+    try {
+      if (stripeEnabled) {
+        const result = await startStripeCheckout(planId, isAdmin ? orgId : undefined);
+        if (!result.ok) {
+          setUpgradeMsg(result.error ?? 'Paiement impossible');
+          return false;
+        }
+        window.location.href = result.checkoutUrl;
+        return true;
+      }
+      if (!simulationAllowed) {
+        setUpgradeMsg(
+          'Le paiement Stripe n’est pas configuré sur ce serveur. Les forfaits payants ne peuvent pas être activés sans règlement. Contactez le support.',
+        );
+        return false;
+      }
+      const res = await fetch(`/api/organizations/${orgId}/subscription`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) {
+        setUpgradeMsg(data?.error ?? 'Mise à jour impossible');
+        return false;
+      }
+      await onSessionRefresh?.();
+      await load();
+      setUpgradeMsg('Mise à jour enregistrée (mode simulation).');
+      return true;
+    } catch {
+      setUpgradeMsg('Erreur réseau');
+      return false;
+    } finally {
+      setUpgradeBusy(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    setUpgradeBusy(true);
+    setUpgradeMsg('');
+    try {
+      const result = await openStripeCustomerPortal(isAdmin ? orgId : undefined);
+      if (!result.ok) {
+        setUpgradeMsg(result.error ?? 'Portail indisponible');
+        return;
+      }
+      window.location.href = result.portalUrl;
+    } catch {
+      setUpgradeMsg('Erreur réseau');
+    } finally {
+      setUpgradeBusy(false);
+    }
+  };
 
   const patchSubscription = async (body) => {
     if (!orgId) return false;
@@ -112,7 +202,11 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
       }
       await onSessionRefresh?.();
       await load();
-      setUpgradeMsg('Mise à jour enregistrée (simulation — branchez Stripe pour les paiements réels).');
+      setUpgradeMsg(
+        stripeEnabled && body.purchaseEventPack
+          ? 'Demande enregistrée.'
+          : 'Mise à jour enregistrée.',
+      );
       return true;
     } catch {
       setUpgradeMsg('Erreur réseau');
@@ -341,7 +435,12 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
       {activeTab === 'plans' ? (
         <div className="users-tab-panel org-billing-tab-panel" role="tabpanel">
           <p className="muted small org-billing-tab-intro">
-            Trois offres : comparez les quotas et souscrivez (simulation tant que Stripe n’est pas branché).
+            Trois offres : comparez les quotas et souscrivez
+            {stripeEnabled
+              ? ' via Stripe (paiement sécurisé).'
+              : simulationAllowed
+                ? ' (mode simulation locale — aucun paiement réel).'
+                : ' — paiement Stripe requis pour les offres payantes (configuration serveur en cours).'}
             {pricingNote ? (
               <>
                 {' '}
@@ -349,6 +448,13 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
               </>
             ) : null}
           </p>
+          {stripeEnabled && orgDetail?.stripeCustomerId ? (
+            <div className="org-billing-actions" style={{ marginBottom: '1rem' }}>
+              <button type="button" className="btn secondary small" disabled={upgradeBusy} onClick={() => void openBillingPortal()}>
+                Gérer l’abonnement Stripe
+              </button>
+            </div>
+          ) : null}
           <div className="org-billing-plans">
             {plans.map((p) => {
               const current = sub?.plan === p.id;
@@ -367,10 +473,10 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                     <button
                       type="button"
                       className="btn secondary small"
-                      disabled={upgradeBusy}
-                      onClick={() => void patchSubscription({ plan: p.id })}
+                      disabled={upgradeBusy || (!stripeEnabled && !simulationAllowed)}
+                      onClick={() => void choosePlan(p.id)}
                     >
-                      Choisir ce forfait
+                      {stripeEnabled ? 'Payer avec Stripe' : simulationAllowed ? 'Choisir (simulation)' : 'Paiement indisponible'}
                     </button>
                   ) : null}
                   {current ? <span className="badge ok">Forfait actuel</span> : null}
@@ -378,7 +484,7 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
               );
             })}
           </div>
-          {canBuy && relevantPacks.length > 0 ? (
+          {canBuy && relevantPacks.length > 0 && simulationAllowed && !stripeEnabled ? (
             <div className="org-billing-packs">
               <span className="muted small">Packs d’événements supplémentaires :</span>
               <div className="dash-upgrade-row">
@@ -409,11 +515,10 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                 Indicateurs courants
               </h4>
               <p className="muted small org-billing-tab-intro">
-                Quota global = unités consommées côté abonnement (chaque action exécutée d’un workflow). Les totaux par
-                mois (cartes « mois en cours », « mois précédent » et ligne repliée « Détail par mois ») viennent du{' '}
-                <strong>compteur mensuel d’événements quota</strong> (aligné sur la consommation du forfait). Les tableaux
-                par projet / par workflow comptent les <strong>réceptions</strong> (lignes de journal : un envoi = une
-                ligne).
+                Le quota affiché correspond au <strong>mois civil en cours</strong> (chaque action exécutée d’un workflow
+                = une unité). Les totaux par mois (cartes « mois en cours », « mois précédent » et ligne repliée « Détail
+                par mois ») viennent du <strong>compteur mensuel d’événements quota</strong>. Les tableaux par projet /
+                par workflow comptent les <strong>réceptions</strong> (lignes de journal : un envoi = une ligne).
               </p>
               <div className="org-billing-usage">
                 <div className="org-billing-usage-card">
@@ -434,7 +539,7 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                   <p className="muted small">limite forfait si indiquée</p>
                 </div>
                 <div className="org-billing-usage-card">
-                  <span className="muted small">Quota événements (global)</span>
+                  <span className="muted small">Quota événements (mois en cours)</span>
                   <p className="org-billing-usage-stat">
                     {usage.currentIndicators?.eventsConsumedTotal?.toLocaleString('fr-FR') ??
                       usage.quota.eventsConsumedTotal?.toLocaleString('fr-FR') ??
@@ -603,8 +708,25 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
       {activeTab === 'invoices' ? (
         <div className="users-tab-panel org-billing-tab-panel" role="tabpanel">
           <p className="muted small org-billing-tab-intro">
-            Les PDF s’affichent lorsque l’URL est fournie (Stripe ou enregistrement serveur).
+            Les factures payées via Stripe apparaissent automatiquement ici avec leur PDF.
           </p>
+          {stripeEnabled ? (
+            <div className="org-billing-actions" style={{ marginBottom: '1rem' }}>
+              <button
+                type="button"
+                className="btn secondary small"
+                disabled={upgradeBusy || !orgDetail?.stripeCustomerId}
+                title={
+                  orgDetail?.stripeCustomerId
+                    ? 'Accéder au portail Stripe : factures, moyen de paiement, résiliation'
+                    : 'Disponible après votre premier paiement Stripe'
+                }
+                onClick={() => void openBillingPortal()}
+              >
+                Gérer l’abonnement &amp; factures (Stripe)
+              </button>
+            </div>
+          ) : null}
           {invoices.length === 0 ? (
             <p className="muted">Aucune facture pour l’instant.</p>
           ) : (
@@ -627,7 +749,7 @@ export default function OrganizationBilling({ user, onSessionRefresh }) {
                       <td>{inv.title}</td>
                       <td>{inv.amountEur} €</td>
                       <td className="actions">
-                        {inv.pdfUrl ? (
+                        {inv.pdfUrl && String(inv.pdfUrl).startsWith('https://') ? (
                           <a className="btn secondary small" href={inv.pdfUrl} target="_blank" rel="noopener noreferrer">
                             PDF
                           </a>

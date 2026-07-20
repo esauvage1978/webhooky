@@ -159,8 +159,13 @@ if ($forwardRaw === false) {
     exit;
 }
 
-/** @var non-empty-string */
-$forwardUrl = getenv('CONTACT_WEBHOOK_FORWARD_URL') ?: 'https://webhooky.builders/webhook/form/64470731-3f7d-48b8-aabf-817f08ce8b42';
+$forwardUrl = getenv('CONTACT_WEBHOOK_FORWARD_URL') ?: '';
+if (!is_string($forwardUrl) || trim($forwardUrl) === '') {
+    http_response_code(503);
+    echo json_encode(['ok' => false, 'error' => 'Contact relay not configured']);
+    exit;
+}
+$forwardUrl = trim($forwardUrl);
 
 $ch = curl_init($forwardUrl);
 if ($ch === false) {

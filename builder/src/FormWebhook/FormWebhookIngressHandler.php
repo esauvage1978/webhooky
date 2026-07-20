@@ -17,12 +17,14 @@ use App\Mailjet\MailjetAuthPairInterface;
 use App\Mailjet\MailjetTemplateSenderInterface;
 use App\Logging\ApplicationErrorLogger;
 use App\Repository\FormWebhookRepository;
+use App\ServiceIntegration\ServiceConnectionSecretHelper;
 use App\ServiceIntegration\ServiceIntegrationType;
 use App\Subscription\SubscriptionEntitlementService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
  * Orchestration : parse une fois → exécution de toutes les actions actives → journaux séparés, réponse agrégée.
@@ -43,11 +45,26 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         private readonly IntegrationActionExecutor $integrationActionExecutor,
         private readonly ApplicationErrorLogger $applicationErrorLogger,
         private readonly BuiltinWorkflowActionExecutor $builtinWorkflowActionExecutor,
+        private readonly RateLimiterFactory $webhookIngestLimiter,
+        private readonly ServiceConnectionSecretHelper $secretHelper,
     ) {
     }
 
     public function handle(Request $request, string $publicToken): JsonResponse
     {
+        $clientKey = $request->getClientIp() ?: 'unknown';
+        $limiter = $this->webhookIngestLimiter->create($clientKey.':'.$publicToken);
+        if (!$limiter->consume(1)->isAccepted()) {
+            return new JsonResponse(
+                [
+                    'ok' => false,
+                    'error' => 'Trop de requêtes. Réessayez dans un instant.',
+                    'code' => 'rate_limited',
+                ],
+                Response::HTTP_TOO_MANY_REQUESTS,
+            );
+        }
+
         $webhook = $this->formWebhookRepository->findOneByPublicTokenForIngress($publicToken);
         if ($webhook === null) {
             return new JsonResponse(['error' => 'Webhook inconnu (aucun workflow ne correspond à ce jeton).'], Response::HTTP_NOT_FOUND);
@@ -418,7 +435,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
             return null;
         }
 
-        $cfg = $sc->getConfig();
+        $cfg = $this->secretHelper->decryptSensitiveFields($sc->getConfig());
         $pub = isset($cfg['apiKeyPublic']) ? trim((string) $cfg['apiKeyPublic']) : '';
         $priv = isset($cfg['apiKeyPrivate']) ? trim((string) $cfg['apiKeyPrivate']) : '';
         if ($pub === '' || $priv === '') {

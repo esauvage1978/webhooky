@@ -32,8 +32,8 @@ final class CreateAdminUserCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('email', null, InputOption::VALUE_REQUIRED, 'Adresse e-mail', 'emmanuel.sauvage@live.fr')
-            ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe', 'Fckgwrhqq101');
+            ->addOption('email', null, InputOption::VALUE_REQUIRED, 'Adresse e-mail')
+            ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe (min. 12 caractères)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -41,6 +41,27 @@ final class CreateAdminUserCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $email = mb_strtolower(trim((string) $input->getOption('email')));
         $plainPassword = (string) $input->getOption('password');
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = (string) $io->ask('E-mail administrateur');
+            $email = mb_strtolower(trim($email));
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $io->error('Une adresse e-mail valide est obligatoire (--email).');
+
+            return Command::FAILURE;
+        }
+
+        if ($plainPassword === '') {
+            $plainPassword = (string) $io->askHidden('Mot de passe (min. 12 caractères)');
+        }
+
+        if (!$this->isPasswordStrongEnough($plainPassword)) {
+            $io->error('Mot de passe trop faible : 12 caractères minimum, avec lettres et chiffres.');
+
+            return Command::FAILURE;
+        }
 
         $user = $this->userRepository->findOneBy(['email' => $email]);
         if ($user === null) {
@@ -61,6 +82,15 @@ final class CreateAdminUserCommand extends Command
         ));
 
         return Command::SUCCESS;
+    }
+
+    private function isPasswordStrongEnough(string $password): bool
+    {
+        if (strlen($password) < 12) {
+            return false;
+        }
+
+        return (bool) preg_match('/[A-Za-z]/', $password) && (bool) preg_match('/\d/', $password);
     }
 
     /**

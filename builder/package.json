@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && php bin/console doctrine:schema:update --force && php bin/console app:ensure-default-webhook-projects && php bin/console app:ensure-default-platform-options"
+    "build": "vite build && php bin/console doctrine:schema:update --force && php bin/console app:ensure-default-webhook-projects && php bin/console app:ensure-default-platform-options",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
@@ -13,6 +15,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^3.2.4"
   }
 }

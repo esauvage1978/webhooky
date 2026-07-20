@@ -20,7 +20,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsCommand(
     name: 'app:create-platform-manager',
-    description: 'Crée le gestionnaire plateforme (contact@webhooky.fr), organisation interne hors forfait et compte prêt à l’emploi.',
+    description: 'Crée le gestionnaire plateforme, organisation interne hors forfait et compte prêt à l’emploi.',
 )]
 final class CreatePlatformManagerCommand extends Command
 {
@@ -37,8 +37,8 @@ final class CreatePlatformManagerCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('email', null, InputOption::VALUE_REQUIRED, 'Adresse e-mail du gestionnaire', 'contact@webhooky.builders')
-            ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe', 'Fckgwrhqq101')
+            ->addOption('email', null, InputOption::VALUE_REQUIRED, 'Adresse e-mail du gestionnaire')
+            ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe (min. 12 caractères)')
             ->addOption('organization-name', null, InputOption::VALUE_REQUIRED, 'Nom de l’organisation interne', 'Webhooky (interne)');
     }
 
@@ -49,8 +49,25 @@ final class CreatePlatformManagerCommand extends Command
         $plainPassword = trim((string) $input->getOption('password'));
         $orgName = trim((string) $input->getOption('organization-name'));
 
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = mb_strtolower(trim((string) $io->ask('E-mail gestionnaire plateforme')));
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $io->error('Une adresse e-mail valide est obligatoire (--email).');
+
+            return Command::FAILURE;
+        }
+
         if ($plainPassword === '') {
-            $io->error('L’option --password est obligatoire.');
+            $plainPassword = trim((string) $io->askHidden('Mot de passe (min. 12 caractères)'));
+        }
+
+        if (strlen($plainPassword) < 12
+            || !preg_match('/[A-Za-z]/', $plainPassword)
+            || !preg_match('/\d/', $plainPassword)
+        ) {
+            $io->error('Mot de passe trop faible : 12 caractères minimum, avec lettres et chiffres.');
 
             return Command::FAILURE;
         }

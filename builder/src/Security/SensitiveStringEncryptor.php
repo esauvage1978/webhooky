@@ -28,6 +28,23 @@ final class SensitiveStringEncryptor
         return self::VERSION.'|'.base64_encode($nonce.$cipher);
     }
 
+    public function isEncrypted(string $stored): bool
+    {
+        return str_starts_with($stored, self::VERSION.'|');
+    }
+
+    /**
+     * Déchiffre si format v1|…, sinon renvoie la valeur en clair (données legacy).
+     */
+    public function reveal(string $stored): string
+    {
+        if ($stored === '' || !$this->isEncrypted($stored)) {
+            return $stored;
+        }
+
+        return $this->decrypt($stored);
+    }
+
     public function decrypt(string $stored): string
     {
         if ($stored === '') {

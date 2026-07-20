@@ -9,6 +9,8 @@
 parameters:
     env(OLLAMA_BASE_URL): 'http://127.0.0.1:11434'
     env(OLLAMA_MODEL): 'mistral'
+    env(NOTIFICATION_WEBHOOK_SECRET): ''
+    notification_webhook_secret_default: ''
 
 services:
     # default configuration for services in *this* file

@@ -16,11 +16,11 @@ export const BUILDER_FORGOT_PASSWORD_URL = `${BUILDER_URL}/mot-de-passe-oublie`;
 export const BUILDER_BILLING_URL = `${BUILDER_URL}/facturation`;
 
 /**
- * Webhook formulaire contact — jeton synchronisé avec public/contact-webhook.php.
- * Surcharge possible via PUBLIC_CONTACT_WEBHOOK_URL.
+ * Webhook formulaire contact — ne pas committer de jeton réel.
+ * Prod : POST same-origin `/contact-webhook.php` (URL serveur CONTACT_WEBHOOK_FORWARD_URL).
+ * Dev : définir PUBLIC_CONTACT_WEBHOOK_URL dans `.env`.
  */
-export const CONTACT_FORM_WEBHOOK_DEFAULT =
-  'https://webhooky.builders/webhook/form/64470731-3f7d-48b8-aabf-817f08ce8b42';
+export const CONTACT_FORM_WEBHOOK_DEFAULT = '';
 
 export const COOKIE_CONSENT_STORAGE_KEY = 'webhooky_cookie_consent';
 export const COOKIE_CONSENT_VERSION = 2;

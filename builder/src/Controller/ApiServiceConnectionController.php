@@ -14,6 +14,7 @@ use App\Repository\ResourceAuditLogRepository;
 use App\Repository\ServiceConnectionRepository;
 use App\Service\Audit\ResourceAuditLogger;
 use App\Service\Audit\ServiceConnectionAuditSnapshot;
+use App\ServiceIntegration\ServiceConnectionSecretHelper;
 use App\ServiceIntegration\ServiceIntegrationType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -36,6 +37,7 @@ final class ApiServiceConnectionController extends AbstractController
         private readonly ValidatorInterface $validator,
         private readonly ResourceAuditLogger $resourceAuditLogger,
         private readonly ResourceAuditLogRepository $resourceAuditLogRepository,
+        private readonly ServiceConnectionSecretHelper $secretHelper,
     ) {
     }
 
@@ -155,7 +157,7 @@ final class ApiServiceConnectionController extends AbstractController
         $s->setCreatedBy($user);
         $s->setType($type);
         $s->setName(trim((string) ($data['name'] ?? '')));
-        $s->setConfig($config);
+        $s->setConfig($this->secretHelper->encryptSensitiveFields($config));
 
         $v = $this->validator->validate($s);
         if (\count($v) > 0) {
@@ -218,14 +220,13 @@ final class ApiServiceConnectionController extends AbstractController
             }
             /** @var array<string, mixed> $config */
             $config = $configRaw;
-            if ($s->getType() === ServiceIntegrationType::MAILJET) {
-                $config = $this->mergeMailjetConfigPreservingMaskedPrivate($s->getConfig(), $config);
-            }
+            $existingPlain = $this->secretHelper->decryptSensitiveFields($s->getConfig());
+            $config = $this->secretHelper->mergePreservingMasked($existingPlain, $config);
             $cfgErr = $this->validateConfigShape($s->getType(), $config);
             if ($cfgErr !== null) {
                 return new JsonResponse(['error' => $cfgErr], Response::HTTP_BAD_REQUEST);
             }
-            $s->setConfig($config);
+            $s->setConfig($this->secretHelper->encryptSensitiveFields($config));
         }
 
         if ($this->isAdmin($user) && \array_key_exists('organizationId', $data)) {
@@ -378,7 +379,8 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::TEAMS,
             ServiceIntegrationType::DISCORD,
             ServiceIntegrationType::GOOGLE_CHAT,
-            ServiceIntegrationType::MATTERMOST => $httpsUrl($config['webhookUrl'] ?? '') ? null : 'Renseignez une webhookUrl HTTPS valide.',
+            ServiceIntegrationType::MATTERMOST,
+            ServiceIntegrationType::PACFLOW => $httpsUrl($config['webhookUrl'] ?? '') ? null : 'Renseignez une webhookUrl HTTPS valide.',
             ServiceIntegrationType::TWILIO_SMS => $this->nonEmptyStrings($config, ['accountSid', 'authToken', 'fromNumber'])
                 ? null
                 : 'Twilio : accountSid, authToken et fromNumber sont requis.',
@@ -426,7 +428,8 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::TEAMS,
             ServiceIntegrationType::DISCORD,
             ServiceIntegrationType::GOOGLE_CHAT,
-            ServiceIntegrationType::MATTERMOST => [
+            ServiceIntegrationType::MATTERMOST,
+            ServiceIntegrationType::PACFLOW => [
                 'webhookUrl' => 'https://…',
             ],
             ServiceIntegrationType::TWILIO_SMS => [
@@ -487,6 +490,9 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::MATTERMOST => [
                 'webhookUrl' => 'https://mattermost.example.com/hooks/abcdefghijklmnop',
             ],
+            ServiceIntegrationType::PACFLOW => [
+                'webhookUrl' => 'https://api.pacflow.fr/api/webhooks/1234567890123456789/abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGH',
+            ],
             ServiceIntegrationType::TWILIO_SMS => [
                 'accountSid' => 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 'authToken' => 'your_auth_token_here',
@@ -522,41 +528,15 @@ final class ApiServiceConnectionController extends AbstractController
     }
 
     /**
-     * @param array<string, mixed> $existing
-     * @param array<string, mixed> $incoming
-     *
-     * @return array<string, mixed>
-     */
-    private function mergeMailjetConfigPreservingMaskedPrivate(array $existing, array $incoming): array
-    {
-        $out = array_merge($existing, $incoming);
-        if (!\array_key_exists('apiKeyPrivate', $incoming)) {
-            return $out;
-        }
-        $priv = trim((string) $incoming['apiKeyPrivate']);
-        if ($priv === '' || str_starts_with($priv, '•') || $priv === '********') {
-            $out['apiKeyPrivate'] = isset($existing['apiKeyPrivate']) ? (string) $existing['apiKeyPrivate'] : '';
-        }
-
-        return $out;
-    }
-
-    /**
      * @param array<string, mixed> $config
      *
      * @return array<string, mixed>
      */
     private function maskSensitiveConfigForApi(string $type, array $config): array
     {
-        if ($type !== ServiceIntegrationType::MAILJET) {
-            return $config;
-        }
-        $out = $config;
-        if (isset($out['apiKeyPrivate']) && \is_string($out['apiKeyPrivate']) && $out['apiKeyPrivate'] !== '') {
-            $out['apiKeyPrivate'] = '••••••••';
-        }
+        unset($type);
 
-        return $out;
+        return $this->secretHelper->maskForApi($config);
     }
 
     /**

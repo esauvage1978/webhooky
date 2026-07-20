@@ -3,9 +3,14 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        handler_id: null
+        cookie_secure: auto
+        cookie_httponly: true
+        cookie_samesite: lax
+        name: WEBHOOKYSESSID
 
-    # Limiteur pour l’ingress webhook (service limiter.webhook_ingest, ex. Api\WebhookController).
+    # Limiteur pour l’ingress webhook (injecté FormWebhookIngressHandler).
     rate_limiter:
         webhook_ingest:
             policy: sliding_window

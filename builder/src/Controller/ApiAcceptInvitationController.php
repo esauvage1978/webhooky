@@ -48,7 +48,7 @@ final class ApiAcceptInvitationController extends AbstractController
         }
         foreach ($this->validator->validate($password, [
             new Assert\NotBlank(message: 'Mot de passe requis'),
-            new Assert\Length(min: 8, minMessage: 'Le mot de passe doit contenir au moins 8 caractères'),
+            new Assert\Length(min: 12, minMessage: 'Le mot de passe doit contenir au moins 12 caractères'),
         ]) as $v) {
             $fields['password'] = $v->getMessage();
             break;

@@ -81,7 +81,7 @@ final class ApiPasswordResetController extends AbstractController
 
         $violations = $this->validator->validate($password, [
             new Assert\NotBlank(message: 'Mot de passe requis'),
-            new Assert\Length(min: 8, minMessage: 'Le mot de passe doit contenir au moins 8 caractères'),
+            new Assert\Length(min: 12, minMessage: 'Le mot de passe doit contenir au moins 12 caractères'),
         ]);
         if (\count($violations) > 0) {
             $fields = [];

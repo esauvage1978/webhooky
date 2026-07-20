@@ -6,6 +6,8 @@ namespace App\FormWebhook;
 
 use App\Entity\FormWebhookAction;
 use App\Entity\FormWebhookActionLog;
+use App\Security\OutboundUrlGuard;
+use App\ServiceIntegration\ServiceConnectionSecretHelper;
 use App\ServiceIntegration\ServiceIntegrationType;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -18,6 +20,8 @@ final class IntegrationActionExecutor
         private readonly HttpClientInterface $httpClient,
         private readonly VariableMapBuilder $variableMapBuilder,
         private readonly IntegrationPayloadInterpolator $interpolator,
+        private readonly OutboundUrlGuard $outboundUrlGuard,
+        private readonly ServiceConnectionSecretHelper $secretHelper,
     ) {
     }
 
@@ -37,7 +41,7 @@ final class IntegrationActionExecutor
         }
 
         /** @var array<string, mixed> $config */
-        $config = $conn->getConfig();
+        $config = $this->secretHelper->decryptSensitiveFields($conn->getConfig());
         $variables = $this->variableMapBuilder->build($parsed, $action->getVariableMapping());
         $aLog->setVariablesSent($variables);
 
@@ -52,6 +56,7 @@ final class IntegrationActionExecutor
             ServiceIntegrationType::GOOGLE_CHAT => $this->postJson($this->requireUrl($config, 'webhookUrl'), ['text' => $this->truncate($text, 28000)], $aLog),
             ServiceIntegrationType::DISCORD => $this->postJson($this->requireUrl($config, 'webhookUrl'), ['content' => $this->truncate($text, 1900)], $aLog),
             ServiceIntegrationType::MATTERMOST => $this->postJson($this->requireUrl($config, 'webhookUrl'), ['text' => $this->truncate($text, 16000)], $aLog),
+            ServiceIntegrationType::PACFLOW => $this->sendPacflow($config, $variables, $parsed, $aLog),
             ServiceIntegrationType::TWILIO_SMS => $this->sendTwilio($config, $action, $parsed, $this->truncate($text, 1400), $aLog),
             ServiceIntegrationType::VONAGE_SMS => $this->sendVonage($config, $action, $parsed, $this->truncate($text, 1007), $aLog),
             ServiceIntegrationType::MESSAGEBIRD_SMS => $this->sendMessageBird($config, $action, $parsed, $this->truncate($text, 1530), $aLog),
@@ -72,7 +77,7 @@ final class IntegrationActionExecutor
             throw new \InvalidArgumentException(sprintf('URL invalide dans la configuration (%s).', $key));
         }
 
-        return $u;
+        return $this->outboundUrlGuard->assertSafe($u, allowPrivateNetworks: false, requireHttps: true);
     }
 
     private function truncate(string $s, int $max): string
@@ -250,6 +255,19 @@ final class IntegrationActionExecutor
         if ($status >= 400) {
             throw new \RuntimeException(sprintf('Telegram HTTP %d', $status));
         }
+    }
+
+    /**
+     * Pacflow : POST JSON du mapping (ou des champs POST bruts si mapping vide). Pas de message libre.
+     *
+     * @param array<string, mixed>  $config
+     * @param array<string, string> $variables
+     * @param array<string, string> $parsed
+     */
+    private function sendPacflow(array $config, array $variables, array $parsed, FormWebhookActionLog $aLog): void
+    {
+        $body = $variables !== [] ? $variables : $parsed;
+        $this->postJson($this->requireUrl($config, 'webhookUrl'), $body, $aLog);
     }
 
     /**

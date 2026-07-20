@@ -1,0 +1,57 @@
+name: Security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  composer-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: builder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium
+      - run: composer install --no-interaction --prefer-dist
+      - name: Composer audit (blocking on high/critical)
+        run: composer audit --abandoned=ignore
+      - name: PHPUnit security suite
+        run: |
+          if [ -f vendor/bin/phpunit ]; then
+            vendor/bin/phpunit
+          else
+            composer require --dev phpunit/phpunit --no-interaction
+            vendor/bin/phpunit
+          fi
+
+  npm-audit-builder:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: builder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm audit --audit-level=critical
+
+  npm-audit-vitrine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site_vitrine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm audit --audit-level=critical
+      - run: npm test
