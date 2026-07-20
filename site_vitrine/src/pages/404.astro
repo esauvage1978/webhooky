@@ -1,0 +1,18 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+
+const title = 'Page introuvable — Webhooky';
+const description = 'La page demandée n’existe pas ou a été déplacée.';
+---
+
+<SiteLayout {title} {description} robots="noindex, follow">
+  <main id="main-content" class="page-main container not-found">
+    <h1>Page introuvable</h1>
+    <p class="muted">La ressource demandée n’existe pas ou a changé d’adresse.</p>
+    <div class="inline-actions" style="justify-content: center;">
+      <a class="btn btn--primary" href="/">Accueil</a>
+      <a class="btn btn--secondary" href="/documentation/">Documentation</a>
+      <a class="btn btn--ghost" href="/contact/">Contact</a>
+    </div>
+  </main>
+</SiteLayout>

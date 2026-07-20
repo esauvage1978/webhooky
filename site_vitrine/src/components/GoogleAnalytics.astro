@@ -1,13 +1,9 @@
 ---
-/**
- * Google tag (gtag.js) — même logique que le snippet Google, mais chargé uniquement si
- * le consentement « mesure d’audience » est accordé (localStorage + événement webhooky:cookie-consent).
- */
 import {
   COOKIE_CONSENT_STORAGE_KEY,
   COOKIE_CONSENT_VERSION,
   GOOGLE_ANALYTICS_ID,
-} from '../site.ts';
+} from '../config/site';
 ---
 
 <script
@@ -45,8 +41,13 @@ import {
         dataLayer.push(arguments);
       }
       window.gtag = gtag;
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        analytics_storage: 'granted',
+        wait_for_update: 0,
+      });
       gtag('js', new Date());
-      gtag('config', id);
+      gtag('config', id, { anonymize_ip: true });
 
       var s = document.createElement('script');
       s.async = true;

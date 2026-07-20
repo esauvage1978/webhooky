@@ -1,0 +1,66 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Alert from '../../components/Alert.astro';
+
+const title = 'Blog — Webhooky';
+const description =
+  'Architecture éditoriale du blog Webhooky : contenus piliers sur les webhooks, automatisations et intégrations.';
+
+/** Piliers prévus — pas d’articles faibles générés automatiquement. */
+const pillars = [
+  {
+    title: 'Comprendre les webhooks',
+    topics: ['Qu’est-ce qu’un webhook', 'Webhook vs API', 'Sécuriser un endpoint webhook', 'Signatures de webhook'],
+  },
+  {
+    title: 'Brancher des formulaires',
+    topics: ['Webhook formulaire HTML', 'Webhook WordPress', 'Webhook Symfony', 'Webhook React'],
+  },
+  {
+    title: 'Orchestrer les actions',
+    topics: [
+      'Envoyer un e-mail Mailjet après un formulaire',
+      'Centraliser les webhooks',
+      'Rejouer un webhook échoué',
+      'Bonnes pratiques de journalisation',
+    ],
+  },
+  {
+    title: 'Comparer et décider',
+    topics: ['Webhook vs Zapier', 'Construire un routeur de webhooks', 'Automatisation de formulaires'],
+  },
+];
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Blog' }]} />
+    <div class="page-hero">
+      <h1>Blog</h1>
+      <p>
+        Espace éditorial dédié aux webhooks et automatisations. Nous publierons des guides utiles plutôt qu’une série
+        d’articles minces.
+      </p>
+      <Alert>
+        Aucun article n’est publié pour le moment. Ci-dessous : architecture de contenus piliers et sujets associés.
+        En attendant, consultez la <a href="/documentation/">documentation de démarrage</a>.
+      </Alert>
+    </div>
+
+    <div class="card-grid card-grid--2">
+      {
+        pillars.map((pillar) => (
+          <article class="feature-card">
+            <h2 style="font-size: 1.15rem;">{pillar.title}</h2>
+            <ul>
+              {pillar.topics.map((topic) => (
+                <li>{topic}</li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+  </main>
+</SiteLayout>

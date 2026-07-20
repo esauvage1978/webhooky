@@ -1,0 +1,27 @@
+---
+interface Props {
+  title?: string;
+  nodes: string[];
+  accentIndex?: number;
+}
+
+const { title = 'Flux typique', nodes, accentIndex = 1 } = Astro.props;
+---
+
+<figure class="flow-diagram" aria-label={title}>
+  <figcaption class="flow-diagram__title">{title}</figcaption>
+  <div class="flow-diagram__track">
+    {
+      nodes.map((node, i) => (
+        <>
+          <span class:list={['flow-node', { 'flow-node--accent': i === accentIndex }]}>{node}</span>
+          {i < nodes.length - 1 ? (
+            <span class="flow-arrow" aria-hidden="true">
+              →
+            </span>
+          ) : null}
+        </>
+      ))
+    }
+  </div>
+</figure>

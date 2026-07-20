@@ -1,0 +1,49 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import { BUILDER_URL, SITE_TAGLINE } from '../../config/site';
+
+const title = 'À propos — Webhooky';
+const description =
+  'Webhooky est une plateforme française de webhooks et d’automatisations : recevoir, orchestrer, connecter et superviser.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'À propos' }]} />
+    <div class="page-hero">
+      <h1>À propos de Webhooky</h1>
+      <p>{SITE_TAGLINE}</p>
+    </div>
+
+    <h2>Notre positionnement</h2>
+    <p>
+      Webhooky n’est pas un simple « connecteur Mailjet ». C’est une plateforme pour recevoir des webhooks, transformer
+      et router les données, déclencher plusieurs actions, connecter différents prestataires et superviser les
+      exécutions depuis une interface centralisée.
+    </p>
+
+    <h2>Pour qui</h2>
+    <ul>
+      <li>Développeurs qui veulent découpler le métier des fournisseurs externes</li>
+      <li>Agences et freelances qui gèrent plusieurs sites clients</li>
+      <li>Éditeurs SaaS qui orchestrent des événements sortants</li>
+      <li>Équipes opérationnelles qui automatisent des notifications</li>
+    </ul>
+
+    <h2>Où vivre le produit</h2>
+    <p>
+      Le site <strong>webhooky.fr</strong> présente le produit. L’application se trouve sur
+      <a href={BUILDER_URL} rel="noopener noreferrer">webhooky.builders</a>.
+    </p>
+
+    <h2>Feuille de route</h2>
+    <p>
+      Nous distinguons clairement ce qui est disponible, en bêta ou prévu. Consultez la
+      <a href="/roadmap/">feuille de route</a> et les <a href="/fonctionnalites/">fonctionnalités</a>.
+    </p>
+
+    <CallToAction />
+  </main>
+</SiteLayout>

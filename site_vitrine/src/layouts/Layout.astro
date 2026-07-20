@@ -1,28 +1,31 @@
 ---
 import CookieConsent from '../components/CookieConsent.astro';
 import GoogleAnalytics from '../components/GoogleAnalytics.astro';
-import { SITE_NAME, SITE_URL } from '../site.ts';
+import {
+  BUILDER_URL,
+  CONTACT_EMAIL,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+  SOCIAL_OG_IMAGE,
+} from '../config/site';
 
 interface Props {
   title: string;
   description: string;
-  /**
-   * Image partage réseaux sociaux : chemin absolu du site (ex. /favicon.svg) ou URL complète.
-   * Idéal : PNG/JPG 1200×630 px à la racine (ex. /og-default.png) — remplacer /favicon.svg en prod si besoin.
-   */
   image?: string;
-  /** Mots-clés (poids SEO faible ; utiles pour certains annuaires). */
   keywords?: string;
-  /** Surcharge robots (ex. noindex, nofollow pour brouillon). */
   robots?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const {
   title,
   description,
-  image = '/favicon.svg',
+  image = SOCIAL_OG_IMAGE,
   keywords,
   robots,
+  jsonLd,
 } = Astro.props;
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
@@ -50,12 +53,17 @@ const jsonLdWebsite = {
   name: SITE_NAME,
   url: `${SITE_URL}/`,
   inLanguage: 'fr-FR',
+  description: SITE_TAGLINE,
   publisher: {
     '@type': 'Organization',
     name: SITE_NAME,
     url: SITE_URL,
+    email: CONTACT_EMAIL,
+    sameAs: [BUILDER_URL],
   },
 };
+
+const extraJsonLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 ---
 
 <!doctype html>
@@ -72,19 +80,17 @@ const jsonLdWebsite = {
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
 
     <title>{title}</title>
     <meta name="description" content={description} />
     {keywords ? <meta name="keywords" content={keywords} /> : null}
 
     <link rel="canonical" href={canonicalHref} />
-    <link rel="alternate" hreflang="fr" href={canonicalHref} />
-    <link rel="alternate" hreflang="x-default" href={canonicalHref} />
 
     <meta name="robots" content={robotsContent} />
     <meta name="googlebot" content={robotsContent} />
 
-    <!-- Open Graph -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
@@ -100,13 +106,17 @@ const jsonLdWebsite = {
       ) : null
     }
 
-    <!-- Twitter / X -->
     <meta name="twitter:card" content={absoluteImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     {absoluteImage ? <meta name="twitter:image" content={absoluteImage} /> : null}
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLdWebsite)} />
+    {
+      extraJsonLd.map((block) => (
+        <script type="application/ld+json" set:html={JSON.stringify(block)} />
+      ))
+    }
 
     <slot name="head" />
   </head>

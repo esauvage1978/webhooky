@@ -1,23 +1,24 @@
 ---
-import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
+import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../config/site';
 ---
 
 <div id="cookie-consent-banner" class="cookie-banner" role="region" aria-label="Préférences de cookies" hidden>
   <div class="cookie-banner__box container">
-    <h2 class="cookie-banner__title">Cookies et données</h2>
+    <h2 class="cookie-banner__title">Cookies et mesure d’audience</h2>
     <p class="cookie-banner__lead">
-      Nous utilisons des cookies nécessaires au fonctionnement du site et, avec votre accord, des cookies de mesure
-      d’audience pour améliorer le service. Consultez la
-      <a href="/politique-confidentialite/">politique de confidentialité</a> pour en savoir plus.
+      Nous utilisons des cookies nécessaires au fonctionnement du site. Avec votre accord, nous chargeons également Google
+      Analytics pour mesurer la fréquentation. Ce n’est pas une anonymisation complète : des identifiants peuvent être
+      utilisés. Consultez la
+      <a href="/politique-confidentialite/">politique de confidentialité</a>.
     </p>
     <div class="cookie-banner__row cookie-banner__row--actions">
       <button type="button" class="cookie-banner__btn cookie-banner__btn--primary" data-cookie-action="accept-all">
         Tout accepter
       </button>
-      <button type="button" class="cookie-banner__btn cookie-banner__btn--ghost" data-cookie-action="reject-optional">
-        Nécessaires uniquement
+      <button type="button" class="cookie-banner__btn" data-cookie-action="reject-optional">
+        Refuser
       </button>
-      <button type="button" class="cookie-banner__btn cookie-banner__btn--ghost" data-cookie-action="toggle-custom">
+      <button type="button" class="cookie-banner__btn" data-cookie-action="toggle-custom">
         Personnaliser
       </button>
     </div>
@@ -29,7 +30,9 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
             <input type="checkbox" checked disabled />
             <span>
               <strong>Cookies nécessaires</strong>
-              <span class="cookie-banner__choice-desc">Mémorisation de vos préférences (dont ce bandeau), sécurité de base.</span>
+              <span class="cookie-banner__choice-desc">
+                Mémorisation de vos préférences (dont ce bandeau) et fonctionnement de base.
+              </span>
             </span>
           </label>
         </li>
@@ -38,7 +41,9 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
             <input type="checkbox" id="cookie-consent-analytics" />
             <span>
               <strong>Mesure d’audience</strong>
-              <span class="cookie-banner__choice-desc">Statistiques anonymisées sur la fréquentation (ex. outils d’analyse), si activés sur le site.</span>
+              <span class="cookie-banner__choice-desc">
+                Google Analytics 4, chargé uniquement si vous acceptez cette catégorie.
+              </span>
             </span>
           </label>
         </li>
@@ -57,7 +62,6 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
     const KEY = COOKIE_CONSENT_STORAGE_KEY;
     const VER = COOKIE_CONSENT_VERSION;
 
-    /** @returns {{ v: number, necessary: boolean, analytics: boolean, at: string } | null} */
     function readStored() {
       try {
         const raw = localStorage.getItem(KEY);
@@ -80,6 +84,10 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
       };
       localStorage.setItem(KEY, JSON.stringify(payload));
       window.dispatchEvent(new CustomEvent('webhooky:cookie-consent', { detail: payload }));
+      if (!analytics && window.__webhookyGtagLoaded) {
+        // Retrait : recharge pour arrêter les hits analytiques déjà initialisés.
+        window.location.reload();
+      }
     }
 
     const banner = document.getElementById('cookie-consent-banner');
@@ -104,24 +112,14 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
       if (custom) {
         custom.hidden = false;
         const s = readStored();
-        if (analyticsEl && analyticsEl instanceof HTMLInputElement) {
+        if (analyticsEl instanceof HTMLInputElement) {
           analyticsEl.checked = s ? s.analytics : false;
         }
         custom.querySelector('input:not([disabled])')?.focus();
       }
     }
 
-    function initVisibility() {
-      if (readStored()) {
-        hideBanner();
-        return;
-      }
-      showBanner();
-    }
-
-    window.webhookyGetCookieConsent = function () {
-      return readStored();
-    };
+    window.webhookyGetCookieConsent = readStored;
     window.webhookyOpenCookieSettings = openPreferences;
 
     banner?.addEventListener('click', (e) => {
@@ -138,9 +136,8 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
         hideBanner();
       } else if (action === 'toggle-custom') {
         if (!custom) return;
-        const show = custom.hidden;
-        custom.hidden = !show;
-        if (show && analyticsEl instanceof HTMLInputElement) {
+        custom.hidden = !custom.hidden;
+        if (!custom.hidden && analyticsEl instanceof HTMLInputElement) {
           const s = readStored();
           analyticsEl.checked = s ? s.analytics : false;
         }
@@ -158,6 +155,7 @@ import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from '../site.ts';
       });
     });
 
-    initVisibility();
+    if (readStored()) hideBanner();
+    else showBanner();
   })();
 </script>

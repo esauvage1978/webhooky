@@ -1,0 +1,220 @@
+---
+import { CONTACT_REQUEST_TYPES } from '../lib/contactValidation';
+import { CONTACT_FORM_WEBHOOK_DEFAULT } from '../config/site';
+
+const envUrl = import.meta.env.PUBLIC_CONTACT_WEBHOOK_URL;
+const webhookUrl = String(envUrl && envUrl.trim() !== '' ? envUrl : CONTACT_FORM_WEBHOOK_DEFAULT).trim();
+const submitUrl = import.meta.env.PROD ? '/contact-webhook.php' : webhookUrl;
+---
+
+<form class="contact-form" id="contact-form" novalidate>
+  <div class="field contact-honeypot" aria-hidden="true">
+    <label for="contact-website">Ne pas remplir ce champ</label>
+    <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <input type="hidden" name="form_ready_at" id="contact-ready" value="" />
+
+  <div class="field" data-field="name">
+    <label for="contact-name">Nom</label>
+    <input type="text" id="contact-name" name="name" required maxlength="120" autocomplete="name" />
+    <p class="field-error" id="error-name" hidden></p>
+  </div>
+
+  <div class="field" data-field="email">
+    <label for="contact-email">E-mail</label>
+    <input type="email" id="contact-email" name="email" required maxlength="180" autocomplete="email" />
+    <p class="field-error" id="error-email" hidden></p>
+  </div>
+
+  <div class="field" data-field="company">
+    <label for="contact-company">Société <span class="optional-label">(optionnel)</span></label>
+    <input type="text" id="contact-company" name="company" maxlength="180" autocomplete="organization" />
+  </div>
+
+  <div class="field" data-field="requestType">
+    <label for="contact-type">Type de demande</label>
+    <select id="contact-type" name="requestType" required>
+      <option value="">Sélectionnez…</option>
+      {CONTACT_REQUEST_TYPES.map((t) => <option value={t.value}>{t.label}</option>)}
+    </select>
+    <p class="field-error" id="error-requestType" hidden></p>
+  </div>
+
+  <div class="field" data-field="subject">
+    <label for="contact-subject">Objet</label>
+    <input type="text" id="contact-subject" name="subject" required maxlength="200" />
+    <p class="field-error" id="error-subject" hidden></p>
+  </div>
+
+  <div class="field" data-field="message">
+    <label for="contact-message">Message</label>
+    <textarea id="contact-message" name="message" required maxlength="8000"></textarea>
+    <p class="field-error" id="error-message" hidden></p>
+  </div>
+
+  <div class="field field--checkbox" data-field="privacyAccepted">
+    <label class="contact-checkbox-label">
+      <input type="checkbox" id="contact-privacy" name="privacy" value="1" required autocomplete="off" />
+      <span>
+        J’ai lu et j’accepte la
+        <a href="/politique-confidentialite/" target="_blank" rel="noopener noreferrer">politique de confidentialité</a>
+        <abbr title="obligatoire">*</abbr>.
+      </span>
+    </label>
+    <p class="field-error" id="error-privacyAccepted" hidden></p>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn--primary" id="contact-submit" disabled={submitUrl.length === 0}>
+      Envoyer
+    </button>
+  </div>
+
+  <p class="contact-status" id="contact-status" role="status" aria-live="polite"></p>
+  <p class="muted" style="font-size: var(--text-xs); margin-top: 1rem;">
+    Les messages sont traités pour répondre à votre demande. Conservation limitée au suivi de la conversation.
+    Ne transmettez pas de mots de passe ni de clés API via ce formulaire.
+  </p>
+</form>
+
+<script define:vars={{ submitUrl: String(submitUrl).trim() }}>
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const MIN_DELAY = 2500;
+  const TYPES = ['sales', 'support', 'partnership', 'integration', 'security', 'other'];
+
+  const form = document.getElementById('contact-form');
+  const statusEl = document.getElementById('contact-status');
+  const submitBtn = document.getElementById('contact-submit');
+  const readyInput = document.getElementById('contact-ready');
+
+  if (readyInput instanceof HTMLInputElement) {
+    readyInput.value = String(Date.now());
+  }
+
+  function clearErrors() {
+    form?.querySelectorAll('.field-error').forEach((el) => {
+      el.hidden = true;
+      el.textContent = '';
+    });
+    form?.querySelectorAll('.field').forEach((el) => el.classList.remove('field--error'));
+  }
+
+  function setError(field, message) {
+    const wrap = form?.querySelector(`[data-field="${field}"]`);
+    const err = document.getElementById(`error-${field}`);
+    if (wrap) wrap.classList.add('field--error');
+    if (err) {
+      err.hidden = false;
+      err.textContent = message;
+    }
+  }
+
+  function validate() {
+    clearErrors();
+    const errors = {};
+    const hp = form?.querySelector('[name="website"]');
+    if (hp instanceof HTMLInputElement && hp.value.trim() !== '') {
+      return { ok: false, honeypot: true };
+    }
+
+    const readyAt = Number(readyInput instanceof HTMLInputElement ? readyInput.value : 0);
+    if (!Number.isFinite(readyAt) || Date.now() - readyAt < MIN_DELAY) {
+      errors.form = 'Veuillez patienter quelques secondes avant d’envoyer le message.';
+    }
+
+    const name = String(form?.querySelector('[name="name"]')?.value || '').trim();
+    const email = String(form?.querySelector('[name="email"]')?.value || '').trim().toLowerCase();
+    const company = String(form?.querySelector('[name="company"]')?.value || '').trim();
+    const requestType = String(form?.querySelector('[name="requestType"]')?.value || '').trim();
+    const subject = String(form?.querySelector('[name="subject"]')?.value || '').trim().replace(/[\r\n]+/g, ' ');
+    const message = String(form?.querySelector('[name="message"]')?.value || '').trim();
+    const privacy = form?.querySelector('[name="privacy"]');
+
+    if (name.length < 2) errors.name = 'Indiquez votre nom (2 caractères minimum).';
+    if (!EMAIL_RE.test(email)) errors.email = 'Indiquez une adresse e-mail valide.';
+    if (!TYPES.includes(requestType)) errors.requestType = 'Sélectionnez un type de demande.';
+    if (subject.length < 2) errors.subject = 'Indiquez un objet.';
+    if (message.length < 10) errors.message = 'Votre message doit contenir au moins 10 caractères.';
+    if (!(privacy instanceof HTMLInputElement) || !privacy.checked) {
+      errors.privacyAccepted = 'Vous devez accepter la politique de confidentialité.';
+    }
+
+    Object.entries(errors).forEach(([key, msg]) => {
+      if (key !== 'form') setError(key, msg);
+    });
+
+    return {
+      ok: Object.keys(errors).length === 0,
+      errors,
+      data: { name, email, company, requestType, subject, message },
+    };
+  }
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!statusEl) return;
+    statusEl.textContent = '';
+    statusEl.className = 'contact-status';
+
+    if (!submitUrl) {
+      statusEl.textContent = 'Formulaire non configuré.';
+      statusEl.classList.add('contact-status--err');
+      return;
+    }
+
+    const result = validate();
+    if (result.honeypot) return;
+    if (!result.ok) {
+      statusEl.textContent = result.errors?.form || 'Corrigez les champs indiqués.';
+      statusEl.classList.add('contact-status--err');
+      const firstErr = form.querySelector('.field--error input, .field--error select, .field--error textarea');
+      firstErr?.focus();
+      return;
+    }
+
+    const consentAt = new Date().toISOString();
+    const payload = {
+      source: 'webhooky.fr-contact',
+      name: result.data.name,
+      email: result.data.email,
+      company: result.data.company,
+      objet: result.data.subject,
+      request_type: result.data.requestType,
+      message: result.data.message,
+      submitted_at: consentAt,
+      page: window.location.href,
+      privacy_policy_accepted: true,
+      privacy_policy_accepted_at: consentAt,
+    };
+
+    if (submitBtn instanceof HTMLButtonElement) submitBtn.disabled = true;
+
+    try {
+      const res = await fetch(submitUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        statusEl.textContent = 'Message envoyé. Nous vous répondrons si nécessaire.';
+        statusEl.classList.add('contact-status--ok');
+        form.reset();
+        if (readyInput instanceof HTMLInputElement) readyInput.value = String(Date.now());
+      } else if (res.status === 429) {
+        statusEl.textContent = 'Trop de tentatives. Réessayez dans quelques minutes ou écrivez-nous par e-mail.';
+        statusEl.classList.add('contact-status--err');
+      } else {
+        statusEl.textContent =
+          'Envoi impossible pour le moment. Réessayez plus tard ou écrivez-nous par e-mail.';
+        statusEl.classList.add('contact-status--err');
+      }
+    } catch {
+      statusEl.textContent = 'Erreur réseau. Vérifiez votre connexion ou utilisez l’e-mail de contact.';
+      statusEl.classList.add('contact-status--err');
+    } finally {
+      if (submitBtn instanceof HTMLButtonElement && submitUrl) submitBtn.disabled = false;
+    }
+  });
+</script>

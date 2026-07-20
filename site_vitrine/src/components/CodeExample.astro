@@ -1,0 +1,37 @@
+---
+interface Props {
+  label: string;
+  code: string;
+  language?: string;
+}
+
+const { label, code, language = 'text' } = Astro.props;
+const id = `code-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+---
+
+<div class="code-block">
+  <div class="code-block__label">
+    <span>{label}</span>
+    <button type="button" class="code-block__copy" data-copy-target={id}>Copier</button>
+  </div>
+  <pre id={id}><code class={`language-${language}`}>{code}</code></pre>
+</div>
+
+<script>
+  document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-copy-target');
+      const el = id ? document.getElementById(id) : null;
+      if (!el) return;
+      try {
+        await navigator.clipboard.writeText(el.textContent || '');
+        btn.textContent = 'Copié';
+        setTimeout(() => {
+          btn.textContent = 'Copier';
+        }, 1600);
+      } catch {
+        btn.textContent = 'Échec';
+      }
+    });
+  });
+</script>

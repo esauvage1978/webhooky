@@ -1,0 +1,108 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Alert from '../../components/Alert.astro';
+import { LEGAL_DISCLAIMER, legalConfig, subprocessors, isLegalIdentityComplete } from '../../config/legal';
+import { CONTACT_EMAIL } from '../../config/site';
+
+const title = 'Politique de confidentialité — Webhooky';
+const description =
+  'Traitement des données personnelles sur webhooky.fr et dans l’application Webhooky : finalités, bases légales, droits et cookies.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Politique de confidentialité' }]} />
+    <h1>Politique de confidentialité</h1>
+    <p class="legal-meta">Dernière mise à jour : {legalConfig.lastUpdated}</p>
+    <p class="legal-meta">{LEGAL_DISCLAIMER}</p>
+
+    {
+      !isLegalIdentityComplete() ? (
+        <Alert variant="info">
+          Le responsable de traitement sera identifié formellement dès publication complète des mentions légales.
+          Contact provisoire : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        </Alert>
+      ) : (
+        <p>
+          <strong>Responsable de traitement :</strong> {legalConfig.publisherName} — {legalConfig.address} —{' '}
+          <a href={`mailto:${legalConfig.contactEmail}`}>{legalConfig.contactEmail}</a>
+        </p>
+      )
+    }
+
+    <h2>Données collectées</h2>
+    <h3>Site vitrine</h3>
+    <ul>
+      <li>Données du formulaire de contact (nom, e-mail, société, type de demande, objet, message, preuve d’acceptation)</li>
+      <li>Données techniques de journalisation serveur (adresse IP, horodatage, user-agent) selon l’hébergement</li>
+      <li>Mesure d’audience via Google Analytics uniquement après consentement</li>
+    </ul>
+    <h3>Application (webhooky.builders)</h3>
+    <ul>
+      <li>Compte utilisateur (identité, e-mail, authentification)</li>
+      <li>Données d’organisation, facturation et abonnement</li>
+      <li>Payloads et métadonnées des webhooks que vous configurez</li>
+      <li>Identifiants de connecteurs nécessaires à l’exécution des actions</li>
+      <li>Journaux d’exécution et audits de sécurité / administration</li>
+    </ul>
+
+    <h2>Finalités et bases légales</h2>
+    <ul>
+      <li>Répondre aux demandes de contact — intérêt légitime / mesures précontractuelles</li>
+      <li>Fournir le service SaaS — exécution du contrat</li>
+      <li>Facturation et obligations comptables — obligation légale</li>
+      <li>Sécurité, prévention des abus — intérêt légitime</li>
+      <li>Mesure d’audience du site — consentement</li>
+    </ul>
+
+    <h2>Durées de conservation</h2>
+    <ul>
+      <li>Messages de contact : durée nécessaire au traitement de la demande, puis archivage limité si obligation légale</li>
+      <li>Comptes et données d’organisation : durée de la relation contractuelle, puis suppression ou anonymisation selon demandes et obligations</li>
+      <li>Journaux d’exécution : durée liée aux besoins de supervision et de diagnostic (politique produit)</li>
+      <li>Consentement cookies : jusqu’au retrait ou expiration de la version de consentement</li>
+    </ul>
+
+    <h2>Destinataires et sous-traitants</h2>
+    <ul>
+      {subprocessors.map((s) => (
+        <li>
+          <strong>{s.name}</strong> — {s.purpose}
+        </li>
+      ))}
+    </ul>
+    <p>
+      Les prestataires que vous connectez (Mailjet, Slack, SMS, etc.) reçoivent les données que vos scénarios leur
+      transmettent. Vous en êtes responsables.
+    </p>
+
+    <h2>Cookies</h2>
+    <p>
+      Les cookies nécessaires mémorisent vos préférences. La mesure d’audience (Google Analytics) n’est chargée qu’après
+      acceptation. Vous pouvez refuser aussi simplement qu’accepter, et rouvrir les préférences depuis le pied de page.
+      Google Analytics n’est pas présenté comme une anonymisation complète.
+    </p>
+
+    <h2>Vos droits</h2>
+    <p>
+      Conformément au RGPD, vous disposez de droits d’accès, de rectification, d’effacement, de limitation,
+      d’opposition et de portabilité lorsque applicables. Exercice :
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Vous pouvez également saisir la CNIL.
+    </p>
+
+    <h2>Suppression des données</h2>
+    <p>
+      Pour demander la suppression de votre compte ou de données associées, contactez-nous en précisant l’adresse
+      e-mail du compte et l’organisation concernée. Certaines données peuvent être conservées si une obligation légale
+      l’exige (facturation notamment).
+    </p>
+
+    <h2>Transferts hors UE</h2>
+    <p>
+      Selon les outils activés (ex. Google Analytics, certains prestataires), des transferts hors UE peuvent intervenir
+      avec les garanties prévues par ces prestataires. Désactivez la mesure d’audience si vous ne souhaitez pas ce
+      traitement sur le site vitrine.
+    </p>
+  </main>
+</SiteLayout>

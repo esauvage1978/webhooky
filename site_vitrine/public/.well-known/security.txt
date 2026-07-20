@@ -1,0 +1,5 @@
+Contact: mailto:contact@webhooky.fr
+Preferred-Languages: fr, en
+Canonical: https://webhooky.fr/.well-known/security.txt
+Policy: https://webhooky.fr/securite/
+Expires: 2027-07-20T00:00:00.000Z

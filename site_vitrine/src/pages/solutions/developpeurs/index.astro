@@ -1,0 +1,38 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import CallToAction from '../../../components/CallToAction.astro';
+import FlowDiagram from '../../../components/FlowDiagram.astro';
+
+const title = 'Webhooky pour les développeurs';
+const description =
+  'Découplez votre application des fournisseurs externes : une URL de webhook, des actions configurables, des journaux et des secrets centralisés.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs
+      items={[
+        { label: 'Accueil', href: '/' },
+        { label: 'Solutions', href: '/cas-usage/' },
+        { label: 'Développeurs' },
+      ]}
+    />
+    <div class="page-hero">
+      <h1>Webhooky pour les développeurs</h1>
+      <p>
+        Évitez de coder et maintenir chaque intégration dans vos projets. Centralisez secrets, mapping et supervision.
+      </p>
+      <FlowDiagram nodes={['Votre app', 'Webhooky', 'Connecteurs', 'Logs']} />
+    </div>
+    <h2>Bénéfices</h2>
+    <ul class="solution-list">
+      <li>Moins de code spécifique fournisseur dans l’application métier</li>
+      <li>Secrets hors des dépôts et des frontends</li>
+      <li>Tests et diagnostics via journaux d’exécution</li>
+      <li>Remplacement d’un prestataire sans redéployer tous les clients</li>
+      <li>Exemples curl, fetch, Symfony et HTML dans la <a href="/documentation/">documentation</a></li>
+    </ul>
+    <CallToAction primaryLabel="Créer un compte développeur" />
+  </main>
+</SiteLayout>

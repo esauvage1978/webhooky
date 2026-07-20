@@ -1,0 +1,22 @@
+---
+import type { UseCase } from '../config/useCases';
+
+interface Props {
+  useCase: UseCase;
+}
+
+const { useCase } = Astro.props;
+---
+
+<article class="usecase-card">
+  <span class="usecase-meta">{useCase.audience}</span>
+  <h3>{useCase.title}</h3>
+  <p><strong>Problème :</strong> {useCase.problem}</p>
+  <ol class="flow-list">
+    {useCase.flow.map((step) => <li>{step}</li>)}
+  </ol>
+  <p><strong>Résultat :</strong> {useCase.result}</p>
+  <div class="inline-actions">
+    <a class="btn btn--secondary" href={useCase.ctaHref}>{useCase.ctaLabel}</a>
+  </div>
+</article>

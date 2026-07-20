@@ -1,0 +1,25 @@
+---
+import type { Integration } from '../config/types';
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  integration: Integration;
+}
+
+const { integration } = Astro.props;
+const href = integration.detailUrl || integration.documentationUrl || '/integrations/';
+---
+
+<article class="integration-card">
+  <div class="integration-card__top">
+    <h3>{integration.name}</h3>
+    <StatusBadge status={integration.status} />
+  </div>
+  <p>{integration.description}</p>
+  <p class="muted" style="font-size: var(--text-xs); margin-top: 0.75rem;">
+    Catégorie : {integration.category}
+  </p>
+  <div class="inline-actions">
+    <a class="btn btn--ghost" href={href}>Détails</a>
+  </div>
+</article>

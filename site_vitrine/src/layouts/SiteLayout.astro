@@ -9,12 +9,13 @@ interface Props {
   image?: string;
   keywords?: string;
   robots?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-const { title, description, image, keywords, robots } = Astro.props;
+const { title, description, image, keywords, robots, jsonLd } = Astro.props;
 ---
 
-<Layout {title} {description} image={image} keywords={keywords} robots={robots}>
+<Layout {title} {description} image={image} keywords={keywords} robots={robots} jsonLd={jsonLd}>
   <slot name="head" slot="head" />
   <SiteHeader />
   <slot />

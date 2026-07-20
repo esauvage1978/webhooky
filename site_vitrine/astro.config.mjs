@@ -1,10 +1,17 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { validateProductConfig } from './src/config/validate.ts';
+
+const validation = validateProductConfig();
+if (!validation.ok) {
+  throw new Error(`Configuration produit invalide:\n- ${validation.errors.join('\n- ')}`);
+}
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://webhooky.fr',
+  trailingSlash: 'always',
   integrations: [
     sitemap({
       changefreq: 'weekly',
@@ -18,7 +25,9 @@ export default defineConfig({
         }
         if (
           u.endsWith('/tarifs') ||
-          u.endsWith('/contact')
+          u.endsWith('/contact') ||
+          u.endsWith('/fonctionnalites') ||
+          u.endsWith('/integrations')
         ) {
           item.priority = 0.85;
           item.changefreq = 'weekly';
@@ -30,7 +39,7 @@ export default defineConfig({
           u.endsWith('/cgu') ||
           u.endsWith('/cgv')
         ) {
-          item.priority = 0.45;
+          item.priority = 0.4;
           item.changefreq = 'monthly';
           return item;
         }

@@ -1,43 +1,32 @@
-# Astro Starter Kit: Minimal
+# Site vitrine Webhooky (webhooky.fr)
 
-```sh
-npm create astro@latest -- --template minimal
+Site marketing Astro (SSG) pour la plateforme Webhooky.
+
+## Commandes
+
+```bash
+npm install
+npm run dev
+npm run test
+npm run build
+npm run preview
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Configuration
 
-## 🚀 Project Structure
+Voir `.env.example` pour :
 
-Inside of your Astro project, you'll see the following folders and files:
+- l’URL du webhook de contact ;
+- les variables `PUBLIC_LEGAL_*` (identité éditeur / hébergeur).
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+Les tarifs et statuts de fonctionnalités sont centralisés dans `src/config/`.  
+Synchronisation des prix avec l’app : `docs/SYNC_PRICING.md`.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Déploiement
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+1. Renseigner les variables légales et le webhook contact.
+2. `npm run build`
+3. Publier le contenu de `dist/` (inclut `contact-webhook.php`, `.htaccess`, `robots.txt`).
+4. Définir `CONTACT_WEBHOOK_FORWARD_URL` côté serveur si besoin.
 
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Application SaaS : https://webhooky.builders

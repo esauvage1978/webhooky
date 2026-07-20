@@ -1,0 +1,35 @@
+---
+import type { FaqItem } from '../config/types';
+
+interface Props {
+  items: FaqItem[];
+  withJsonLd?: boolean;
+}
+
+const { items, withJsonLd = true } = Astro.props;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
+---
+
+<div class="faq">
+  {
+    items.map((item) => (
+      <details id={item.id}>
+        <summary>{item.question}</summary>
+        <p>{item.answer}</p>
+      </details>
+    ))
+  }
+</div>
+{withJsonLd ? <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} /> : null}

@@ -1,0 +1,30 @@
+---
+import { BUILDER_REGISTER_URL } from '../config/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  title = 'Passez de l’idée au premier webhook en quelques minutes',
+  description = 'Créez un compte gratuit, générez une URL et connectez votre première action.',
+  primaryHref = BUILDER_REGISTER_URL,
+  primaryLabel = 'Créer un compte gratuitement',
+  secondaryHref = '/contact/',
+  secondaryLabel = 'Nous contacter',
+} = Astro.props;
+---
+
+<section class="cta-band" aria-labelledby="cta-final-title">
+  <h2 id="cta-final-title">{title}</h2>
+  <p>{description}</p>
+  <div class="cta-band__actions">
+    <a class="btn btn--primary btn--large" href={primaryHref}>{primaryLabel}</a>
+    <a class="btn btn--secondary btn--large" href={secondaryHref}>{secondaryLabel}</a>
+  </div>
+</section>

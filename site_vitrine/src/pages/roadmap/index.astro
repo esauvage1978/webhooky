@@ -1,0 +1,64 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import { features } from '../../config/features';
+
+const title = 'Feuille de route — Webhooky';
+const description =
+  'Ce qui est disponible aujourd’hui, en bêta, ou prévu prochainement sur la plateforme Webhooky.';
+
+const available = features.filter((f) => f.status === 'available');
+const beta = features.filter((f) => f.status === 'beta');
+const planned = features.filter((f) => f.status === 'planned');
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Feuille de route' }]} />
+    <div class="page-hero">
+      <h1>Feuille de route</h1>
+      <p>
+        Transparence sur l’état réel des capacités. Les éléments « prochainement » ne sont pas commercialisés comme
+        disponibles.
+      </p>
+    </div>
+
+    <section class="section">
+      <h2><StatusBadge status="available" /> Disponible</h2>
+      <ul>
+        {available.map((f) => (
+          <li>
+            <strong>{f.title}</strong> — {f.description}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><StatusBadge status="beta" /> Bêta</h2>
+      <ul>
+        {beta.map((f) => (
+          <li>
+            <strong>{f.title}</strong> — {f.description}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><StatusBadge status="planned" /> Prochainement</h2>
+      <ul>
+        {planned.map((f) => (
+          <li>
+            <strong>{f.title}</strong> — {f.description}
+          </li>
+        ))}
+      </ul>
+      <p class="muted">
+        Autres pistes évoquées : packs self-serve Stripe généralisés, rate limiting par webhook, API publique / SDK,
+        environnements formels, alertes proactives.
+      </p>
+    </section>
+  </main>
+</SiteLayout>

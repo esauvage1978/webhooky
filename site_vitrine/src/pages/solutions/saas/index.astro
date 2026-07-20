@@ -1,0 +1,36 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import CallToAction from '../../../components/CallToAction.astro';
+
+const title = 'Webhooky pour les éditeurs SaaS';
+const description =
+  'Routez les événements de votre produit vers e-mail, SMS, messagerie et HTTP tout en contrôlant quotas et journaux.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs
+      items={[
+        { label: 'Accueil', href: '/' },
+        { label: 'Solutions', href: '/cas-usage/' },
+        { label: 'SaaS' },
+      ]}
+    />
+    <div class="page-hero">
+      <h1>Webhooky pour les éditeurs SaaS</h1>
+      <p>
+        Gardez votre cœur métier découplé des détails d’intégration. Webhooky orchestre le fan-out vers plusieurs
+        services et journalise chaque action.
+      </p>
+    </div>
+    <h2>Bénéfices</h2>
+    <ul class="solution-list">
+      <li>Événements à plus grande échelle avec quotas explicites</li>
+      <li>Suivi des exécutions hors des logs applicatifs hétérogènes</li>
+      <li>Connexion de plusieurs services externes sans alourdir le monolithe</li>
+      <li>Isolation par organisation pour environnements ou clients</li>
+    </ul>
+    <CallToAction />
+  </main>
+</SiteLayout>

@@ -1,33 +1,52 @@
 ---
-import { BUILDER_URL, SITE_URL, CONTACT_EMAIL } from '../site.ts';
+import { footerNav } from '../config/navigation';
+import { BUILDER_URL, CONTACT_EMAIL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '../config/site';
 
-const legal = [
-  { href: '/mentions-legales', label: 'Mentions légales' },
-  { href: '/politique-confidentialite', label: 'Politique de confidentialité' },
-  { href: '/cgu', label: 'CGU' },
-  { href: '/cgv', label: 'CGV' },
-];
+const year = new Date().getFullYear();
 ---
 
 <footer class="site-footer">
-  <div class="container footer-inner">
+  <div class="container">
     <div class="footer-grid">
-      <div>
-        <p class="legal-strong"><strong>Webhooky</strong></p>
-        <p class="footer-muted">
-          Vitrine : <a href={SITE_URL}>webhooky.fr</a>
-          — Application : <a href={BUILDER_URL}>webhooky.builders</a>
+      <div class="footer-brand">
+        <strong>{SITE_NAME}</strong>
+        <p>{SITE_TAGLINE}</p>
+        <p>
+          Application :
+          <a href={BUILDER_URL} rel="noopener noreferrer">webhooky.builders</a>
         </p>
-        <p class="footer-muted">
-          Contact : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+        <p>
+          Contact :
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
         </p>
       </div>
-      <div>
-        <p class="legal-strong">Informations</p>
+
+      <div class="footer-col">
+        <h2>Produit</h2>
         <ul class="footer-links">
-          <li><a href="/tarifs">Tarifs</a></li>
-          <li><a href="/contact">Contact</a></li>
-          {legal.map((item) => (
+          {footerNav.product.map((item) => (
+            <li>
+              <a href={item.href}>{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h2>Ressources</h2>
+        <ul class="footer-links">
+          {footerNav.resources.map((item) => (
+            <li>
+              <a href={item.href}>{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h2>Légal</h2>
+        <ul class="footer-links">
+          {footerNav.legal.map((item) => (
             <li>
               <a href={item.href}>{item.label}</a>
             </li>
@@ -40,15 +59,10 @@ const legal = [
         </ul>
       </div>
     </div>
-    <p class="footer-muted">
-      Produit en évolution ; les fonctionnalités peuvent être étendues selon vos besoins.
-    </p>
-    <p class="footer-disclaimer">
-      <strong>Clause de non-responsabilité :</strong> l’éditeur du site et l’exploitant de la plateforme ne sauraient
-      être tenus responsables des actions effectuées par les utilisateurs (notamment configuration des webhooks, contenus
-      transmis, envois d’e-mails, intégrations tierces telles que Mailjet ou vos formulaires). Vous restez seul
-      responsable de votre usage du service et du respect des lois applicables, y compris le RGPD et la réglementation
-      sur les communications électroniques.
-    </p>
+
+    <div class="footer-bottom">
+      <p>© {year} {SITE_NAME} — <a href={SITE_URL}>webhooky.fr</a></p>
+      <p>Plateforme française de webhooks et d’automatisations.</p>
+    </div>
   </div>
 </footer>

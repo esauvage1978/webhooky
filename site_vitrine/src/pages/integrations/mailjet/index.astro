@@ -1,0 +1,100 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import StatusBadge from '../../../components/StatusBadge.astro';
+import Alert from '../../../components/Alert.astro';
+import CallToAction from '../../../components/CallToAction.astro';
+import { BUILDER_REGISTER_URL } from '../../../config/site';
+
+const title = 'Intégration Mailjet — Webhooky';
+const description =
+  'Connectez Mailjet à Webhooky : clés API, modèles, variables, destinataires, tests et journaux d’erreurs.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container container--narrow legal-prose">
+    <Breadcrumbs
+      items={[
+        { label: 'Accueil', href: '/' },
+        { label: 'Intégrations', href: '/integrations/' },
+        { label: 'Mailjet' },
+      ]}
+    />
+    <div class="page-hero">
+      <p><StatusBadge status="available" /></p>
+      <h1>Intégration Mailjet</h1>
+      <p>
+        Utilisez Mailjet pour envoyer des e-mails transactionnels à partir d’un webhook Webhooky. Mailjet est un
+        connecteur parmi d’autres : il n’est pas obligatoire.
+      </p>
+    </div>
+
+    <Alert variant="warning" title="Responsabilités :">
+      Vous êtes responsable des destinataires contactés, des consentements, du contenu des messages et du respect du
+      RGPD / de la réglementation sur les communications électroniques. N’exposez jamais vos clés API dans le code front
+      ou dans des exemples publics.
+    </Alert>
+
+    <h2>1. Connecter les clés Mailjet</h2>
+    <ol>
+      <li>Connectez-vous à <a href={BUILDER_REGISTER_URL}>webhooky.builders</a> et ouvrez votre organisation.</li>
+      <li>Ajoutez une connexion de type Mailjet.</li>
+      <li>Renseignez la clé API publique et la clé API privée fournies par Mailjet.</li>
+      <li>Enregistrez : les identifiants restent côté serveur et sont masqués dans l’interface.</li>
+    </ol>
+
+    <h2>2. Sélectionner un modèle</h2>
+    <p>
+      Dans l’action du webhook, indiquez l’identifiant du modèle Mailjet (<code>TemplateID</code>) que vous souhaitez
+      utiliser. Le modèle doit exister dans votre compte Mailjet.
+    </p>
+
+    <h2>3. Mapper les variables</h2>
+    <p>
+      Associez les champs du payload reçu (nom, e-mail, message…) aux variables attendues par le modèle. Exemple de
+      payload fictif :
+    </p>
+    <pre><code>{`{
+  "name": "Jean Dupont",
+  "email": "jean.dupont@example.com",
+  "subject": "Demande de démonstration",
+  "message": "Je souhaite découvrir Webhooky."
+}`}</code></pre>
+
+    <h2>4. Définir les destinataires</h2>
+    <p>
+      Configurez destinataire, expéditeur et éventuellement copie selon les capacités du modèle / de l’action. Vérifiez
+      toujours que l’adresse destinataire provient d’une source légitime (soumission utilisateur, compte authentifié…).
+    </p>
+
+    <h2>5. Tester</h2>
+    <ol>
+      <li>Passez le webhook en brouillon si besoin pour valider sans consommer le quota de production.</li>
+      <li>Utilisez l’envoi de test depuis l’interface.</li>
+      <li>Vérifiez la réception du message et le journal d’exécution.</li>
+    </ol>
+
+    <h2>6. Consulter les erreurs</h2>
+    <p>
+      En cas d’échec (identifiants invalides, modèle introuvable, rejet Mailjet…), consultez le journal d’exécution.
+      Les identifiants MessageUUID / MessageID peuvent être journalisés lorsqu’ils sont renvoyés par Mailjet.
+    </p>
+
+    <h2>Bonnes pratiques</h2>
+    <ul>
+      <li>Ne placez jamais de vraies clés dans vos sites ou dépôts publics.</li>
+      <li>Préférez des modèles transactionnels avec variables contrôlées.</li>
+      <li>Documentez le mapping pour les autres membres de l’organisation.</li>
+      <li>Surveillez les quotas Webhooky et les limites Mailjet.</li>
+    </ul>
+
+    <div class="inline-actions">
+      <a class="btn btn--primary" href={BUILDER_REGISTER_URL}>Configurer Mailjet</a>
+      <a class="btn btn--secondary" href="/documentation/">Documentation de démarrage</a>
+    </div>
+
+    <div class="section">
+      <CallToAction />
+    </div>
+  </main>
+</SiteLayout>

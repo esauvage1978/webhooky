@@ -1,0 +1,105 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import PricingCard from '../../components/PricingCard.astro';
+import PricingComparison from '../../components/PricingComparison.astro';
+import Faq from '../../components/Faq.astro';
+import Alert from '../../components/Alert.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import {
+  EVENT_DEFINITION_FR,
+  PRICING_NOTE_FR,
+  QUOTA_EXCEEDED_FR,
+  eventPacks,
+  plans,
+} from '../../config/pricing';
+import { pricingFaq } from '../../config/faq';
+import { CONTACT_EMAIL } from '../../config/site';
+
+const title = 'Tarifs — Webhooky';
+const description =
+  'Forfaits Free (0 €), Starter (9 € HT/mois) et Pro (29 € HT/mois). Quotas d’événements, webhooks et packs catalogue.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Tarifs' }]} />
+    <div class="page-hero">
+      <h1>Tarifs</h1>
+      <p>
+        Grille alignée sur le catalogue applicatif. {PRICING_NOTE_FR}
+      </p>
+    </div>
+
+    <div class="pricing-grid">
+      {plans.map((plan) => <PricingCard plan={plan} />)}
+    </div>
+
+    <section class="section">
+      <h2>Comparatif</h2>
+      <PricingComparison />
+    </section>
+
+    <section class="section section--alt" style="padding-inline: 0;">
+      <div class="container" style="width: 100%;">
+        <h2>Qu’est-ce qu’un événement ?</h2>
+        <p>{EVENT_DEFINITION_FR}</p>
+
+        <h2>Dépassement de quota</h2>
+        <ul>
+          <li><strong>Free :</strong> {QUOTA_EXCEEDED_FR.free}</li>
+          <li><strong>Starter / Pro :</strong> {QUOTA_EXCEEDED_FR.paid}</li>
+        </ul>
+
+        <h2>Packs d’événements</h2>
+        <Alert variant="info">
+          Les packs ci-dessous sont définis au catalogue produit. L’achat self-serve via Stripe n’est pas encore ouvert
+          pour tous les comptes. Contactez <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> si vous avez besoin
+          d’un volume supplémentaire.
+        </Alert>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Packs d’événements">
+          <table class="pricing-table">
+            <thead>
+              <tr>
+                <th scope="col">Pack</th>
+                <th scope="col">Forfait</th>
+                <th scope="col">Événements</th>
+                <th scope="col">Prix HT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                eventPacks.map((pack) => (
+                  <tr>
+                    <td>{pack.label}</td>
+                    <td>{pack.forPlan}</td>
+                    <td>+{pack.eventsAdded.toLocaleString('fr-FR')}</td>
+                    <td>{pack.priceEur} €</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <h2>TVA, facturation et résiliation</h2>
+        <ul>
+          <li>Montants affichés en euros HT ; TVA ajoutée à la facturation.</li>
+          <li>Abonnement rattaché à l’organisation, paiement via Stripe lorsque configuré.</li>
+          <li>Changement de forfait depuis l’espace facturation de l’application.</li>
+          <li>Résiliation et factures : portail Stripe / CGV.</li>
+          <li>Aucune offre annuelle n’est commercialisée actuellement (pas de commutateur mensuel/annuel).</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container--narrow" style="margin-inline: auto;">
+        <h2>FAQ tarifaire</h2>
+        <Faq items={pricingFaq} />
+      </div>
+    </section>
+
+    <CallToAction title="Commencez gratuitement, évoluez quand le volume le demande" />
+  </main>
+</SiteLayout>

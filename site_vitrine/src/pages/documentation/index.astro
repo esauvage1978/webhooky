@@ -1,0 +1,164 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import CodeExample from '../../components/CodeExample.astro';
+import Alert from '../../components/Alert.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import { BUILDER_REGISTER_URL, BUILDER_URL } from '../../config/site';
+
+const title = 'Documentation — Démarrer avec Webhooky';
+const description =
+  'Guide de démarrage : webhooks, organisation, payload JSON, action Mailjet, tests, journaux et bonnes pratiques.';
+
+const samplePayload = `{
+  "name": "Jean Dupont",
+  "email": "jean.dupont@example.com",
+  "subject": "Demande de démonstration",
+  "message": "Je souhaite découvrir Webhooky."
+}`;
+
+const curlExample = `curl -X POST "https://webhooky.builders/webhook/form/VOTRE_JETON" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json" \\
+  -d '${samplePayload.replace(/\n/g, '')}'`;
+
+const fetchExample = `await fetch('https://webhooky.builders/webhook/form/VOTRE_JETON', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  body: JSON.stringify({
+    name: 'Jean Dupont',
+    email: 'jean.dupont@example.com',
+    subject: 'Demande de démonstration',
+    message: 'Je souhaite découvrir Webhooky.',
+  }),
+});`;
+
+const phpExample = `use Symfony\\Component\\HttpClient\\HttpClient;
+
+$client = HttpClient::create();
+$response = $client->request('POST', 'https://webhooky.builders/webhook/form/VOTRE_JETON', [
+    'headers' => [
+        'Accept' => 'application/json',
+    ],
+    'json' => [
+        'name' => 'Jean Dupont',
+        'email' => 'jean.dupont@example.com',
+        'subject' => 'Demande de démonstration',
+        'message' => 'Je souhaite découvrir Webhooky.',
+    ],
+]);
+
+$status = $response->getStatusCode();`;
+
+const htmlExample = `<form action="https://webhooky.builders/webhook/form/VOTRE_JETON" method="post">
+  <label>Nom <input name="name" required></label>
+  <label>E-mail <input type="email" name="email" required></label>
+  <label>Message <textarea name="message" required></textarea></label>
+  <button type="submit">Envoyer</button>
+</form>
+
+<!-- Préférez un envoi JSON via JavaScript si votre formulaire est moderne.
+     Ne placez jamais de secret dans le HTML. -->`;
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Documentation' }]} />
+    <div class="page-hero">
+      <h1>Documentation — démarrage</h1>
+      <p>
+        Guide pratique pour recevoir un premier webhook, configurer une action et lire les journaux. Remplacez
+        toujours <code>VOTRE_JETON</code> par le jeton fourni dans l’application.
+      </p>
+    </div>
+
+    <nav class="doc-toc" aria-label="Sommaire">
+      <strong>Sommaire</strong>
+      <ol>
+        <li><a href="#webhook">Qu’est-ce qu’un webhook ?</a></li>
+        <li><a href="#compte">Créer un compte</a></li>
+        <li><a href="#organisation">Créer une organisation</a></li>
+        <li><a href="#creer-webhook">Créer un webhook</a></li>
+        <li><a href="#payload">Exemple de payload</a></li>
+        <li><a href="#exemples">Exemples d’envoi</a></li>
+        <li><a href="#mailjet">Action Mailjet</a></li>
+        <li><a href="#test">Tester et lire les journaux</a></li>
+        <li><a href="#erreurs">Erreurs courantes</a></li>
+        <li><a href="#securite">Bonnes pratiques</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="webhook">Qu’est-ce qu’un webhook ?</h2>
+    <p>
+      Un webhook est une URL appelée par une application ou un formulaire lorsqu’un événement survient. Webhooky
+      reçoit cet appel, journalise le payload, puis exécute les actions configurées.
+    </p>
+
+    <h2 id="compte">Créer un compte</h2>
+    <ol>
+      <li>Ouvrez <a href={BUILDER_REGISTER_URL}>la page d’inscription</a>.</li>
+      <li>Validez votre e-mail si demandé.</li>
+      <li>Connectez-vous sur <a href={BUILDER_URL}>webhooky.builders</a>.</li>
+    </ol>
+
+    <h2 id="organisation">Créer une organisation</h2>
+    <p>
+      L’abonnement, les connecteurs et les webhooks sont rattachés à une organisation. Complétez l’onboarding
+      (profil, adresse de facturation si nécessaire, choix du forfait).
+    </p>
+
+    <h2 id="creer-webhook">Créer un webhook</h2>
+    <ol>
+      <li>Créez un projet si besoin, puis un webhook formulaire.</li>
+      <li>Copiez l’URL d’ingress générée.</li>
+      <li>Ajoutez une ou plusieurs actions.</li>
+      <li>Utilisez le mode brouillon pour tester sans consommer le quota de production.</li>
+    </ol>
+
+    <h2 id="payload">Exemple de payload JSON</h2>
+    <CodeExample label="JSON" language="json" code={samplePayload} />
+
+    <h2 id="exemples">Exemples d’envoi</h2>
+    <Alert variant="warning" title="Sécurité :">
+      Ne publiez jamais un jeton réel. Les exemples utilisent le placeholder <code>VOTRE_JETON</code>.
+    </Alert>
+    <CodeExample label="curl" language="bash" code={curlExample} />
+    <CodeExample label="JavaScript (fetch)" language="javascript" code={fetchExample} />
+    <CodeExample label="PHP (Symfony HttpClient)" language="php" code={phpExample} />
+    <CodeExample label="Formulaire HTML" language="html" code={htmlExample} />
+
+    <h2 id="mailjet">Configurer une action Mailjet</h2>
+    <p>
+      Ajoutez une connexion Mailjet dans l’organisation, puis une action template sur le webhook. Guide détaillé :
+      <a href="/integrations/mailjet/">intégration Mailjet</a>.
+    </p>
+
+    <h2 id="test">Envoyer un test et lire les journaux</h2>
+    <ol>
+      <li>Utilisez la fonction de test de l’interface ou un appel curl.</li>
+      <li>Ouvrez l’historique d’exécution.</li>
+      <li>Vérifiez le statut de chaque action.</li>
+    </ol>
+
+    <h2 id="erreurs">Gestion des erreurs</h2>
+    <ul>
+      <li><strong>402</strong> — quota d’événements atteint ou abonnement inactif.</li>
+      <li><strong>Erreur d’action</strong> — connecteur mal configuré, modèle introuvable, destinataire invalide…</li>
+      <li>Corrigez la configuration puis renvoyez un test.</li>
+    </ul>
+
+    <h2 id="securite">Bonnes pratiques de sécurité</h2>
+    <ul>
+      <li>Gardez les jetons d’URL confidentiels.</li>
+      <li>Ne stockez pas de clés fournisseurs dans vos sites.</li>
+      <li>Minimisez les données personnelles envoyées dans le payload.</li>
+      <li>Surveillez les journaux et la consommation de quota.</li>
+      <li>Préférez HTTPS pour toutes les destinations HTTP sortantes.</li>
+    </ul>
+
+    <CallToAction title="Passez à la pratique" primaryLabel="Créer un compte" />
+  </main>
+</SiteLayout>

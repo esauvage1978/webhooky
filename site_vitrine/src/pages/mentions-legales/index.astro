@@ -1,0 +1,85 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import LegalField from '../../components/LegalField.astro';
+import Alert from '../../components/Alert.astro';
+import {
+  LEGAL_DISCLAIMER,
+  isLegalIdentityComplete,
+  legalConfig,
+} from '../../config/legal';
+import { BUILDER_URL, SITE_URL } from '../../config/site';
+
+const title = 'Mentions légales — Webhooky';
+const description = 'Mentions légales du site webhooky.fr et informations sur l’éditeur du service Webhooky.';
+const complete = isLegalIdentityComplete();
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Mentions légales' }]} />
+    <h1>Mentions légales</h1>
+    <p class="legal-meta">Dernière mise à jour : {legalConfig.lastUpdated}</p>
+
+    {
+      !complete ? (
+        <Alert variant="warning" title="Identité de l’éditeur :">
+          Certaines mentions obligatoires (raison sociale, forme juridique, adresse, directeur de publication,
+          hébergeur) seront publiées dès finalisation administrative. En attendant, contactez{' '}
+          <a href={`mailto:${legalConfig.contactEmail}`}>{legalConfig.contactEmail}</a> pour toute demande relative à
+          l’éditeur.
+        </Alert>
+      ) : null
+    }
+
+    <h2>Éditeur du site</h2>
+    <LegalField label="Raison sociale" value={legalConfig.publisherName} />
+    <LegalField label="Forme juridique" value={legalConfig.legalForm} />
+    <LegalField label="Capital social" value={legalConfig.capital} />
+    <LegalField label="Siège social" value={legalConfig.address} />
+    <LegalField label="SIREN" value={legalConfig.siren} />
+    <LegalField label="SIRET" value={legalConfig.siret} />
+    <LegalField label="RCS" value={legalConfig.rcs} />
+    <LegalField label="N° TVA" value={legalConfig.vatNumber} />
+    <LegalField label="Directeur de la publication" value={legalConfig.publicationDirector} />
+    <p>
+      <strong>Contact :</strong>
+      <a href={`mailto:${legalConfig.contactEmail}`}>{legalConfig.contactEmail}</a>
+    </p>
+    <p>
+      <strong>Sites :</strong>
+      <a href={SITE_URL}>{SITE_URL}</a> (vitrine) —
+      <a href={BUILDER_URL}>{BUILDER_URL}</a> (application)
+    </p>
+
+    <h2>Hébergement</h2>
+    {
+      legalConfig.hostName ? (
+        <>
+          <LegalField label="Hébergeur" value={legalConfig.hostName} />
+          <LegalField label="Adresse" value={legalConfig.hostAddress} />
+          <LegalField label="Contact hébergeur" value={legalConfig.hostContact} />
+        </>
+      ) : (
+        <p>
+          Les informations d’hébergement seront publiées avec l’identité complète de l’éditeur. Demande possible à{' '}
+          {legalConfig.contactEmail}.
+        </p>
+      )
+    }
+
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Les contenus, marques et éléments graphiques du site sont protégés. Toute reproduction non autorisée est
+      interdite, sous réserve des exceptions légales.
+    </p>
+
+    <h2>Limitation</h2>
+    <p>
+      Les informations du site sont fournies à titre informatif. L’éditeur s’efforce d’en assurer l’exactitude sans
+      garantir l’absence d’erreurs. L’usage de l’application est régi par les CGU et CGV.
+    </p>
+
+    <p class="legal-meta">{LEGAL_DISCLAIMER}</p>
+  </main>
+</SiteLayout>

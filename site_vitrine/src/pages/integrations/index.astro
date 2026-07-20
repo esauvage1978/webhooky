@@ -1,0 +1,58 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import IntegrationCard from '../../components/IntegrationCard.astro';
+import Alert from '../../components/Alert.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import { INTEGRATION_DISCLAIMER, integrations } from '../../config/integrations';
+
+const title = 'Intégrations — Webhooky';
+const description =
+  'Connecteurs disponibles : Mailjet, Slack, Teams, Discord, SMS (Twilio, Vonage, MessageBird), HTTP, Telegram, Pushover et plus.';
+
+const categories = [
+  { id: 'email', label: 'E-mail' },
+  { id: 'messaging', label: 'Messagerie' },
+  { id: 'sms', label: 'SMS' },
+  { id: 'http', label: 'HTTP / API' },
+  { id: 'notification', label: 'Notifications' },
+  { id: 'other', label: 'Autres' },
+] as const;
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Intégrations' }]} />
+    <div class="page-hero">
+      <h1>Intégrations</h1>
+      <p>
+        Mailjet est le premier connecteur e-mail mis en avant, mais Webhooky orchestre déjà plusieurs familles de
+        prestataires. Les marques citées appartiennent à leurs propriétaires.
+      </p>
+      <Alert>
+        Nous n’affichons pas de logos partenaires « officiels » sans accord. La liste ci-dessous reflète les types de
+        connexion présents dans l’application.
+      </Alert>
+    </div>
+
+    {
+      categories.map((cat) => {
+        const items = integrations.filter((i) => i.category === cat.id);
+        if (!items.length) return null;
+        return (
+          <section class="section" aria-labelledby={`int-${cat.id}`}>
+            <h2 id={`int-${cat.id}`}>{cat.label}</h2>
+            <div class="card-grid card-grid--3">
+              {items.map((integration) => (
+                <IntegrationCard integration={integration} />
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
+
+    <p class="pricing-note">{INTEGRATION_DISCLAIMER}</p>
+    <CallToAction title="Connectez votre premier prestataire" />
+  </main>
+</SiteLayout>

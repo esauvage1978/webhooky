@@ -1,314 +1,311 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro';
-import { BUILDER_URL, SITE_NAME, SITE_URL } from '../site.ts';
+import SectionHeading from '../components/SectionHeading.astro';
+import FlowDiagram from '../components/FlowDiagram.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import UseCaseCard from '../components/UseCaseCard.astro';
+import IntegrationCard from '../components/IntegrationCard.astro';
+import PricingCard from '../components/PricingCard.astro';
+import Faq from '../components/Faq.astro';
+import CallToAction from '../components/CallToAction.astro';
+import Alert from '../components/Alert.astro';
+import { features } from '../config/features';
+import { useCases } from '../config/useCases';
+import { integrations, INTEGRATION_DISCLAIMER } from '../config/integrations';
+import { plans, PRICING_NOTE_FR } from '../config/pricing';
+import { homeFaq } from '../config/faq';
+import {
+  BUILDER_REGISTER_URL,
+  BUILDER_URL,
+  SITE_NAME,
+  SITE_URL,
+  VALUE_PROPOSITION,
+} from '../config/site';
 
-const title = 'Webhooky — Webhooks et envoi d’e-mails Mailjet';
+const title = 'Webhooky — Centralisez vos webhooks et automatisez vos actions';
 const description =
-  'Recevez les soumissions de vos formulaires via des webhooks et déclenchez plusieurs actions, dont l’envoi d’e-mails transactionnels avec Mailjet. Centralisez les intégrations, limitez l’adhérence aux services tiers et gardez l’historique au même endroit — pilotage depuis une interface dédiée.';
-const keywords =
-  'webhook, webhooks, Mailjet, e-mail transactionnel, formulaire, automatisation, intégration, notification, Webhooky';
-const jsonLdWebPage = {
+  'Plateforme française pour recevoir des webhooks, orchestrer e-mails, SMS, notifications et appels HTTP, et superviser chaque exécution.';
+
+const highlightFeatures = features.filter((f) =>
+  [
+    'inbound-webhooks',
+    'multi-actions',
+    'mailjet',
+    'messaging',
+    'execution-logs',
+    'quotas',
+    'organizations',
+    'secrets-central',
+    'swappable-providers',
+    'http-out',
+    'dynamic-variables',
+    'error-tracking',
+  ].includes(f.id),
+);
+
+const homeUseCases = useCases.slice(0, 4);
+const homeIntegrations = integrations.filter((i) =>
+  ['mailjet', 'http_webhook', 'slack', 'twilio_sms'].includes(i.id),
+);
+
+const softwareJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'WebPage',
-  name: title,
+  '@type': 'SoftwareApplication',
+  name: SITE_NAME,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  url: SITE_URL,
   description,
-  url: `${SITE_URL}/`,
-  inLanguage: 'fr-FR',
-  isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: `${SITE_URL}/` },
+  offers: plans.map((p) => ({
+    '@type': 'Offer',
+    name: p.name,
+    price: String(p.priceMonthlyEur),
+    priceCurrency: 'EUR',
+  })),
 };
 ---
 
-<SiteLayout {title} {description} {keywords}>
-  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLdWebPage)} />
-  <main>
-    <section class="hero container" aria-labelledby="hero-title">
-      <p class="hero-eyebrow">Automatisation · Formulaires · Mailjet</p>
-      <h1 id="hero-title" class="hero-title">
-        Un webhook, <span class="highlight">plusieurs actions</span> — dont vos e-mails Mailjet
-      </h1>
-      <p class="hero-lead">
-        Webhooky transforme chaque soumission en événement exploitable : recevez le payload, enchaînez des actions
-        (notifications, scénarios métier) et <strong>envoyez des e-mails via Mailjet</strong>, le tout configurable depuis
-        votre espace.
-      </p>
-      <div class="hero-cta">
-        <a class="btn btn--primary" href={BUILDER_URL}>Ouvrir le tableau de bord</a>
-        <a class="btn btn--secondary" href="#fonctionnalites">Découvrir les possibilités</a>
+<SiteLayout {title} {description} keywords="webhook, automatisation, mailjet, formulaires, saas français" jsonLd={softwareJsonLd}>
+  <main id="main-content">
+    <section class="container home-hero">
+      <div class="home-hero__copy">
+        <span class="badge badge--soft">{VALUE_PROPOSITION.badge}</span>
+        <h1>{VALUE_PROPOSITION.headline}</h1>
+        <p>{VALUE_PROPOSITION.subheadline}</p>
+        <div class="home-hero__actions">
+          <a class="btn btn--primary btn--large" href={BUILDER_REGISTER_URL}>Créer un compte</a>
+          <a class="btn btn--secondary btn--large" href="/fonctionnalites/">Voir les fonctionnalités</a>
+        </div>
+        <p class="muted" style="margin-top: 1rem; font-size: var(--text-sm);">
+          Déjà client ? <a href={BUILDER_URL}>Se connecter sur webhooky.builders</a>
+        </p>
       </div>
+      <FlowDiagram
+        title="De l’événement à la supervision"
+        nodes={[
+          'Formulaire / app',
+          'Webhooky',
+          'Règles & variables',
+          'Mailjet · SMS · HTTP · notif.',
+          'Journaux',
+        ]}
+      />
     </section>
 
-    <section id="fonctionnalites" class="section container" aria-labelledby="feat-title">
-      <h2 id="feat-title" class="section-title">Ce que vous pouvez faire aujourd’hui</h2>
-      <p class="section-intro">
-        L’objectif est simple : brancher vos formulaires ou intégrations sur des webhooks fiables, puis orchestrer la
-        suite — avec un focus sur l’envoi d’e-mails transactionnels Mailjet. En traitant les connecteurs tiers dans ce
-        SaaS, vous <strong>réduisez l’adhérence aux prestataires</strong> dans vos projets : changer de routeur e-mail ou
-        de fournisseur SMS se fait côté configuration, sans disperser la logique, tout en gardant <strong>traces et audit
-        au même endroit</strong>.
-      </p>
-      <ul class="cards">
-        <li class="card">
-          <h3>Webhooks entrants</h3>
-          <p>
-            Pointez votre formulaire ou votre outil vers une URL Webhooky : chaque soumission est reçue, journalisée et
-            traitée selon vos règles.
-          </p>
-        </li>
-        <li class="card">
-          <h3>Plusieurs actions par webhook</h3>
-          <p>
-            Pour <strong>un même webhook</strong>, définissez <strong>plusieurs actions</strong> (par exemple plusieurs
-            envois ou scénarios) sans multiplier les points d’entrée côté formulaire.
-          </p>
-        </li>
-        <li class="card">
-          <h3>Mailjet intégré</h3>
-          <p>
-            Reliez vos clés Mailjet et vos modèles : envoyez des messages personnalisés à partir des champs reçus dans le
-            webhook (variables, destinataires, etc.).
-          </p>
-        </li>
-        <li class="card">
-          <h3>Prestataires e-mail & SMS : centralisés, interchangeables</h3>
-          <p>
-            Vous n’êtes pas enfermé dans un seul fournisseur au cœur du code du site : les secrets et les actions (e-mail,
-            SMS, messagerie, etc.) sont gérés dans Webhooky. Si vous changez de prestataire pour les mails ou les SMS, vous
-            basculez le connecteur et conservez vos scénarios — <strong>journalisation et supervision réunis</strong> pour
-            tout tracer simplement.
-          </p>
-        </li>
-      </ul>
-    </section>
-
-    <section id="comment-ca-marche" class="section section--alt" aria-labelledby="steps-title">
+    <section class="section section--alt">
       <div class="container">
-        <h2 id="steps-title" class="section-title">Comment ça marche</h2>
-        <ol class="steps">
-          <li>
-            <span class="step-num">1</span>
-            <div>
-              <h3>Créez une organisation</h3>
-              <p>Sur <a href={BUILDER_URL}>webhooky.builders</a>, configurez votre espace et vos accès.</p>
-            </div>
-          </li>
-          <li>
-            <span class="step-num">2</span>
-            <div>
-              <h3>Ajoutez un webhook et vos actions</h3>
-              <p>Définissez l’URL fournie par votre formulaire, puis enchaînez les actions — dont Mailjet.</p>
-            </div>
-          </li>
-          <li>
-            <span class="step-num">3</span>
-            <div>
-              <h3>Surveillez les exécutions</h3>
-              <p>Consultez l’historique et les journaux pour ajuster vos scénarios en toute confiance.</p>
-            </div>
-          </li>
-        </ol>
+        <SectionHeading
+          eyebrow="Pourquoi Webhooky"
+          title="Une URL, plusieurs actions, une supervision claire"
+          description="Évitez de coder et maintenir chaque intégration dans vos applications. Centralisez la logique, les secrets et les journaux."
+        />
+        <div class="card-grid card-grid--3">
+          <article class="value-card">
+            <h3>Une URL, plusieurs actions</h3>
+            <p>Recevez un événement et déclenchez e-mail, notification, SMS ou appel HTTP sans disperser la logique.</p>
+          </article>
+          <article class="value-card">
+            <h3>Fournisseurs remplaçables</h3>
+            <p>Changez de connecteur côté organisation sans modifier l’URL publique de vos formulaires.</p>
+          </article>
+          <article class="value-card">
+            <h3>Historique centralisé</h3>
+            <p>Diagnostiquez les succès et les erreurs depuis une interface unique, par organisation.</p>
+          </article>
+          <article class="value-card">
+            <h3>Moins de code spécifique</h3>
+            <p>Découplez votre application métier des détails d’intégration de chaque prestataire.</p>
+          </article>
+          <article class="value-card">
+            <h3>Secrets hors des sites</h3>
+            <p>Conservez les identifiants au niveau de l’organisation plutôt que dans chaque projet client.</p>
+          </article>
+          <article class="value-card">
+            <h3>Quotas maîtrisés</h3>
+            <p>Suivez la consommation d’événements et bloquez proprement les dépassements selon le forfait.</p>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section class="section container cta-band" aria-labelledby="cta-title">
-      <h2 id="cta-title" class="cta-title">Prêt à connecter vos formulaires ?</h2>
-      <p class="cta-text">L’interface complète vous attend sur webhooky.builders.</p>
-      <a class="btn btn--primary btn--large" href={BUILDER_URL}>Accéder à webhooky.builders</a>
+    <section class="section">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Pour qui"
+          title="Conçu pour les équipes qui automatisent des flux"
+          description="Des messages adaptés aux développeurs, agences, éditeurs SaaS et équipes opérationnelles."
+        />
+        <div class="audience-grid">
+          <article class="audience-card">
+            <h3>Développeurs</h3>
+            <p>Moins d’intégrations à maintenir, secrets centralisés, diagnostics plus rapides.</p>
+          </article>
+          <article class="audience-card">
+            <h3>Agences & freelances</h3>
+            <p>Gérez plusieurs clients sans disperser les clés API dans chaque site.</p>
+          </article>
+          <article class="audience-card">
+            <h3>Éditeurs SaaS</h3>
+            <p>Routez les événements vers plusieurs services tout en gardant le cœur métier découplé.</p>
+          </article>
+          <article class="audience-card">
+            <h3>PME & ops</h3>
+            <p>Automatisez notifications et confirmations avec un historique compréhensible.</p>
+          </article>
+        </div>
+        <div class="inline-actions">
+          <a href="/solutions/developpeurs/">Développeurs</a>
+          <a href="/solutions/agences/">Agences</a>
+          <a href="/solutions/saas/">SaaS</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt" id="fonctionnement">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Fonctionnement"
+          title="Quatre étapes pour démarrer"
+          description="De la création d’organisation au suivi des exécutions."
+        />
+        <div class="steps">
+          <article class="step">
+            <h3>Créer une organisation</h3>
+            <p class="muted">Isolez vos projets, membres et connecteurs.</p>
+          </article>
+          <article class="step">
+            <h3>Générer une URL</h3>
+            <p class="muted">Obtenez l’endpoint webhook à brancher sur vos formulaires ou apps.</p>
+          </article>
+          <article class="step">
+            <h3>Configurer les actions</h3>
+            <p class="muted">Mailjet, messagerie, SMS, HTTP… avec variables dynamiques.</p>
+          </article>
+          <article class="step">
+            <h3>Suivre les exécutions</h3>
+            <p class="muted">Consultez journaux, erreurs et consommation de quota.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="fonctionnalites">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Fonctionnalités"
+          title="Ce qui est disponible, en bêta ou prévu"
+          description="Chaque statut provient d’une configuration centralisée, alignée sur l’application."
+        />
+        <div class="card-grid card-grid--3">
+          {highlightFeatures.map((feature) => <FeatureCard feature={feature} />)}
+        </div>
+        <div class="inline-actions">
+          <a class="btn btn--secondary" href="/fonctionnalites/">Toutes les fonctionnalités</a>
+          <a class="btn btn--ghost" href="/roadmap/">Feuille de route</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Cas d’usage"
+          title="Des scénarios concrets, immédiatement actionnables"
+        />
+        <div class="card-grid card-grid--2">
+          {homeUseCases.map((useCase) => <UseCaseCard useCase={useCase} />)}
+        </div>
+        <div class="inline-actions">
+          <a class="btn btn--secondary" href="/cas-usage/">Tous les cas d’usage</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Intégrations"
+          title="Mailjet en premier connecteur e-mail, pas l’identité du produit"
+          description="Webhooky orchestre plusieurs familles de connecteurs déjà disponibles dans l’application."
+        />
+        <div class="card-grid card-grid--2">
+          {homeIntegrations.map((integration) => <IntegrationCard integration={integration} />)}
+        </div>
+        <p class="pricing-note">{INTEGRATION_DISCLAIMER}</p>
+        <div class="inline-actions">
+          <a class="btn btn--secondary" href="/integrations/">Catalogue des intégrations</a>
+          <a class="btn btn--ghost" href="/integrations/mailjet/">Guide Mailjet</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt" id="securite">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Confiance"
+          title="Des mesures réelles, sans promesses absolues"
+          description="Nous documentons uniquement ce qui est confirmé dans l’application ou l’infrastructure."
+        />
+        <div class="card-grid card-grid--3">
+          <article class="value-card">
+            <h3>HTTPS</h3>
+            <p>Communications chiffrées en transit vers l’application et le site.</p>
+          </article>
+          <article class="value-card">
+            <h3>Isolation par organisation</h3>
+            <p>Contrôle d’accès aux projets, connecteurs et webhooks selon l’organisation.</p>
+          </article>
+          <article class="value-card">
+            <h3>Journalisation</h3>
+            <p>Traçabilité des exécutions et des événements utiles au diagnostic.</p>
+          </article>
+          <article class="value-card">
+            <h3>Quotas</h3>
+            <p>Limitation du volume d’événements selon le forfait, avec refus explicite au-delà.</p>
+          </article>
+          <article class="value-card">
+            <h3>Secrets côté serveur</h3>
+            <p>Identifiants de connecteurs stockés au niveau organisation, masqués dans l’UI.</p>
+          </article>
+          <article class="value-card">
+            <h3>OAuth sensible chiffré</h3>
+            <p>Certaines données OAuth (ex. Google) sont chiffrées au repos via secretbox.</p>
+          </article>
+        </div>
+        <Alert variant="info">
+          La page sécurité détaille aussi les responsabilités client et les mesures encore à renforcer.
+        </Alert>
+        <a class="btn btn--secondary" href="/securite/">Lire la page sécurité</a>
+      </div>
+    </section>
+
+    <section class="section" id="tarifs">
+      <div class="container">
+        <SectionHeading
+          eyebrow="Tarifs"
+          title="Trois forfaits clairs"
+          description={PRICING_NOTE_FR}
+        />
+        <div class="pricing-grid">
+          {plans.map((plan) => <PricingCard plan={plan} />)}
+        </div>
+        <div class="inline-actions">
+          <a class="btn btn--secondary" href="/tarifs/">Comparatif détaillé</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt">
+      <div class="container container--narrow">
+        <SectionHeading eyebrow="FAQ" title="Questions fréquentes" />
+        <Faq items={homeFaq} />
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <CallToAction />
+      </div>
     </section>
   </main>
 </SiteLayout>
-
-<style>
-  .hero {
-    position: relative;
-    padding-block: 3.5rem 4rem;
-    text-align: center;
-    overflow: hidden;
-  }
-
-  .hero::before {
-    content: '';
-    position: absolute;
-    width: 420px;
-    height: 420px;
-    right: -140px;
-    top: -160px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 90, 54, 0.2) 0%, transparent 65%);
-    pointer-events: none;
-  }
-
-  .hero > * {
-    position: relative;
-  }
-
-  .hero-eyebrow {
-    margin: 0 0 1rem;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--coral);
-  }
-
-  .hero-title {
-    margin: 0 0 1.25rem;
-    font-size: clamp(2rem, 4.5vw, 2.85rem);
-    line-height: 1.12;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    max-width: 20ch;
-    margin-inline: auto;
-    color: var(--ink);
-  }
-
-  .highlight {
-    background: linear-gradient(120deg, var(--coral), var(--coral-soft));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .hero-lead {
-    margin: 0 auto 2rem;
-    max-width: 62ch;
-    color: var(--text-muted);
-    font-size: 1.05rem;
-  }
-
-  .hero-lead strong {
-    color: var(--coral);
-    font-weight: 700;
-  }
-
-  .hero-cta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .hero-note {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  .hero-note a {
-    font-weight: 600;
-  }
-
-  .section {
-    padding-block: 4rem;
-  }
-
-  .section--alt {
-    background: var(--surface-elevated);
-    border-block: 1px solid var(--border);
-  }
-
-  .section-title {
-    margin: 0 0 0.75rem;
-    font-size: clamp(1.6rem, 3vw, 2rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-  }
-
-  .section-intro {
-    margin: 0 0 2.5rem;
-    max-width: 65ch;
-    color: var(--text-muted);
-  }
-
-  .cards {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .card {
-    margin: 0;
-    padding: 1.5rem 1.6rem;
-    background: var(--surface-elevated);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    border-left: 4px solid var(--coral);
-  }
-
-  .card h3 {
-    margin: 0 0 0.65rem;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .card p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.98rem;
-  }
-
-  .steps {
-    list-style: none;
-    margin: 2rem 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.75rem;
-    max-width: 720px;
-  }
-
-  .steps li {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1.25rem;
-    align-items: start;
-  }
-
-  .step-num {
-    display: grid;
-    place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    background: var(--coral-dim);
-    color: var(--coral);
-    font-weight: 800;
-  }
-
-  .steps h3 {
-    margin: 0 0 0.35rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .steps p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.98rem;
-  }
-
-  .cta-band {
-    text-align: center;
-    padding-block: 4.5rem;
-  }
-
-  .cta-title {
-    margin: 0 0 0.5rem;
-    font-size: clamp(1.5rem, 3vw, 1.85rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-  }
-
-  .cta-text {
-    margin: 0 0 1.5rem;
-    color: var(--text-muted);
-  }
-</style>

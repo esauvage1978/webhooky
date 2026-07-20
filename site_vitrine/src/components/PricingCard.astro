@@ -1,0 +1,31 @@
+---
+import type { PricingPlan } from '../config/types';
+import { formatPriceEur, formatWebhooks } from '../config/pricing';
+import { BUILDER_REGISTER_URL, BUILDER_BILLING_URL } from '../config/site';
+
+interface Props {
+  plan: PricingPlan;
+}
+
+const { plan } = Astro.props;
+const href = plan.id === 'free' ? BUILDER_REGISTER_URL : BUILDER_BILLING_URL;
+---
+
+<article class:list={['pricing-card', { 'pricing-card--highlight': plan.highlighted }]}>
+  {plan.highlighted ? <span class="badge badge--soft">Le plus choisi</span> : null}
+  <h3>{plan.name}</h3>
+  <p class="muted">{plan.description}</p>
+  <p class="pricing-card__price">
+    {formatPriceEur(plan.priceMonthlyEur)}
+    <span>/ mois HT</span>
+  </p>
+  <p class="muted" style="font-size: var(--text-sm);">
+    {plan.includedEvents.toLocaleString('fr-FR')} événements · {formatWebhooks(plan.maxWebhooks)} webhook{plan.maxWebhooks === 1 ? '' : 's'}
+  </p>
+  <ul>
+    {plan.highlights.map((item) => <li>{item}</li>)}
+  </ul>
+  <a class:list={['btn', 'btn--large', plan.highlighted ? 'btn--primary' : 'btn--secondary']} href={href}>
+    {plan.ctaLabel}
+  </a>
+</article>

@@ -1,0 +1,37 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import UseCaseCard from '../../components/UseCaseCard.astro';
+import FlowDiagram from '../../components/FlowDiagram.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import { useCases } from '../../config/useCases';
+
+const title = 'Cas d’usage — Webhooky';
+const description =
+  'Scénarios concrets : formulaires, devis, agences multi-sites, fan-out SaaS, remplacement de fournisseur e-mail et journaux centralisés.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Cas d’usage' }]} />
+    <div class="page-hero">
+      <h1>Cas d’usage</h1>
+      <p>
+        Des parcours métier réalistes pour illustrer comment Webhooky centralise les webhooks et les actions qui
+        suivent — sans présenter comme disponible ce qui ne l’est pas encore.
+      </p>
+      <FlowDiagram
+        nodes={['Événement', 'Webhooky', 'Actions multiples', 'Supervision']}
+        title="Schéma commun à tous les cas"
+      />
+    </div>
+
+    <div class="card-grid card-grid--2">
+      {useCases.map((useCase) => <UseCaseCard useCase={useCase} />)}
+    </div>
+
+    <div class="section">
+      <CallToAction />
+    </div>
+  </main>
+</SiteLayout>

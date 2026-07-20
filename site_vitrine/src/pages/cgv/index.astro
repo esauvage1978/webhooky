@@ -1,0 +1,100 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import { LEGAL_DISCLAIMER, legalConfig } from '../../config/legal';
+import { CONTACT_EMAIL } from '../../config/site';
+import { PRICING_NOTE_FR, plans } from '../../config/pricing';
+
+const title = 'Conditions générales de vente — Webhooky';
+const description =
+  'Conditions générales de vente des abonnements Webhooky : forfaits, facturation, TVA, résiliation et responsabilités.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'CGV' }]} />
+    <h1>Conditions générales de vente</h1>
+    <p class="legal-meta">Dernière mise à jour : {legalConfig.lastUpdated}</p>
+    <p class="legal-meta">{LEGAL_DISCLAIMER}</p>
+
+    <h2>1. Objet</h2>
+    <p>
+      Les présentes CGV régissent la souscription aux offres payantes de la plateforme Webhooky et précisent les
+      modalités de facturation des forfaits.
+    </p>
+
+    <h2>2. Offres</h2>
+    <p>{PRICING_NOTE_FR}</p>
+    <ul>
+      {
+        plans.map((p) => (
+          <li>
+            <strong>{p.name}</strong> — {p.priceMonthlyEur === 0 ? '0 €' : `${p.priceMonthlyEur} € HT / mois`} —{' '}
+            {p.includedEvents.toLocaleString('fr-FR')} événements inclus
+            {p.maxWebhooks === null ? '' : `, ${p.maxWebhooks} webhook`}
+          </li>
+        ))
+      }
+    </ul>
+    <p>
+      Le détail est publié sur <a href="/tarifs/">la page tarifs</a>. Les packs d’événements figurent au catalogue ; leur
+      disponibilité d’achat self-serve peut varier.
+    </p>
+
+    <h2>3. Commande et paiement</h2>
+    <ul>
+      <li>L’abonnement est rattaché à une organisation.</li>
+      <li>Le paiement des offres payantes est réalisé via Stripe lorsque ce moyen est activé.</li>
+      <li>En cas d’échec de paiement ou de statut d’abonnement inactif, l’exécution des webhooks peut être refusée.</li>
+    </ul>
+
+    <h2>4. Quotas</h2>
+    <p>
+      Un événement correspond à une action exécutée. Lorsque le quota est atteint, les nouvelles exécutions sont
+      refusées jusqu’à régularisation (changement de forfait ou pack, selon disponibilité).
+    </p>
+
+    <h2>5. Rétractation</h2>
+    <p>
+      Si vous êtes un consommateur au sens du Code de la consommation, vous disposez d’un droit de rétractation de 14
+      jours pour les contrats conclus à distance, sous réserve des exceptions légales applicables aux contenus numériques
+      et services pleinement exécutés. Pour les professionnels, ce droit ne s’applique pas sauf stipulation contraire.
+      Contact : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+
+    <h2>6. Résiliation</h2>
+    <p>
+      La résiliation s’effectue depuis l’espace facturation (portail Stripe lorsque disponible) ou sur demande écrite.
+      Les sommes dues pour la période entamée restent exigibles selon les conditions Stripe / facture émise.
+    </p>
+
+    <h2>7. Support</h2>
+    <p>
+      Le support est assuré par e-mail à {CONTACT_EMAIL} selon les moyens disponibles. Aucun délai de réponse garanti
+      n’est promis sur le site, sauf engagement contractuel spécifique.
+    </p>
+
+    <h2>8. Responsabilité et disponibilité</h2>
+    <p>
+      Le service est fourni selon une obligation de moyens. Aucune disponibilité permanente, livraison garantie ou
+      absence totale d’incidents n’est promise. La responsabilité de l’éditeur est limitée, dans les limites autorisées
+      par la loi, aux montants réellement payés au cours des douze derniers mois pour l’organisation concernée.
+    </p>
+
+    <h2>9. Données personnelles</h2>
+    <p>
+      Le traitement des données est décrit dans la
+      <a href="/politique-confidentialite/">politique de confidentialité</a>.
+    </p>
+
+    <h2>10. Droit applicable</h2>
+    <p>
+      Les présentes CGV sont soumises au {legalConfig.governingLaw}.
+      {
+        legalConfig.jurisdiction
+          ? ` Litiges : tribunaux de ${legalConfig.jurisdiction}, sous réserve des règles impératives de protection des consommateurs.`
+          : ' Les tribunaux compétents seront déterminés selon le droit commun, sous réserve des règles impératives de protection des consommateurs.'
+      }
+    </p>
+  </main>
+</SiteLayout>

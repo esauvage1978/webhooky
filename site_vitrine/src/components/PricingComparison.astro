@@ -1,0 +1,81 @@
+---
+import { plans } from '../config/pricing';
+
+const rows = [
+  {
+    label: 'Prix mensuel HT',
+    values: plans.map((p) => (p.priceMonthlyEur === 0 ? '0 €' : `${p.priceMonthlyEur} €`)),
+  },
+  {
+    label: 'Événements inclus',
+    values: plans.map((p) => p.includedEvents.toLocaleString('fr-FR')),
+  },
+  {
+    label: 'Webhooks',
+    values: plans.map((p) => (p.maxWebhooks === null ? 'Non plafonnés*' : String(p.maxWebhooks))),
+  },
+  {
+    label: 'Organisations',
+    values: ['Oui', 'Oui', 'Oui'],
+  },
+  {
+    label: 'Utilisateurs',
+    values: ['Selon invitations', 'Selon invitations', 'Selon invitations'],
+  },
+  {
+    label: 'Actions par scénario',
+    values: ['Plusieurs', 'Plusieurs', 'Plusieurs'],
+  },
+  {
+    label: 'Journaux d’exécution',
+    values: ['Oui', 'Oui', 'Oui'],
+  },
+  {
+    label: 'Rejeu depuis l’historique',
+    values: ['Prochainement', 'Prochainement', 'Prochainement'],
+  },
+  {
+    label: 'Packs au-delà du quota',
+    values: ['Non', 'Catalogue**', 'Catalogue**'],
+  },
+  {
+    label: 'Support',
+    values: ['Communautaire / e-mail', 'Standard', 'Standard'],
+  },
+  {
+    label: 'API publique documentée',
+    values: ['Prochainement', 'Prochainement', 'Prochainement'],
+  },
+  {
+    label: 'Conservation des logs',
+    values: ['Selon politique produit', 'Selon politique produit', 'Selon politique produit'],
+  },
+];
+---
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Comparatif des forfaits">
+  <table class="pricing-table">
+    <thead>
+      <tr>
+        <th scope="col">Critère</th>
+        {plans.map((plan) => <th scope="col">{plan.name}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            <th scope="row">{row.label}</th>
+            {row.values.map((value) => (
+              <td>{value}</td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+<p class="pricing-note">
+  * Webhooks non plafonnés dans le forfait, sous réserve d’usage raisonnable et des protections techniques de la plateforme.<br />
+  ** Packs définis au catalogue ; achat self-serve Stripe en cours d’ouverture.
+</p>

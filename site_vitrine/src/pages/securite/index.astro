@@ -1,0 +1,102 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Alert from '../../components/Alert.astro';
+import { CONTACT_EMAIL } from '../../config/site';
+import { legalConfig } from '../../config/legal';
+import { subprocessors } from '../../config/legal';
+
+const title = 'Sécurité — Webhooky';
+const description =
+  'Mesures de sécurité confirmées, responsabilités partagées, conservation, sous-traitants et signalement de vulnérabilités.';
+
+const securityEmail = legalConfig.securityEmail || CONTACT_EMAIL;
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Sécurité' }]} />
+    <div class="page-hero">
+      <h1>Sécurité</h1>
+      <p>
+        Transparence sur ce qui est en place aujourd’hui. Aucune promesse de « sécurité totale » ou de disponibilité
+        permanente.
+      </p>
+    </div>
+
+    <h2>Responsabilités de Webhooky</h2>
+    <ul>
+      <li>Fournir une plateforme d’ingress, d’orchestration et de journalisation.</li>
+      <li>Isoler les accès par organisation.</li>
+      <li>Protéger les sessions et les API de l’application.</li>
+      <li>Appliquer les quotas d’événements.</li>
+      <li>Maintenir le chiffrement en transit (HTTPS) sur les domaines de production.</li>
+    </ul>
+
+    <h2>Responsabilités du client</h2>
+    <ul>
+      <li>Protéger les jetons d’URL de webhook et les accès utilisateurs.</li>
+      <li>Configurer correctement destinataires, contenus et consentements.</li>
+      <li>Ne pas transmettre de secrets inutiles dans les payloads.</li>
+      <li>Respecter le RGPD et les lois applicables à vos traitements.</li>
+      <li>Révoquer les accès des collaborateurs qui quittent l’organisation.</li>
+    </ul>
+
+    <h2>Mesures confirmées dans l’application</h2>
+    <ul>
+      <li><strong>HTTPS</strong> en production.</li>
+      <li><strong>Contrôle d’accès</strong> basé sur l’appartenance à l’organisation.</li>
+      <li><strong>Journalisation</strong> des exécutions et audits utiles à la supervision.</li>
+      <li><strong>Quotas</strong> d’événements avec refus explicite au-delà.</li>
+      <li><strong>Masquage</strong> des secrets de connecteurs dans l’API / l’UI.</li>
+      <li><strong>Chiffrement au repos</strong> pour certaines données OAuth sensibles (secretbox).</li>
+    </ul>
+
+    <Alert variant="warning" title="À ne pas sur-affirmer :">
+      Le chiffrement au repos de toutes les clés Mailjet n’est pas présenté comme généralisé. Les rate limits par
+      webhook et une rétention client documentée de façon exhaustive sont des axes d’amélioration.
+    </Alert>
+
+    <h2>Recommandations techniques internes (non présentées comme déjà livrées)</h2>
+    <ul>
+      <li>Étendre le chiffrement au repos à l’ensemble des secrets de connecteurs.</li>
+      <li>Mettre en place un rate limiting par endpoint d’ingress.</li>
+      <li>Documenter et automatiser les durées de conservation / purge.</li>
+      <li>Exposer un canal dédié security@ lorsque disponible.</li>
+      <li>Renforcer le throttling des authentifications.</li>
+    </ul>
+
+    <h2>Protection des endpoints</h2>
+    <p>
+      Les URL de webhook sont des secrets d’accès. Traitez-les comme des identifiants. En cas de fuite, régénérez le
+      jeton dans l’application et mettez à jour vos formulaires.
+    </p>
+
+    <h2>Journalisation et conservation</h2>
+    <p>
+      Les exécutions sont journalisées pour le diagnostic et la supervision. Les durées exactes de conservation évoluent
+      avec la politique produit ; une demande de suppression peut être adressée à
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+
+    <h2>Sous-traitants</h2>
+    <ul>
+      {subprocessors.map((s) => (
+        <li>
+          <strong>{s.name}</strong> — {s.purpose} ({s.region})
+        </li>
+      ))}
+    </ul>
+
+    <h2>Incidents et vulnérabilités</h2>
+    <p>
+      Pour signaler une vulnérabilité ou un incident de sécurité lié à Webhooky, écrivez à
+      <a href={`mailto:${securityEmail}`}>{securityEmail}</a>. Merci de ne pas exploiter la faille au-delà de la preuve
+      de concept minimale et d’éviter tout impact sur les données de tiers.
+    </p>
+    <p>
+      Un fichier <a href="/.well-known/security.txt"><code>security.txt</code></a> est publié lorsque les coordonnées
+      sont configurées.
+    </p>
+  </main>
+</SiteLayout>

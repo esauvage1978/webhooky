@@ -1,0 +1,52 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import SectionHeading from '../../components/SectionHeading.astro';
+import FeatureCard from '../../components/FeatureCard.astro';
+import CallToAction from '../../components/CallToAction.astro';
+import { featureCategories, features } from '../../config/features';
+import { STATUS_LABELS } from '../../config/status';
+
+const title = 'Fonctionnalités — Webhooky';
+const description =
+  'Collectez des webhooks, orchestrez des actions, connectez vos prestataires et supervisez les exécutions. Statuts disponibles, bêta et prochainement.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Fonctionnalités' }]} />
+    <div class="page-hero">
+      <h1>Fonctionnalités</h1>
+      <p>
+        Webhooky couvre la collecte d’événements, l’orchestration d’actions, les connecteurs, la supervision et
+        l’administration. Chaque élément affiche son statut réel :
+        {Object.values(STATUS_LABELS).join(', ')}.
+      </p>
+      <div class="inline-actions">
+        <a class="btn btn--secondary" href="/cas-usage/">Cas d’usage</a>
+        <a class="btn btn--ghost" href="/documentation/">Documentation</a>
+      </div>
+    </div>
+
+    {
+      featureCategories.map((cat) => {
+        const items = features.filter((f) => f.category === cat.id);
+        return (
+          <section class="section" aria-labelledby={`cat-${cat.id}`}>
+            <SectionHeading id={`cat-${cat.id}`} title={cat.title} description={cat.intro} />
+            <div class="card-grid card-grid--3">
+              {items.map((feature) => (
+                <FeatureCard feature={feature} />
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
+
+    <CallToAction
+      title="Testez les fonctionnalités disponibles"
+      description="Créez un compte Free et configurez votre premier scénario en production ou en brouillon."
+    />
+  </main>
+</SiteLayout>

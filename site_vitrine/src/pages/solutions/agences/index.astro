@@ -1,0 +1,37 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import CallToAction from '../../../components/CallToAction.astro';
+
+const title = 'Webhooky pour les agences web';
+const description =
+  'Gérez les automatisations de plusieurs sites clients : formulaires, e-mails, notifications et supervision centralisée.';
+---
+
+<SiteLayout {title} {description}>
+  <main id="main-content" class="page-main container legal-prose">
+    <Breadcrumbs
+      items={[
+        { label: 'Accueil', href: '/' },
+        { label: 'Solutions', href: '/cas-usage/' },
+        { label: 'Agences' },
+      ]}
+    />
+    <div class="page-hero">
+      <h1>Webhooky pour les agences</h1>
+      <p>
+        Connectez rapidement les formulaires de vos clients sans disperser les clés API dans chaque projet WordPress,
+        Symfony ou site statique.
+      </p>
+    </div>
+    <h2>Bénéfices</h2>
+    <ul class="solution-list">
+      <li>Organisation unique (ou plusieurs) pour vos clients et projets</li>
+      <li>Onboarding plus rapide des nouveaux sites</li>
+      <li>Maintenance des connecteurs au même endroit</li>
+      <li>Supervision des échecs sans fouiller chaque hébergement</li>
+      <li>Parcours adapté : <a href="/cas-usage/">cas d’usage agence multi-sites</a></li>
+    </ul>
+    <CallToAction />
+  </main>
+</SiteLayout>

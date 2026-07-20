@@ -1,0 +1,25 @@
+---
+import type { ProductFeature } from '../config/types';
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  feature: ProductFeature;
+}
+
+const { feature } = Astro.props;
+---
+
+<article class="feature-card">
+  <div class="feature-card__top">
+    <h3>{feature.title}</h3>
+    <StatusBadge status={feature.status} />
+  </div>
+  <p>{feature.description}</p>
+  {
+    feature.documentationUrl ? (
+      <p class="inline-actions">
+        <a href={feature.documentationUrl}>En savoir plus</a>
+      </p>
+    ) : null
+  }
+</article>

@@ -1,0 +1,14 @@
+---
+import type { FeatureStatus } from '../config/types';
+import { STATUS_HINTS, STATUS_LABELS } from '../config/status';
+
+interface Props {
+  status: FeatureStatus;
+}
+
+const { status } = Astro.props;
+---
+
+<span class={`badge badge--${status}`} title={STATUS_HINTS[status]}>
+  {STATUS_LABELS[status]}
+</span>

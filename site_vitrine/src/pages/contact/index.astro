@@ -1,0 +1,37 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ContactForm from '../../components/ContactForm.astro';
+import { CONTACT_EMAIL, SITE_URL } from '../../config/site';
+
+const title = 'Contact — Webhooky';
+const description =
+  'Contactez l’équipe Webhooky pour une question commerciale, une assistance, un partenariat ou un sujet sécurité.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: title,
+  url: `${SITE_URL}/contact/`,
+  mainEntity: {
+    '@type': 'Organization',
+    name: 'Webhooky',
+    email: CONTACT_EMAIL,
+    url: SITE_URL,
+  },
+};
+---
+
+<SiteLayout {title} {description} jsonLd={jsonLd}>
+  <main id="main-content" class="page-main container">
+    <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Contact' }]} />
+    <div class="page-hero">
+      <h1>Contact</h1>
+      <p>
+        Écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> ou utilisez le formulaire. Ne
+        transmettez pas de mots de passe ni de clés API.
+      </p>
+    </div>
+    <ContactForm />
+  </main>
+</SiteLayout>
