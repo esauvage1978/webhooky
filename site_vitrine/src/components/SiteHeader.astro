@@ -1,9 +1,17 @@
 ---
-import { headerActions, headerNav } from '../config/navigation';
+import { headerActions, headerNav, mobileNav } from '../config/navigation';
 
 const path = Astro.url.pathname.endsWith('/')
   ? Astro.url.pathname
   : `${Astro.url.pathname}/`;
+
+function isActive(href: string): boolean {
+  return path === href || (href !== '/' && path.startsWith(href));
+}
+
+function isProductActive(children?: { href: string }[]): boolean {
+  return Boolean(children?.some((c) => isActive(c.href)));
+}
 ---
 
 <a class="skip-link" href="#main-content">Aller au contenu</a>
@@ -17,11 +25,41 @@ const path = Astro.url.pathname.endsWith('/')
 
     <nav class="nav-desktop" aria-label="Navigation principale">
       {
-        headerNav.map((item) => (
-          <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>
-            {item.label}
-          </a>
-        ))
+        headerNav.map((item) =>
+          item.children?.length ? (
+            <div class="nav-dropdown">
+              <button
+                type="button"
+                class="nav-dropdown__trigger"
+                aria-expanded="false"
+                aria-haspopup="true"
+                aria-controls={`nav-dd-${item.label.toLowerCase()}`}
+                data-nav-dropdown
+                aria-current={isProductActive(item.children) ? 'true' : undefined}
+              >
+                {item.label}
+                <span class="nav-dropdown__chevron" aria-hidden="true"></span>
+              </button>
+              <ul
+                class="nav-dropdown__menu"
+                id={`nav-dd-${item.label.toLowerCase()}`}
+                hidden
+              >
+                {item.children.map((child) => (
+                  <li>
+                    <a href={child.href} aria-current={isActive(child.href) ? 'page' : undefined}>
+                      {child.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ),
+        )
       }
     </nav>
 
@@ -46,8 +84,8 @@ const path = Astro.url.pathname.endsWith('/')
     <div class="container">
       <nav aria-label="Navigation mobile">
         {
-          headerNav.map((item) => (
-            <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>
+          mobileNav.map((item) => (
+            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
               {item.label}
             </a>
           ))
@@ -86,4 +124,38 @@ const path = Astro.url.pathname.endsWith('/')
       if (e.key === 'Escape') setOpen(false);
     });
   }
+
+  document.querySelectorAll('[data-nav-dropdown]').forEach((btn) => {
+    const menuId = btn.getAttribute('aria-controls');
+    const menu = menuId ? document.getElementById(menuId) : null;
+    if (!menu) return;
+
+    const setDd = (open) => {
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menu.hidden = !open;
+    };
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      document.querySelectorAll('[data-nav-dropdown]').forEach((other) => {
+        if (other !== btn) {
+          other.setAttribute('aria-expanded', 'false');
+          const oid = other.getAttribute('aria-controls');
+          const om = oid ? document.getElementById(oid) : null;
+          if (om) om.hidden = true;
+        }
+      });
+      setDd(open);
+    });
+
+    menu.querySelectorAll('a').forEach((a) => {
+      a.addEventListener('click', () => setDd(false));
+    });
+
+    document.addEventListener('click', () => setDd(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setDd(false);
+    });
+  });
 </script>

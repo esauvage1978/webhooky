@@ -34,4 +34,4 @@ export const VALUE_PROPOSITION = {
   badge: 'Webhooks et automatisations',
 } as const;
 
-export const SOCIAL_OG_IMAGE = '/og-default.svg';
+export const SOCIAL_OG_IMAGE = '/og-default.png';

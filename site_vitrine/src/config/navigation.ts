@@ -5,7 +5,8 @@ import {
   CONTACT_EMAIL,
 } from './site';
 
-export const mainNav: NavItem[] = [
+/** Navigation desktop : Produit (dropdown) + entrées principales du brief. */
+export const headerNav: NavItem[] = [
   {
     href: '/fonctionnalites/',
     label: 'Produit',
@@ -16,7 +17,6 @@ export const mainNav: NavItem[] = [
       { href: '/a-propos/', label: 'À propos' },
     ],
   },
-  { href: '/fonctionnalites/', label: 'Fonctionnalités' },
   { href: '/cas-usage/', label: 'Cas d’usage' },
   { href: '/integrations/', label: 'Intégrations' },
   { href: '/tarifs/', label: 'Tarifs' },
@@ -24,13 +24,16 @@ export const mainNav: NavItem[] = [
   { href: '/contact/', label: 'Contact' },
 ];
 
-/** Navigation desktop simplifiée (évite la duplication Produit / Fonctionnalités). */
-export const headerNav: NavItem[] = [
+/** Navigation mobile : liste plate (Produit déplié). */
+export const mobileNav: NavItem[] = [
   { href: '/fonctionnalites/', label: 'Fonctionnalités' },
+  { href: '/securite/', label: 'Sécurité' },
   { href: '/cas-usage/', label: 'Cas d’usage' },
   { href: '/integrations/', label: 'Intégrations' },
   { href: '/tarifs/', label: 'Tarifs' },
   { href: '/documentation/', label: 'Documentation' },
+  { href: '/roadmap/', label: 'Feuille de route' },
+  { href: '/a-propos/', label: 'À propos' },
   { href: '/contact/', label: 'Contact' },
 ];
 
