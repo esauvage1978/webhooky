@@ -1,6 +1,6 @@
 /**
- * Identité légale — variables PUBLIC_LEGAL_* (override) avec valeurs par défaut
- * alignées sur https://emmanuelsauvage.fr/mentions-legales/ (éditeur) et o2switch (hébergeur).
+ * Identité légale — alignée sur https://emmanuelsauvage.fr/mentions-legales/
+ * (override possible via PUBLIC_LEGAL_*).
  *
  * Ne pas inventer rue, capital, RCS ou TVA s’ils ne sont pas connus.
  * Validation juridique externe recommandée avant commercialisation.
@@ -14,10 +14,12 @@ export interface LegalConfig {
   siret: string;
   rcs: string;
   vatNumber: string;
+  phone: string;
   publicationDirector: string;
   hostName: string;
   hostAddress: string;
-  hostContact: string;
+  hostPhone: string;
+  hostWebsite: string;
   contactEmail: string;
   securityEmail: string;
   lastUpdated: string;
@@ -38,21 +40,23 @@ export const legalConfig: LegalConfig = {
   publisherName: envOr('PUBLIC_LEGAL_PUBLISHER_NAME', 'Emmanuel SAUVAGE'),
   legalForm: envOr('PUBLIC_LEGAL_FORM', 'Consultant indépendant'),
   capital: env('PUBLIC_LEGAL_CAPITAL'),
-  address: envOr('PUBLIC_LEGAL_ADDRESS', 'Erquinghem-Lys, France'),
+  address: envOr('PUBLIC_LEGAL_ADDRESS', 'Erquinghem-lys'),
   siren: envOr('PUBLIC_LEGAL_SIREN', '887 814 168'),
   siret: envOr('PUBLIC_LEGAL_SIRET', '887 814 168 00019'),
   rcs: env('PUBLIC_LEGAL_RCS'),
   vatNumber: env('PUBLIC_LEGAL_VAT'),
+  phone: envOr('PUBLIC_LEGAL_PHONE', '06 09 92 49 45'),
   publicationDirector: envOr('PUBLIC_LEGAL_PUBLICATION_DIRECTOR', 'Emmanuel SAUVAGE'),
   hostName: envOr('PUBLIC_LEGAL_HOST_NAME', 'o2switch'),
   hostAddress: envOr(
     'PUBLIC_LEGAL_HOST_ADDRESS',
     '222-224 Boulevard Gustave Flaubert, 63000 Clermont-Ferrand, France',
   ),
-  hostContact: envOr('PUBLIC_LEGAL_HOST_CONTACT', '04 44 44 60 40 — https://www.o2switch.fr'),
-  contactEmail: envOr('PUBLIC_LEGAL_CONTACT_EMAIL', 'contact@webhooky.fr'),
-  securityEmail: envOr('PUBLIC_LEGAL_SECURITY_EMAIL', 'contact@webhooky.fr'),
-  lastUpdated: envOr('PUBLIC_LEGAL_LAST_UPDATED', '2026-07-21'),
+  hostPhone: envOr('PUBLIC_LEGAL_HOST_PHONE', '04 44 44 60 40'),
+  hostWebsite: envOr('PUBLIC_LEGAL_HOST_WEBSITE', 'https://www.o2switch.fr'),
+  contactEmail: envOr('PUBLIC_LEGAL_CONTACT_EMAIL', 'contact@emmanuelsauvage.fr'),
+  securityEmail: envOr('PUBLIC_LEGAL_SECURITY_EMAIL', 'contact@emmanuelsauvage.fr'),
+  lastUpdated: envOr('PUBLIC_LEGAL_LAST_UPDATED', '21/07/2026'),
   governingLaw: envOr('PUBLIC_LEGAL_GOVERNING_LAW', 'Droit français'),
   jurisdiction: env('PUBLIC_LEGAL_JURISDICTION'),
 };
