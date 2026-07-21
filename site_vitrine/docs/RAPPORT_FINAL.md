@@ -51,7 +51,7 @@ Pages volontairement absentes (pas de contenu réel) : `/statut/`, `/comparatifs
 | Point | État |
 |-------|------|
 | Mentions légales / CGU / CGV / privacy | Pages présentes ; textes à **valider par un avocat** |
-| Identité éditeur | Variables `PUBLIC_LEGAL_*` encore vides → placeholders jusqu’à fourniture |
+| Identité éditeur | Renseignée (Emmanuel SAUVAGE, SIRET issu de emmanuelsauvage.fr ; hébergeur o2switch). Capital / RCS / TVA / rue non publiés sur la source → laissés vides. Validation avocat toujours recommandée. |
 | Cookies | Bannière + stockage consentement v2 |
 | Pas de page statut service | Non livrée (pas de status page réelle) |
 

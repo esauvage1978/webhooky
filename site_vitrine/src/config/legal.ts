@@ -1,8 +1,9 @@
 /**
- * Identité légale — valeurs lues depuis les variables d’environnement PUBLIC_LEGAL_*.
- * Ne jamais inventer SIREN, adresse ou capital. Si vides, les pages restent honnêtes.
+ * Identité légale — variables PUBLIC_LEGAL_* (override) avec valeurs par défaut
+ * alignées sur https://emmanuelsauvage.fr/mentions-legales/ (éditeur) et o2switch (hébergeur).
  *
- * Validation juridique externe requise avant commercialisation.
+ * Ne pas inventer rue, capital, RCS ou TVA s’ils ne sont pas connus.
+ * Validation juridique externe recommandée avant commercialisation.
  */
 export interface LegalConfig {
   publisherName: string;
@@ -29,23 +30,30 @@ function env(key: string): string {
   return typeof v === 'string' ? v.trim() : '';
 }
 
+function envOr(key: string, fallback: string): string {
+  return env(key) || fallback;
+}
+
 export const legalConfig: LegalConfig = {
-  publisherName: env('PUBLIC_LEGAL_PUBLISHER_NAME'),
-  legalForm: env('PUBLIC_LEGAL_FORM'),
+  publisherName: envOr('PUBLIC_LEGAL_PUBLISHER_NAME', 'Emmanuel SAUVAGE'),
+  legalForm: envOr('PUBLIC_LEGAL_FORM', 'Consultant indépendant'),
   capital: env('PUBLIC_LEGAL_CAPITAL'),
-  address: env('PUBLIC_LEGAL_ADDRESS'),
-  siren: env('PUBLIC_LEGAL_SIREN'),
-  siret: env('PUBLIC_LEGAL_SIRET'),
+  address: envOr('PUBLIC_LEGAL_ADDRESS', 'Erquinghem-Lys, France'),
+  siren: envOr('PUBLIC_LEGAL_SIREN', '887 814 168'),
+  siret: envOr('PUBLIC_LEGAL_SIRET', '887 814 168 00019'),
   rcs: env('PUBLIC_LEGAL_RCS'),
   vatNumber: env('PUBLIC_LEGAL_VAT'),
-  publicationDirector: env('PUBLIC_LEGAL_PUBLICATION_DIRECTOR'),
-  hostName: env('PUBLIC_LEGAL_HOST_NAME'),
-  hostAddress: env('PUBLIC_LEGAL_HOST_ADDRESS'),
-  hostContact: env('PUBLIC_LEGAL_HOST_CONTACT'),
-  contactEmail: env('PUBLIC_LEGAL_CONTACT_EMAIL') || 'contact@webhooky.fr',
-  securityEmail: env('PUBLIC_LEGAL_SECURITY_EMAIL'),
-  lastUpdated: env('PUBLIC_LEGAL_LAST_UPDATED') || '2026-07-20',
-  governingLaw: env('PUBLIC_LEGAL_GOVERNING_LAW') || 'Droit français',
+  publicationDirector: envOr('PUBLIC_LEGAL_PUBLICATION_DIRECTOR', 'Emmanuel SAUVAGE'),
+  hostName: envOr('PUBLIC_LEGAL_HOST_NAME', 'o2switch'),
+  hostAddress: envOr(
+    'PUBLIC_LEGAL_HOST_ADDRESS',
+    '222-224 Boulevard Gustave Flaubert, 63000 Clermont-Ferrand, France',
+  ),
+  hostContact: envOr('PUBLIC_LEGAL_HOST_CONTACT', '04 44 44 60 40 — https://www.o2switch.fr'),
+  contactEmail: envOr('PUBLIC_LEGAL_CONTACT_EMAIL', 'contact@webhooky.fr'),
+  securityEmail: envOr('PUBLIC_LEGAL_SECURITY_EMAIL', 'contact@webhooky.fr'),
+  lastUpdated: envOr('PUBLIC_LEGAL_LAST_UPDATED', '2026-07-21'),
+  governingLaw: envOr('PUBLIC_LEGAL_GOVERNING_LAW', 'Droit français'),
   jurisdiction: env('PUBLIC_LEGAL_JURISDICTION'),
 };
 
@@ -85,5 +93,10 @@ export const subprocessors = [
     name: 'Google Analytics',
     purpose: 'Mesure d’audience du site vitrine (uniquement après consentement)',
     region: 'Selon configuration Google',
+  },
+  {
+    name: 'o2switch',
+    purpose: 'Hébergement du site vitrine et de l’infrastructure associée',
+    region: 'France (UE)',
   },
 ] as const;
