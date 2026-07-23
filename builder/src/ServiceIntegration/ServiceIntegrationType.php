@@ -30,11 +30,16 @@ final class ServiceIntegrationType
     /** MessageBird — API REST SMS */
     public const MESSAGEBIRD_SMS = 'messagebird_sms';
 
+    /** SMSFactor — API REST SMS (https://www.smsfactor.com/) */
+    public const SMSFACTOR_SMS = 'smsfactor_sms';
+
     public const TELEGRAM = 'telegram';
 
     public const HTTP_WEBHOOK = 'http_webhook';
 
     public const PUSHOVER = 'pushover';
+
+    public const PACFLOW = 'pacflow';
 
     /**
      * @return list<string>
@@ -51,9 +56,11 @@ final class ServiceIntegrationType
             self::TWILIO_SMS,
             self::VONAGE_SMS,
             self::MESSAGEBIRD_SMS,
+            self::SMSFACTOR_SMS,
             self::TELEGRAM,
             self::HTTP_WEBHOOK,
             self::PUSHOVER,
+            self::PACFLOW,
         ];
     }
 
@@ -77,8 +84,10 @@ final class ServiceIntegrationType
             self::TWILIO_SMS => 'https://www.twilio.com/',
             self::VONAGE_SMS => 'https://www.vonage.com/',
             self::MESSAGEBIRD_SMS => 'https://bird.com/',
+            self::SMSFACTOR_SMS => 'https://www.smsfactor.com/',
             self::TELEGRAM => 'https://telegram.org/',
             self::PUSHOVER => 'https://pushover.net/',
+            self::PACFLOW => 'https://api.pacflow.fr/',
         ];
     }
 
@@ -99,9 +108,11 @@ final class ServiceIntegrationType
             self::TWILIO_SMS => 'Twilio — SMS',
             self::VONAGE_SMS => 'Vonage — SMS',
             self::MESSAGEBIRD_SMS => 'MessageBird — SMS',
+            self::SMSFACTOR_SMS => 'SMSFactor — SMS',
             self::TELEGRAM => 'Telegram — Bot',
             self::HTTP_WEBHOOK => 'HTTP — URL personnalisée',
             self::PUSHOVER => 'Pushover — Notifications push',
+            self::PACFLOW => 'Pacflow — Webhook entrant',
         ];
     }
 

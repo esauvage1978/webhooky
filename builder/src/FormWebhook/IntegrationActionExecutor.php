@@ -60,6 +60,7 @@ final class IntegrationActionExecutor
             ServiceIntegrationType::TWILIO_SMS => $this->sendTwilio($config, $action, $parsed, $this->truncate($text, 1400), $aLog),
             ServiceIntegrationType::VONAGE_SMS => $this->sendVonage($config, $action, $parsed, $this->truncate($text, 1007), $aLog),
             ServiceIntegrationType::MESSAGEBIRD_SMS => $this->sendMessageBird($config, $action, $parsed, $this->truncate($text, 1530), $aLog),
+            ServiceIntegrationType::SMSFACTOR_SMS => $this->sendSmsFactor($config, $action, $parsed, $this->truncate($text, 1530), $aLog),
             ServiceIntegrationType::TELEGRAM => $this->sendTelegram($config, $this->truncate($text, 3900), $aLog),
             ServiceIntegrationType::HTTP_WEBHOOK => $this->sendHttpWebhook($config, $action, $variables, $parsed, $aLog),
             ServiceIntegrationType::PUSHOVER => $this->sendPushover($config, $this->truncate($text, 1024), $aLog),
@@ -228,6 +229,71 @@ final class IntegrationActionExecutor
         $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
         if ($status >= 400) {
             throw new \RuntimeException(sprintf('MessageBird HTTP %d', $status));
+        }
+    }
+
+    /**
+     * Envoi SMS via l’API SMSFactor (POST /send).
+     *
+     * @see https://dev.smsfactor.com/fr/api/sms/send/send-campaign
+     *
+     * @param array<string, mixed>  $config
+     * @param array<string, string> $parsed
+     */
+    private function sendSmsFactor(array $config, FormWebhookAction $action, array $parsed, string $bodyText, FormWebhookActionLog $aLog): void
+    {
+        $apiToken = isset($config['apiToken']) ? trim((string) $config['apiToken']) : '';
+        $sender = isset($config['sender']) ? trim((string) $config['sender']) : '';
+        if ($apiToken === '' || $sender === '') {
+            throw new \InvalidArgumentException('Configuration SMSFactor incomplète (apiToken, sender).');
+        }
+
+        $to = $this->resolvePhone($action, $parsed);
+        if ($to === '') {
+            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
+        }
+
+        $aLog->setToEmail($to);
+        // SMSFactor attend un GSM (chiffres, indicatif pays, sans +).
+        $gsm = preg_replace('/\D+/', '', $to) ?? '';
+        if ($gsm === '') {
+            throw new \InvalidArgumentException('Numéro destinataire SMS invalide.');
+        }
+
+        $response = $this->httpClient->request('POST', 'https://api.smsfactor.com/send', [
+            'headers' => [
+                'Authorization' => 'Bearer '.$apiToken,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+            'json' => [
+                'sms' => [
+                    'message' => [
+                        'text' => $bodyText,
+                        'sender' => $sender,
+                    ],
+                    'recipients' => [
+                        'gsm' => [
+                            ['value' => $gsm],
+                        ],
+                    ],
+                ],
+            ],
+            'timeout' => 30,
+        ]);
+
+        $status = $response->getStatusCode();
+        $aLog->setMailjetHttpStatus($status);
+        $raw = $response->getContent(false);
+        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
+        if ($status >= 400) {
+            throw new \RuntimeException(sprintf('SMSFactor HTTP %d', $status));
+        }
+
+        $decoded = json_decode($raw, true);
+        if (\is_array($decoded) && isset($decoded['status']) && (int) $decoded['status'] !== 1) {
+            $msg = isset($decoded['message']) ? trim((string) $decoded['message']) : 'erreur API';
+            throw new \RuntimeException(sprintf('SMSFactor : %s (status %s)', $msg !== '' ? $msg : 'échec', (string) $decoded['status']));
         }
     }
 

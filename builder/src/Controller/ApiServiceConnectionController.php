@@ -390,6 +390,9 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::MESSAGEBIRD_SMS => $this->nonEmptyStrings($config, ['accessKey', 'originator'])
                 ? null
                 : 'MessageBird : accessKey et originator sont requis.',
+            ServiceIntegrationType::SMSFACTOR_SMS => $this->nonEmptyStrings($config, ['apiToken', 'sender'])
+                ? null
+                : 'SMSFactor : apiToken et sender sont requis.',
             ServiceIntegrationType::TELEGRAM => $this->nonEmptyStrings($config, ['botToken', 'chatId'])
                 ? null
                 : 'Telegram : botToken et chatId sont requis.',
@@ -445,6 +448,10 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::MESSAGEBIRD_SMS => [
                 'accessKey' => 'live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 'originator' => 'Webhooky ou +33123456789',
+            ],
+            ServiceIntegrationType::SMSFACTOR_SMS => [
+                'apiToken' => 'jeton API (my.smsfactor.com → Développeurs)',
+                'sender' => 'Webhooky (max. 11 car. alphanum. ou numéro)',
             ],
             ServiceIntegrationType::TELEGRAM => [
                 'botToken' => '123456:ABC…',
@@ -506,6 +513,10 @@ final class ApiServiceConnectionController extends AbstractController
             ServiceIntegrationType::MESSAGEBIRD_SMS => [
                 'accessKey' => 'live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 'originator' => '+33123456789',
+            ],
+            ServiceIntegrationType::SMSFACTOR_SMS => [
+                'apiToken' => 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example',
+                'sender' => 'Webhooky',
             ],
             ServiceIntegrationType::TELEGRAM => [
                 'botToken' => '123456789:AAHevxxxxxxxxxxxxxxxxxxxxxxxxxxxx',

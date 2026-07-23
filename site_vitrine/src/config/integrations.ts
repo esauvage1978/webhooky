@@ -129,6 +129,17 @@ export const integrations: Integration[] = [
     vendorUrl: 'https://bird.com/',
   },
   {
+    id: 'smsfactor_sms',
+    name: 'SMSFactor',
+    category: 'sms',
+    status: 'available',
+    description: 'Envoyez des SMS professionnels via l’API SMSFactor (made in France).',
+    actions: ['Envoi SMS'],
+    prerequisites: ['Compte SMSFactor', 'Jeton API', 'Crédits SMS'],
+    documentationUrl: '/integrations/',
+    vendorUrl: 'https://www.smsfactor.com/',
+  },
+  {
     id: 'pushover',
     name: 'Pushover',
     category: 'notification',

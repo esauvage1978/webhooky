@@ -13,6 +13,7 @@ const INTEGRATION_ACTION_TYPES = [
   { id: 'twilio_sms', label: 'Twilio SMS' },
   { id: 'vonage_sms', label: 'Vonage SMS' },
   { id: 'messagebird_sms', label: 'MessageBird SMS' },
+  { id: 'smsfactor_sms', label: 'SMSFactor SMS' },
   { id: 'telegram', label: 'Telegram' },
   { id: 'http_webhook', label: 'HTTP / Zapier / custom' },
   { id: 'pushover', label: 'Pushover' },
@@ -23,7 +24,7 @@ function integrationTypeLabel(id) {
 }
 
 function isSmsActionType(at) {
-  return at === 'twilio_sms' || at === 'vonage_sms' || at === 'messagebird_sms';
+  return at === 'twilio_sms' || at === 'vonage_sms' || at === 'messagebird_sms' || at === 'smsfactor_sms';
 }
 
 /** Identifiant projet pour filtre / groupement (l’API peut exposer `projectId` et/ou `project.id`). */
