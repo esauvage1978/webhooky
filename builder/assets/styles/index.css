@@ -2129,8 +2129,10 @@ h1 {
   color: rgba(255, 255, 255, 0.9);
   font-family: ui-monospace, monospace;
   font-size: 0.78rem;
-  white-space: pre-wrap;
-  word-break: break-all;
+  line-height: 1.45;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .muted.small {

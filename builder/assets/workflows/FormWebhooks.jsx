@@ -591,18 +591,34 @@ function KeyValueBlock({ title, record, emptyText, copyable = false }) {
   );
 }
 
+function formatRawBodyForDisplay(body) {
+  if (typeof body !== 'string' || body.trim() === '') {
+    return typeof body === 'string' ? body : '';
+  }
+  const trimmed = body.trim();
+  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+    return body;
+  }
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    return body;
+  }
+}
+
 function CopyableRawBody({ body }) {
+  const formatted = formatRawBodyForDisplay(body);
   return (
     <div className="log-kv-block">
       <div className="log-kv-title-row">
         <h4 className="log-kv-title">Corps brut</h4>
         <LogCopyButton
-          text={body}
+          text={formatted}
           ariaLabel="Copier le corps brut"
           ariaLabelDone="Corps brut copié"
         />
       </div>
-      <pre className="log-raw-body">{body}</pre>
+      <pre className="log-raw-body">{formatted}</pre>
     </div>
   );
 }
