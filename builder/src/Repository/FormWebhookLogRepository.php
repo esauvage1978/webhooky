@@ -352,4 +352,114 @@ class FormWebhookLogRepository extends ServiceEntityRepository
             'ingressCount' => (int) $r['cnt'],
         ], $rows);
     }
+
+    /**
+     * @return array<string, int>
+     */
+    public function countByStatusBetween(
+        \DateTimeImmutable $from,
+        \DateTimeImmutable $to,
+        ?int $organizationId = null,
+    ): array {
+        $qb = $this->createQueryBuilder('l')
+            ->select('l.status AS status, COUNT(l.id) AS cnt')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->groupBy('l.status');
+        if ($organizationId !== null) {
+            $qb->join('l.formWebhook', 'w')
+                ->andWhere('IDENTITY(w.organization) = :oid')
+                ->setParameter('oid', $organizationId);
+        }
+        $out = [];
+        foreach ($qb->getQuery()->getArrayResult() as $row) {
+            $out[(string) $row['status']] = (int) $row['cnt'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array{avg: float|null, p95: float|null, count: int}
+     */
+    public function durationStatsBetween(
+        \DateTimeImmutable $from,
+        \DateTimeImmutable $to,
+        ?int $organizationId = null,
+    ): array {
+        $qb = $this->createQueryBuilder('l')
+            ->select('l.durationMs')
+            ->andWhere('l.receivedAt >= :from')
+            ->andWhere('l.receivedAt < :to')
+            ->andWhere('l.durationMs IS NOT NULL')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->orderBy('l.durationMs', 'ASC');
+        if ($organizationId !== null) {
+            $qb->join('l.formWebhook', 'w')
+                ->andWhere('IDENTITY(w.organization) = :oid')
+                ->setParameter('oid', $organizationId);
+        }
+        $values = array_map(
+            static fn (array $r) => (float) $r['durationMs'],
+            $qb->getQuery()->getArrayResult(),
+        );
+        $n = \count($values);
+        if ($n === 0) {
+            return ['avg' => null, 'p95' => null, 'count' => 0];
+        }
+        $avg = array_sum($values) / $n;
+        $idx = (int) max(0, min($n - 1, (int) ceil($n * 0.95) - 1));
+
+        return ['avg' => round($avg, 2), 'p95' => $values[$idx], 'count' => $n];
+    }
+
+    /**
+     * @return array{items: list<FormWebhookLog>, total: int}
+     */
+    public function findPaginatedForMonitoring(
+        int $offset,
+        int $limit,
+        ?int $organizationId = null,
+        ?string $status = null,
+        ?string $correlationId = null,
+        ?\DateTimeImmutable $from = null,
+        ?\DateTimeImmutable $to = null,
+    ): array {
+        $qb = $this->createQueryBuilder('l')
+            ->join('l.formWebhook', 'w')->addSelect('w')
+            ->orderBy('l.receivedAt', 'DESC');
+        if ($organizationId !== null) {
+            $qb->andWhere('IDENTITY(w.organization) = :oid')->setParameter('oid', $organizationId);
+        }
+        if ($status !== null && $status !== '' && \in_array($status, FormWebhookLogStatus::all(), true)) {
+            $qb->andWhere('l.status = :st')->setParameter('st', $status);
+        }
+        if ($correlationId !== null && $correlationId !== '') {
+            $qb->andWhere('l.correlationId = :cid')->setParameter('cid', $correlationId);
+        }
+        if ($from !== null) {
+            $qb->andWhere('l.receivedAt >= :from')->setParameter('from', $from);
+        }
+        if ($to !== null) {
+            $qb->andWhere('l.receivedAt < :to')->setParameter('to', $to);
+        }
+        $total = (int) (clone $qb)->select('COUNT(l.id)')->getQuery()->getSingleScalarResult();
+        $ids = (clone $qb)->select('l.id')->setFirstResult($offset)->setMaxResults($limit)->getQuery()->getSingleColumnResult();
+        if ($ids === []) {
+            return ['items' => [], 'total' => $total];
+        }
+        $items = $this->createQueryBuilder('l2')
+            ->leftJoin('l2.actionLogs', 'al')->addSelect('al')
+            ->leftJoin('l2.formWebhook', 'w2')->addSelect('w2')
+            ->andWhere('l2.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('l2.receivedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
 }

@@ -62,6 +62,9 @@ class FormWebhookActionLog
     #[ORM\Column(nullable: true)]
     private ?int $durationMs = null;
 
+    #[ORM\Column(options: ['default' => 1])]
+    private int $attempt = 1;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -249,6 +252,18 @@ class FormWebhookActionLog
     public function setDurationMs(?int $durationMs): static
     {
         $this->durationMs = $durationMs;
+
+        return $this;
+    }
+
+    public function getAttempt(): int
+    {
+        return $this->attempt;
+    }
+
+    public function setAttempt(int $attempt): static
+    {
+        $this->attempt = max(1, $attempt);
 
         return $this;
     }

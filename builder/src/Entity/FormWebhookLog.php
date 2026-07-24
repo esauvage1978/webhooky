@@ -17,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: FormWebhookLogRepository::class)]
 #[ORM\Table(name: 'form_webhook_log')]
 #[ORM\Index(name: 'IDX_form_webhook_log_webhook_received', columns: ['form_webhook_id', 'received_at'])]
+#[ORM\Index(name: 'IDX_form_webhook_log_correlation', columns: ['correlation_id'])]
+#[ORM\Index(name: 'IDX_form_webhook_log_received_status', columns: ['received_at', 'status'])]
 class FormWebhookLog
 {
     #[ORM\Id]
@@ -56,6 +58,18 @@ class FormWebhookLog
 
     #[ORM\Column(nullable: true)]
     private ?int $durationMs = null;
+
+    #[ORM\Column(length: 36, nullable: true)]
+    private ?string $correlationId = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $httpStatusResponse = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $quotaUnitsConsumed = null;
+
+    #[ORM\Column(options: ['default' => 1])]
+    private int $attemptCount = 1;
 
     /**
      * @var Collection<int, FormWebhookActionLog>
@@ -215,6 +229,54 @@ class FormWebhookLog
     public function setDurationMs(?int $durationMs): static
     {
         $this->durationMs = $durationMs;
+
+        return $this;
+    }
+
+    public function getCorrelationId(): ?string
+    {
+        return $this->correlationId;
+    }
+
+    public function setCorrelationId(?string $correlationId): static
+    {
+        $this->correlationId = $correlationId;
+
+        return $this;
+    }
+
+    public function getHttpStatusResponse(): ?int
+    {
+        return $this->httpStatusResponse;
+    }
+
+    public function setHttpStatusResponse(?int $httpStatusResponse): static
+    {
+        $this->httpStatusResponse = $httpStatusResponse;
+
+        return $this;
+    }
+
+    public function getQuotaUnitsConsumed(): ?int
+    {
+        return $this->quotaUnitsConsumed;
+    }
+
+    public function setQuotaUnitsConsumed(?int $quotaUnitsConsumed): static
+    {
+        $this->quotaUnitsConsumed = $quotaUnitsConsumed;
+
+        return $this;
+    }
+
+    public function getAttemptCount(): int
+    {
+        return $this->attemptCount;
+    }
+
+    public function setAttemptCount(int $attemptCount): static
+    {
+        $this->attemptCount = max(1, $attemptCount);
 
         return $this;
     }

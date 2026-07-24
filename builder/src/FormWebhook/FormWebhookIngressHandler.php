@@ -16,6 +16,9 @@ use App\Mailjet\MailjetApiKeyPair;
 use App\Mailjet\MailjetAuthPairInterface;
 use App\Mailjet\MailjetTemplateSenderInterface;
 use App\Logging\ApplicationErrorLogger;
+use App\Monitoring\FormWebhookRetryService;
+use App\Monitoring\MonitoringMetricBuffer;
+use App\Monitoring\MonitoringMetricKeys;
 use App\Repository\FormWebhookRepository;
 use App\ServiceIntegration\ServiceConnectionSecretHelper;
 use App\ServiceIntegration\ServiceIntegrationType;
@@ -25,6 +28,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Orchestration : parse une fois → exécution de toutes les actions actives → journaux séparés, réponse agrégée.
@@ -47,19 +51,29 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         private readonly BuiltinWorkflowActionExecutor $builtinWorkflowActionExecutor,
         private readonly RateLimiterFactory $webhookIngestLimiter,
         private readonly ServiceConnectionSecretHelper $secretHelper,
+        private readonly MonitoringMetricBuffer $metricBuffer,
+        private readonly FormWebhookRetryService $retryService,
     ) {
     }
 
     public function handle(Request $request, string $publicToken): JsonResponse
     {
+        $correlationId = Uuid::v4()->toRfc4122();
         $clientKey = $request->getClientIp() ?: 'unknown';
         $limiter = $this->webhookIngestLimiter->create($clientKey.':'.$publicToken);
         if (!$limiter->consume(1)->isAccepted()) {
+            try {
+                $this->metricBuffer->increment(MonitoringMetricKeys::WEBHOOK_RATE_LIMITED, 1);
+                $this->metricBuffer->flushToDatabase();
+            } catch (\Throwable) {
+            }
+
             return new JsonResponse(
                 [
                     'ok' => false,
                     'error' => 'Trop de requêtes. Réessayez dans un instant.',
                     'code' => 'rate_limited',
+                    'correlationId' => $correlationId,
                 ],
                 Response::HTTP_TOO_MANY_REQUESTS,
             );
@@ -80,13 +94,14 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
 
         $actions = $webhook->getActiveActionsOrdered();
         if ($actions === []) {
-            $logId = $this->persistIngressRejectionLog($webhook, $request, 'Aucune action active sur ce webhook.');
+            $logId = $this->persistIngressRejectionLog($webhook, $request, 'Aucune action active sur ce webhook.', $correlationId);
 
             return new JsonResponse(
                 [
                     'ok' => false,
                     'error' => 'Aucune action active sur ce webhook.',
                     'logId' => $logId,
+                    'correlationId' => $correlationId,
                 ],
                 Response::HTTP_BAD_REQUEST,
             );
@@ -98,6 +113,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                 $webhook,
                 $request,
                 'Abonnement inactif ou expiré pour cette organisation.',
+                $correlationId,
             );
 
             return new JsonResponse(
@@ -106,6 +122,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     'error' => 'Abonnement inactif ou expiré pour cette organisation. Réactivez un forfait pour accepter à nouveau les envois.',
                     'code' => 'subscription_inactive',
                     'logId' => $logId,
+                    'correlationId' => $correlationId,
                 ],
                 Response::HTTP_PAYMENT_REQUIRED,
             );
@@ -118,6 +135,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                 $webhook,
                 $request,
                 (string) ($snap['blockReason'] ?? 'Quota d’événements épuisé.'),
+                $correlationId,
             );
 
             return new JsonResponse(
@@ -127,6 +145,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     'code' => 'events_quota_exceeded',
                     'subscription' => $snap,
                     'logId' => $logId,
+                    'correlationId' => $correlationId,
                 ],
                 Response::HTTP_PAYMENT_REQUIRED,
             );
@@ -139,6 +158,11 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         $log->setContentType((string) $request->headers->get('Content-Type', ''));
         $log->setRawBody($this->truncateRaw($request->getContent()));
         $log->setStatus(FormWebhookLogStatus::RECEIVED);
+        $log->setCorrelationId($correlationId);
+        $log->setQuotaUnitsConsumed($eventCount);
+
+        $orgId = $org instanceof Organization ? (int) $org->getId() : null;
+        $this->safeMetric(MonitoringMetricKeys::WEBHOOK_RECEIVED, 1, $orgId);
 
         $t0 = (int) round(microtime(true) * 1000);
 
@@ -150,10 +174,14 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
             $this->applicationErrorLogger->logThrowable($e, $request, ApplicationErrorLog::SOURCE_HANDLED, [
                 'handler' => 'form_webhook_ingress_parse',
                 'formWebhookId' => $webhook->getId(),
+                'formWebhookLogId' => null,
+                'correlationId' => $correlationId,
             ]);
             $log->setStatus(FormWebhookLogStatus::ERROR);
             $log->setErrorDetail($e->getMessage());
             $this->persistLog($log, $t0);
+            $this->safeMetric(MonitoringMetricKeys::WEBHOOK_RUN_ERROR, 1, $orgId);
+            $this->safeFlushMetrics();
             $this->runNotifier->notifyAfterRun($webhook, $log, false);
 
             return new JsonResponse(
@@ -161,6 +189,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     'ok' => false,
                     'error' => $e->getMessage(),
                     'logId' => $log->getId(),
+                    'correlationId' => $correlationId,
                     'actions' => [],
                 ],
                 Response::HTTP_BAD_REQUEST,
@@ -256,6 +285,11 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                         $aLog->setErrorDetail($result->getErrorMessage() ?? 'Erreur Mailjet');
                         $entry['error'] = $aLog->getErrorDetail();
                         $entry['mailjetHttpStatus'] = $result->getHttpStatus();
+                        $this->safeMetric(MonitoringMetricKeys::WEBHOOK_ACTION_ERROR, 1, $orgId, ['actionType' => ServiceIntegrationType::MAILJET]);
+                        if ($this->retryService->isRetryable($aLog)) {
+                            $this->retryService->scheduleRetry($aLog, 2);
+                            $entry['retryScheduled'] = true;
+                        }
                     } else {
                         $aLog->setStatus(FormWebhookLogStatus::SENT);
                         $entry['ok'] = true;
@@ -276,6 +310,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     'formWebhookId' => $webhook->getId(),
                     'formWebhookActionId' => $action->getId(),
                     'actionType' => $action->getActionType(),
+                    'correlationId' => $correlationId,
                 ]);
                 $allOk = false;
                 $aLog->setStatus(FormWebhookLogStatus::ERROR);
@@ -287,21 +322,50 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     $entry['mailjetHttpStatus'] = $st;
                     $entry['httpStatus'] = $st;
                 }
+                $this->safeMetric(MonitoringMetricKeys::WEBHOOK_ACTION_ERROR, 1, $orgId, ['actionType' => (string) $action->getActionType()]);
+                if ($this->retryService->isRetryable($aLog)) {
+                    $this->retryService->scheduleRetry($aLog, 2);
+                    $entry['retryScheduled'] = true;
+                }
             }
 
             $aLog->setDurationMs((int) round(microtime(true) * 1000) - $tAction);
+            if ($aLog->getStatus() === FormWebhookLogStatus::SENT) {
+                $this->safeMetric(MonitoringMetricKeys::WEBHOOK_ACTION_SUCCESS, 1, $orgId, ['actionType' => (string) $action->getActionType()]);
+            }
             $actionPayloads[] = $entry;
         }
 
-        $log->setStatus($allOk ? FormWebhookLogStatus::SENT : FormWebhookLogStatus::ERROR);
-        if (!$allOk) {
+        $hasRetry = false;
+        foreach ($log->getActionLogs() as $al) {
+            if ($al->getStatus() === FormWebhookLogStatus::RETRY_SCHEDULED) {
+                $hasRetry = true;
+                break;
+            }
+        }
+        if ($hasRetry) {
+            $log->setStatus(FormWebhookLogStatus::RETRY_SCHEDULED);
+        } else {
+            $log->setStatus($allOk ? FormWebhookLogStatus::SENT : FormWebhookLogStatus::ERROR);
+        }
+        if (!$allOk && !$hasRetry) {
             $log->setErrorDetail('Une ou plusieurs actions ont échoué.');
         }
         $this->persistLog($log, $t0);
+        $this->safeMetric(
+            $allOk ? MonitoringMetricKeys::WEBHOOK_RUN_SUCCESS : ($hasRetry ? MonitoringMetricKeys::WEBHOOK_RETRY_SCHEDULED : MonitoringMetricKeys::WEBHOOK_RUN_ERROR),
+            1,
+            $orgId,
+        );
+        if ($log->getDurationMs() !== null) {
+            $this->safeMetric(MonitoringMetricKeys::WEBHOOK_DURATION_MS, (float) $log->getDurationMs(), $orgId);
+        }
+        $this->safeFlushMetrics();
 
         $body = [
             'ok' => $allOk,
             'logId' => $log->getId(),
+            'correlationId' => $correlationId,
             'actions' => $actionPayloads,
         ];
         if (!$allOk) {
@@ -472,8 +536,12 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
     /**
      * Journalise une réception refusée avant exécution des actions (traçabilité dans l’UI).
      */
-    private function persistIngressRejectionLog(FormWebhook $webhook, Request $request, string $errorDetail): int
-    {
+    private function persistIngressRejectionLog(
+        FormWebhook $webhook,
+        Request $request,
+        string $errorDetail,
+        ?string $correlationId = null,
+    ): int {
         $log = new FormWebhookLog();
         $log->setFormWebhook($webhook);
         $log->setClientIp($request->getClientIp());
@@ -482,8 +550,15 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         $log->setRawBody($this->truncateRaw($request->getContent()));
         $log->setStatus(FormWebhookLogStatus::ERROR);
         $log->setErrorDetail($errorDetail);
+        if ($correlationId !== null) {
+            $log->setCorrelationId($correlationId);
+        }
         $t0 = (int) round(microtime(true) * 1000);
         $this->persistLog($log, $t0);
+        $orgId = $webhook->getOrganization()?->getId();
+        $this->safeMetric(MonitoringMetricKeys::WEBHOOK_RECEIVED, 1, $orgId);
+        $this->safeMetric(MonitoringMetricKeys::WEBHOOK_RUN_ERROR, 1, $orgId);
+        $this->safeFlushMetrics();
 
         return (int) $log->getId();
     }
@@ -495,5 +570,24 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
         }
 
         return mb_substr($raw, 0, self::RAW_BODY_MAX_LEN)."\n… [tronqué]";
+    }
+
+    /**
+     * @param array<string, scalar> $dims
+     */
+    private function safeMetric(string $key, float $value = 1.0, ?int $orgId = null, array $dims = []): void
+    {
+        try {
+            $this->metricBuffer->increment($key, $value, $orgId, $dims);
+        } catch (\Throwable) {
+        }
+    }
+
+    private function safeFlushMetrics(): void
+    {
+        try {
+            $this->metricBuffer->flushToDatabase();
+        } catch (\Throwable) {
+        }
     }
 }

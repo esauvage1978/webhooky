@@ -6,7 +6,9 @@ const TOPBAR_SECTION_LABELS = {
   changePassword: 'Changer mon mot de passe',
   usersJournal: 'Journal des actions',
   adminSupervision: 'Supervision',
+  adminMonitoring: 'Tour de contrôle',
   adminOptions: 'Options plateforme',
+  clientMonitoring: 'Monitoring',
   seoInsights: 'SEO & IA',
 };
 
@@ -17,6 +19,10 @@ const NAV_DASHBOARD = { id: 'dashboard', label: 'Tableau de bord', icon: MdiView
 const NAV_ORGANIZATIONS = { id: 'organizations', label: 'Organisations', icon: MdiDomain };
 
 const NAV_ADMIN_SUPERVISION = { id: 'adminSupervision', label: 'Supervision', icon: MdiShieldAlert };
+
+const NAV_ADMIN_MONITORING = { id: 'adminMonitoring', label: 'Tour de contrôle', icon: MdiMonitorDashboard };
+
+const NAV_CLIENT_MONITORING = { id: 'clientMonitoring', label: 'Monitoring', icon: MdiMonitorDashboard };
 
 const NAV_ADMIN_OPTIONS = { id: 'adminOptions', label: 'Options plateforme', icon: MdiTune };
 
@@ -50,6 +56,7 @@ function navSectionsForUser(user) {
   const adminItems = [NAV_DASHBOARD];
   if (isAdmin) {
     adminItems.push(NAV_ORGANIZATIONS);
+    adminItems.push(NAV_ADMIN_MONITORING);
     adminItems.push(NAV_ADMIN_SUPERVISION);
     adminItems.push(NAV_ADMIN_OPTIONS);
   }
@@ -61,10 +68,19 @@ function navSectionsForUser(user) {
     adminItems.push(NAV_USERS);
   }
 
+  const webhookItems = [...NAV_WEBHOOK_STACK];
+  if (!userNeedsOrganizationSetup(user) && userHasOrg(user)) {
+    webhookItems.unshift(NAV_CLIENT_MONITORING);
+  }
+
   return [
     { sectionLabel: SECTION_ADMIN, items: adminItems },
-    { sectionLabel: SECTION_WEBHOOK, items: [...NAV_WEBHOOK_STACK] },
+    { sectionLabel: SECTION_WEBHOOK, items: webhookItems },
   ];
+}
+
+function userHasOrg(user) {
+  return (user.organizations?.length ?? 0) > 0 || user.organization != null;
 }
 
 /** Liste plate (fil d’Ariane, recherche d’intitulé actif). */
@@ -97,6 +113,17 @@ function MdiShieldAlert() {
       <path
         fill="currentColor"
         d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16 2-4.18L14 17h-4zm2-9.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.71z"
+      />
+    </svg>
+  );
+}
+
+function MdiMonitorDashboard() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M21 16H3V4h18v12zm-10 2v2H3v-2h8zm2 0h8v2h-8v-2zM5 6v8h6V6H5zm8 0v3h6V6h-6zm0 5v3h6v-3h-6z"
       />
     </svg>
   );

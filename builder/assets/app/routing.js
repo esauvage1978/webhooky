@@ -69,6 +69,12 @@ export function pathToNavId(pathname) {
   if (/(^|\/)admin\/supervision$/.test(p)) {
     return 'adminSupervision';
   }
+  if (/(^|\/)admin\/monitoring$/.test(p)) {
+    return 'adminMonitoring';
+  }
+  if (/(^|\/)monitoring$/.test(p)) {
+    return 'clientMonitoring';
+  }
   if (/(^|\/)admin\/options$/.test(p)) {
     return 'adminOptions';
   }
@@ -145,6 +151,12 @@ export function navIdToPath(navId) {
     case 'adminSupervision':
       rel = '/admin/supervision';
       break;
+    case 'adminMonitoring':
+      rel = '/admin/monitoring';
+      break;
+    case 'clientMonitoring':
+      rel = '/monitoring';
+      break;
     case 'adminOptions':
       rel = '/admin/options';
       break;
@@ -179,7 +191,7 @@ export function userCanAccessNav(user, navId) {
   if (navId === 'accountProfile' || navId === 'changePassword') {
     return true;
   }
-  if (navId === 'adminSupervision' || navId === 'adminOptions') {
+  if (navId === 'adminSupervision' || navId === 'adminOptions' || navId === 'adminMonitoring') {
     return isAdmin;
   }
   const needsOrg = userNeedsOrganizationSetup(user);
@@ -190,6 +202,9 @@ export function userCanAccessNav(user, navId) {
   if (navId === 'organizationBilling') {
     if (!user.organization) return false;
     return isAdmin || isManager;
+  }
+  if (navId === 'clientMonitoring') {
+    return userHasOrganizationContext(user);
   }
   if (navId === 'seoInsights') {
     return userHasOrganizationContext(user);
