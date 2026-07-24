@@ -77,7 +77,7 @@ final class BuiltinWorkflowActionExecutor
         $context['data']['gsc_fetch'] = $result;
         $context['data']['gsc_keywords'] = json_encode($result['keywords'] ?? [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         $aLog->setVariablesSent(['gsc_keyword_count' => (string) \count($result['keywords'] ?? [])]);
-        $aLog->setMailjetResponseBody(mb_substr(json_encode($result, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), 0, 16000));
+        $aLog->setProviderResponseBody(mb_substr(json_encode($result, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), 0, 16000));
 
         return ['skip_next' => 0];
     }
@@ -105,10 +105,32 @@ final class BuiltinWorkflowActionExecutor
             $key = (string) $k;
             $vars[$key] = $this->pipelineInterpolator->interpolateTemplate((string) $tpl, $parsed, $context['data'] ?? []);
         }
-        $text = $this->aiActionService->runPrompt($organization, $promptId, $vars);
+        $promptTemplate = isset($cfg['promptTemplate']) ? trim((string) $cfg['promptTemplate']) : '';
+        $outputKey = isset($cfg['outputKey']) ? trim((string) $cfg['outputKey']) : 'last_ai_response';
+        if ($outputKey === '') {
+            $outputKey = 'last_ai_response';
+        }
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $outputKey)) {
+            throw new \RuntimeException('Clé de sortie IA invalide : '.$outputKey);
+        }
+
+        if ($promptTemplate !== '') {
+            $prompt = $this->pipelineInterpolator->interpolateTemplate($promptTemplate, $parsed, $context['data'] ?? [], $vars);
+            $text = $this->aiActionService->runRawPrompt($organization, $prompt);
+            $promptSource = 'custom';
+        } else {
+            $text = $this->aiActionService->runPrompt($organization, $promptId, $vars);
+            $promptSource = $promptId;
+        }
+
         $context['data']['last_ai_response'] = $text;
-        $aLog->setVariablesSent(['promptId' => $promptId, 'chars' => (string) mb_strlen($text)]);
-        $aLog->setMailjetResponseBody(mb_substr($text, 0, 16000));
+        $context['data'][$outputKey] = $text;
+        $aLog->setVariablesSent([
+            'prompt' => $promptSource,
+            'outputKey' => $outputKey,
+            'chars' => (string) mb_strlen($text),
+        ]);
+        $aLog->setProviderResponseBody(mb_substr($text, 0, 16000));
 
         return ['skip_next' => 0];
     }
@@ -133,7 +155,7 @@ final class BuiltinWorkflowActionExecutor
         }
         $context['data'][$target] = $decoded;
         $aLog->setVariablesSent(['targetKey' => $target]);
-        $aLog->setMailjetResponseBody(mb_substr(json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), 0, 16000));
+        $aLog->setProviderResponseBody(mb_substr(json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), 0, 16000));
 
         return ['skip_next' => 0];
     }

@@ -226,7 +226,7 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                     if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
                         throw new \InvalidArgumentException('Destinataire invalide pour une action : renseignez recipientEmailPostKey ou defaultRecipientEmail.');
                     }
-                    $aLog->setToEmail($toEmail);
+                    $aLog->setRecipient($toEmail);
 
                     $variables = $this->variableMapBuilder->build($parsed, $action->getVariableMapping());
                     $aLog->setVariablesSent($variables);
@@ -245,10 +245,10 @@ final class FormWebhookIngressHandler implements FormWebhookIngressHandlerInterf
                         $variables,
                     );
 
-                    $aLog->setMailjetHttpStatus($result->getHttpStatus());
+                    $aLog->setHttpStatus($result->getHttpStatus());
                     $truncResp = $result->getRawResponseBody();
-                    $aLog->setMailjetResponseBody($truncResp !== null ? mb_substr($truncResp, 0, 16000) : null);
-                    $aLog->setMailjetMessageId($result->getMessageId());
+                    $aLog->setProviderResponseBody($truncResp !== null ? mb_substr($truncResp, 0, 16000) : null);
+                    $aLog->setProviderMessageId($result->getMessageId());
 
                     if (!$result->isSuccess()) {
                         $allOk = false;

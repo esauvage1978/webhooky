@@ -11,6 +11,11 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * Journal d’exécution d’une action pour un ingress donné.
+ *
+ * Note historique : les colonnes `mailjetHttpStatus` / `mailjetResponseBody` / `mailjetMessageId`
+ * et `toEmail` stockent en réalité toute réponse HTTP distante et tout destinataire
+ * (e-mail ou SMS). Préférer les alias sémantiques {@see setHttpStatus()},
+ * {@see setProviderResponseBody()}, {@see setRecipient()}.
  */
 #[ORM\Entity(repositoryClass: FormWebhookActionLogRepository::class)]
 #[ORM\Table(name: 'form_webhook_action_log')]
@@ -128,6 +133,18 @@ class FormWebhookActionLog
         return $this;
     }
 
+    /** Destinataire (e-mail ou numéro SMS) — alias sémantique de {@see getToEmail()}. */
+    public function getRecipient(): ?string
+    {
+        return $this->getToEmail();
+    }
+
+    /** Destinataire (e-mail ou numéro SMS) — alias sémantique de {@see setToEmail()}. */
+    public function setRecipient(?string $recipient): static
+    {
+        return $this->setToEmail($recipient);
+    }
+
     public function getStatus(): string
     {
         return $this->status;
@@ -152,6 +169,18 @@ class FormWebhookActionLog
         return $this;
     }
 
+    /** Status HTTP du fournisseur distant — alias de {@see getMailjetHttpStatus()}. */
+    public function getHttpStatus(): ?int
+    {
+        return $this->getMailjetHttpStatus();
+    }
+
+    /** Status HTTP du fournisseur distant — alias de {@see setMailjetHttpStatus()}. */
+    public function setHttpStatus(?int $httpStatus): static
+    {
+        return $this->setMailjetHttpStatus($httpStatus);
+    }
+
     public function getMailjetResponseBody(): ?string
     {
         return $this->mailjetResponseBody;
@@ -164,6 +193,18 @@ class FormWebhookActionLog
         return $this;
     }
 
+    /** Corps de réponse du fournisseur — alias de {@see getMailjetResponseBody()}. */
+    public function getProviderResponseBody(): ?string
+    {
+        return $this->getMailjetResponseBody();
+    }
+
+    /** Corps de réponse du fournisseur — alias de {@see setMailjetResponseBody()}. */
+    public function setProviderResponseBody(?string $body): static
+    {
+        return $this->setMailjetResponseBody($body);
+    }
+
     public function getMailjetMessageId(): ?string
     {
         return $this->mailjetMessageId;
@@ -174,6 +215,18 @@ class FormWebhookActionLog
         $this->mailjetMessageId = $mailjetMessageId;
 
         return $this;
+    }
+
+    /** Identifiant message fournisseur — alias de {@see getMailjetMessageId()}. */
+    public function getProviderMessageId(): ?string
+    {
+        return $this->getMailjetMessageId();
+    }
+
+    /** Identifiant message fournisseur — alias de {@see setMailjetMessageId()}. */
+    public function setProviderMessageId(?string $messageId): static
+    {
+        return $this->setMailjetMessageId($messageId);
     }
 
     public function getErrorDetail(): ?string

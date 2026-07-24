@@ -34,4 +34,23 @@ final class RecipientResolver
 
         return [$email, $name];
     }
+
+    /**
+     * Numéro SMS : clé POST prioritaire, sinon numéro par défaut sur l’action.
+     *
+     * @param array<string, string> $flatInput
+     */
+    public function resolvePhone(FormWebhookAction $action, array $flatInput): string
+    {
+        $key = $action->getSmsToPostKey();
+        $phone = '';
+        if ($key !== null && $key !== '') {
+            $phone = trim((string) ($flatInput[$key] ?? ''));
+        }
+        if ($phone === '') {
+            $phone = trim((string) ($action->getSmsToDefault() ?? ''));
+        }
+
+        return $phone;
+    }
 }

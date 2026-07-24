@@ -10,6 +10,7 @@ use App\Security\OutboundUrlGuard;
 use App\ServiceIntegration\ServiceConnectionSecretHelper;
 use App\ServiceIntegration\ServiceIntegrationType;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Exécute les actions basées sur {@see \App\Entity\ServiceConnection} (Slack, Twilio, etc.).
@@ -22,6 +23,7 @@ final class IntegrationActionExecutor
         private readonly IntegrationPayloadInterpolator $interpolator,
         private readonly OutboundUrlGuard $outboundUrlGuard,
         private readonly ServiceConnectionSecretHelper $secretHelper,
+        private readonly RecipientResolver $recipientResolver,
     ) {
     }
 
@@ -91,6 +93,28 @@ final class IntegrationActionExecutor
     }
 
     /**
+     * Enregistre status + corps (tronqué) sur le journal d’action.
+     *
+     * @return array{0: int, 1: string}
+     */
+    private function recordOutboundHttp(ResponseInterface $response, FormWebhookActionLog $aLog): array
+    {
+        $status = $response->getStatusCode();
+        $raw = $response->getContent(false);
+        $aLog->setHttpStatus($status);
+        $aLog->setProviderResponseBody(mb_substr($raw, 0, 16000));
+
+        return [$status, $raw];
+    }
+
+    private function assertHttpOk(int $status, string $errorMessage): void
+    {
+        if ($status >= 400) {
+            throw new \RuntimeException($errorMessage);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $body
      */
     private function postJson(string $url, array $body, FormWebhookActionLog $aLog): void
@@ -100,18 +124,27 @@ final class IntegrationActionExecutor
             'json' => $body,
             'timeout' => 25,
         ]);
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('Réponse HTTP %d du service distant.', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('Réponse HTTP %d du service distant.', $status));
     }
 
     /**
-     * @param array<string, mixed>       $config
-     * @param array<string, string>      $parsed
+     * @param array<string, string> $parsed
+     */
+    private function requireSmsRecipient(FormWebhookAction $action, array $parsed, FormWebhookActionLog $aLog): string
+    {
+        $to = $this->recipientResolver->resolvePhone($action, $parsed);
+        if ($to === '') {
+            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
+        }
+        $aLog->setRecipient($to);
+
+        return $to;
+    }
+
+    /**
+     * @param array<string, mixed>  $config
+     * @param array<string, string> $parsed
      */
     private function sendTwilio(array $config, FormWebhookAction $action, array $parsed, string $bodyText, FormWebhookActionLog $aLog): void
     {
@@ -122,13 +155,7 @@ final class IntegrationActionExecutor
             throw new \InvalidArgumentException('Configuration Twilio incomplète (accountSid, authToken, fromNumber).');
         }
 
-        $to = $this->resolvePhone($action, $parsed);
-        if ($to === '') {
-            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
-        }
-
-        $aLog->setToEmail($to);
-
+        $to = $this->requireSmsRecipient($action, $parsed, $aLog);
         $url = sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', rawurlencode($sid));
         $response = $this->httpClient->request('POST', $url, [
             'auth_basic' => [$sid, $token],
@@ -139,14 +166,8 @@ final class IntegrationActionExecutor
             ],
             'timeout' => 30,
         ]);
-
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('Twilio HTTP %d', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('Twilio HTTP %d', $status));
     }
 
     /**
@@ -162,13 +183,7 @@ final class IntegrationActionExecutor
             throw new \InvalidArgumentException('Configuration Vonage incomplète (apiKey, apiSecret, from).');
         }
 
-        $to = $this->resolvePhone($action, $parsed);
-        if ($to === '') {
-            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
-        }
-
-        $aLog->setToEmail($to);
-
+        $to = $this->requireSmsRecipient($action, $parsed, $aLog);
         $response = $this->httpClient->request('POST', 'https://rest.nexmo.com/sms/json', [
             'headers' => ['Content-Type' => 'application/json'],
             'json' => [
@@ -180,14 +195,8 @@ final class IntegrationActionExecutor
             ],
             'timeout' => 30,
         ]);
-
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('Vonage HTTP %d', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('Vonage HTTP %d', $status));
     }
 
     /**
@@ -202,12 +211,7 @@ final class IntegrationActionExecutor
             throw new \InvalidArgumentException('Configuration MessageBird incomplète (accessKey, originator).');
         }
 
-        $to = $this->resolvePhone($action, $parsed);
-        if ($to === '') {
-            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
-        }
-
-        $aLog->setToEmail($to);
+        $to = $this->requireSmsRecipient($action, $parsed, $aLog);
         $recipient = preg_replace('/[^\d+]/', '', $to) ?? $to;
 
         $response = $this->httpClient->request('POST', 'https://rest.messagebird.com/messages', [
@@ -222,19 +226,11 @@ final class IntegrationActionExecutor
             ],
             'timeout' => 30,
         ]);
-
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('MessageBird HTTP %d', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('MessageBird HTTP %d', $status));
     }
 
     /**
-     * Envoi SMS via l’API SMSFactor (POST /send).
-     *
      * @see https://dev.smsfactor.com/fr/api/sms/send/send-campaign
      *
      * @param array<string, mixed>  $config
@@ -248,13 +244,7 @@ final class IntegrationActionExecutor
             throw new \InvalidArgumentException('Configuration SMSFactor incomplète (apiToken, sender).');
         }
 
-        $to = $this->resolvePhone($action, $parsed);
-        if ($to === '') {
-            throw new \InvalidArgumentException('Numéro destinataire SMS manquant (champ POST ou numéro par défaut).');
-        }
-
-        $aLog->setToEmail($to);
-        // SMSFactor attend un GSM (chiffres, indicatif pays, sans +).
+        $to = $this->requireSmsRecipient($action, $parsed, $aLog);
         $gsm = preg_replace('/\D+/', '', $to) ?? '';
         if ($gsm === '') {
             throw new \InvalidArgumentException('Numéro destinataire SMS invalide.');
@@ -281,14 +271,8 @@ final class IntegrationActionExecutor
             ],
             'timeout' => 30,
         ]);
-
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('SMSFactor HTTP %d', $status));
-        }
+        [$status, $raw] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('SMSFactor HTTP %d', $status));
 
         $decoded = json_decode($raw, true);
         if (\is_array($decoded) && isset($decoded['status']) && (int) $decoded['status'] !== 1) {
@@ -314,18 +298,11 @@ final class IntegrationActionExecutor
             'json' => ['chat_id' => $chatId, 'text' => $text],
             'timeout' => 25,
         ]);
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('Telegram HTTP %d', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('Telegram HTTP %d', $status));
     }
 
     /**
-     * Pacflow : POST JSON du mapping (ou des champs POST bruts si mapping vide). Pas de message libre.
-     *
      * @param array<string, mixed>  $config
      * @param array<string, string> $variables
      * @param array<string, string> $parsed
@@ -377,13 +354,8 @@ final class IntegrationActionExecutor
             'body' => $bodyStr,
             'timeout' => 30,
         ]);
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('HTTP distant %d', $status));
-        }
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('HTTP distant %d', $status));
     }
 
     /**
@@ -405,29 +377,7 @@ final class IntegrationActionExecutor
             ],
             'timeout' => 25,
         ]);
-        $status = $response->getStatusCode();
-        $aLog->setMailjetHttpStatus($status);
-        $raw = $response->getContent(false);
-        $aLog->setMailjetResponseBody(mb_substr($raw, 0, 16000));
-        if ($status >= 400) {
-            throw new \RuntimeException(sprintf('Pushover HTTP %d', $status));
-        }
-    }
-
-    /**
-     * @param array<string, string> $parsed
-     */
-    private function resolvePhone(FormWebhookAction $action, array $parsed): string
-    {
-        $k = $action->getSmsToPostKey();
-        $p = '';
-        if ($k !== null && $k !== '') {
-            $p = trim((string) ($parsed[$k] ?? ''));
-        }
-        if ($p === '') {
-            $p = trim((string) ($action->getSmsToDefault() ?? ''));
-        }
-
-        return $p;
+        [$status] = $this->recordOutboundHttp($response, $aLog);
+        $this->assertHttpOk($status, sprintf('Pushover HTTP %d', $status));
     }
 }
