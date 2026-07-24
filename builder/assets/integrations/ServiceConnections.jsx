@@ -1,48 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalPortal from '../components/ModalPortal.jsx';
 import { parseJson } from '../lib/http.js';
+import { defaultConfigJson, typeLabelFromMeta } from './serviceConnectionTypes.js';
 
-const TYPE_LABELS = {
-  mailjet: 'Mailjet (e-mail)',
-  slack: 'Slack',
-  teams: 'Microsoft Teams',
-  discord: 'Discord',
-  google_chat: 'Google Chat',
-  mattermost: 'Mattermost',
-  twilio_sms: 'Twilio SMS',
-  vonage_sms: 'Vonage SMS',
-  messagebird_sms: 'MessageBird SMS',
-  smsfactor_sms: 'SMSFactor SMS',
-  telegram: 'Telegram',
-  http_webhook: 'HTTP personnalisé',
-  pushover: 'Pushover',
-};
-
-function typeLabel(id) {
-  return TYPE_LABELS[id] ?? id;
-}
-
-function defaultConfigJson(type, typesMeta) {
-  const meta = typesMeta.find((t) => t.id === type);
-  if (meta?.configExampleFilled && Object.keys(meta.configExampleFilled).length > 0) {
-    return JSON.stringify(meta.configExampleFilled, null, 2);
-  }
-  const samples = {
-    mailjet: { apiKeyPublic: '', apiKeyPrivate: '' },
-    slack: { webhookUrl: 'https://hooks.slack.com/services/...' },
-    teams: { webhookUrl: 'https://outlook.office.com/webhook/...' },
-    discord: { webhookUrl: 'https://discord.com/api/webhooks/...' },
-    google_chat: { webhookUrl: 'https://chat.googleapis.com/v1/spaces/...' },
-    mattermost: { webhookUrl: 'https://mattermost.example/hooks/...' },
-    twilio_sms: { accountSid: '', authToken: '', fromNumber: '+33…' },
-    vonage_sms: { apiKey: '', apiSecret: '', from: 'Marque ou +33…' },
-    messagebird_sms: { accessKey: '', originator: 'Marque ou +33…' },
-    smsfactor_sms: { apiToken: '', sender: 'Webhooky' },
-    telegram: { botToken: '', chatId: '' },
-    http_webhook: { url: 'https://…', method: 'POST', headers: {} },
-    pushover: { appToken: '', userKey: '' },
-  };
-  return JSON.stringify(samples[type] ?? { note: 'voir la documentation du type' }, null, 2);
+function typeLabel(typesMeta, id) {
+  return typeLabelFromMeta(typesMeta, id);
 }
 
 export default function ServiceConnections({ user, hubTitle, hubDescription, embeddedInTabs = false }) {
@@ -404,7 +366,7 @@ export default function ServiceConnections({ user, hubTitle, hubDescription, emb
                   {items.map((row) => (
                     <tr key={row.id}>
                       <td>{row.id}</td>
-                      <td>{typeLabel(row.type)}</td>
+                      <td>{typeLabel(typesMeta, row.type)}</td>
                       <td>{row.name}</td>
                       <td className="mono-cell">{row.workflowCount ?? 0}</td>
                       <td className="mono-cell">{row.actionCount ?? 0}</td>

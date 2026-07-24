@@ -53,6 +53,7 @@ final class ApiServiceConnectionController extends AbstractController
                 'id' => $t,
                 'label' => ServiceIntegrationType::labels()[$t] ?? $t,
                 'vendorUrl' => ServiceIntegrationType::vendorUrl($t),
+                'sms' => str_ends_with($t, '_sms'),
                 'configSchema' => $this->configValidator->schemaHint($t),
                 'configExampleFilled' => $this->configValidator->exampleFilled($t),
             ];
