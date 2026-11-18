@@ -7,6 +7,60 @@ declare(strict_types=1);
  *
  * CONTACT_WEBHOOK_FORWARD_URL — URL d’ingress (même jeton que src/config/site.ts)
  */
+
+function contact_journal_dir(): ?string
+{
+    $candidates = [dirname(__DIR__) . '/contact-journal', __DIR__ . '/_contact-journal'];
+    foreach ($candidates as $dir) {
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0700, true);
+        }
+        if (is_dir($dir) && is_writable($dir)) {
+            if (str_starts_with($dir, __DIR__)) {
+                if (!is_file($dir . '/.htaccess')) {
+                    @file_put_contents($dir . '/.htaccess', "Require all denied\nDeny from all\n");
+                }
+                if (!is_file($dir . '/index.html')) {
+                    @file_put_contents($dir . '/index.html', '');
+                }
+            }
+
+            return $dir;
+        }
+    }
+
+    return null;
+}
+
+function contact_journal_write(array $entry): void
+{
+    try {
+        $dir = contact_journal_dir();
+        if ($dir === null) {
+            error_log('[contact-journal] dossier non inscriptible');
+
+            return;
+        }
+        $file = $dir . '/demandes-' . gmdate('Y-m') . '.jsonl';
+        $ok = @file_put_contents(
+            $file,
+            json_encode($entry, JSON_UNESCAPED_UNICODE) . "\n",
+            FILE_APPEND | LOCK_EX
+        );
+        if ($ok === false) {
+            error_log('[contact-journal] écriture impossible: ' . $file);
+        }
+        $limit = gmdate('Y-m', strtotime('first day of -2 months'));
+        foreach ((array) glob($dir . '/demandes-*.jsonl') as $old) {
+            if (preg_match('/demandes-(\d{4}-\d{2})\.jsonl$/', (string) $old, $m) && $m[1] < $limit) {
+                @unlink((string) $old);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[contact-journal] ' . $e->getMessage());
+    }
+}
+
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
@@ -167,6 +221,22 @@ if (!is_string($forwardUrl) || trim($forwardUrl) === '') {
 }
 $forwardUrl = trim($forwardUrl);
 
+$journalId = bin2hex(random_bytes(6));
+contact_journal_write([
+    'id' => $journalId,
+    'etape' => 'recue',
+    'ip' => $ip,
+    'host' => $host,
+    'source' => $forward['source'],
+    'name' => $forward['name'],
+    'email' => $forward['email'],
+    'company' => $forward['company'],
+    'objet' => $forward['objet'],
+    'request_type' => $forward['request_type'],
+    'message' => $forward['message'],
+    'submitted_at' => $forward['submitted_at'],
+]);
+
 $ch = curl_init($forwardUrl);
 if ($ch === false) {
     http_response_code(502);
@@ -192,10 +262,25 @@ $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($responseBody === false || $curlErr !== '') {
+    contact_journal_write([
+        'id' => $journalId,
+        'etape' => 'echec',
+        'at' => gmdate('c'),
+        'http' => $status,
+        'erreur' => $curlErr,
+        'reponse' => substr((string) $responseBody, 0, 300),
+    ]);
     http_response_code(502);
     echo json_encode(['ok' => false, 'error' => 'Relay upstream failed']);
     exit;
 }
+
+contact_journal_write([
+    'id' => $journalId,
+    'etape' => 'envoyee',
+    'at' => gmdate('c'),
+    'http' => $status,
+]);
 
 http_response_code($status > 0 ? $status : 502);
 echo $responseBody;
